@@ -29,4 +29,4 @@ The DevWorkspace Operator is installed automatically as a dependency.
 
 == Next Steps
 
-Proceed to xref:day2-devspaces-overview.adoc[Dev Spaces Overview].
+Proceed to xref:day2-devspaces-install.adoc[Configure Dev Spaces].

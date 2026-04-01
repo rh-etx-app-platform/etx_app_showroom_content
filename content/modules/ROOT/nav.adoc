@@ -5,15 +5,13 @@
 * xref:day1-branching-strategies.adoc[Branching Strategies]
 
 .Day 2: Software Factory & Application Lifecycle
-** Cluster Setup
+** Overview
+* xref:day2-devspaces-overview.adoc[Dev Spaces]
+* xref:day2-devspaces-devfiles.adoc[Devfiles & Base Images]
+** Lab 1: Software Factory
 * xref:day2-cluster-setup.adoc[Cluster Setup]
-** Dev Spaces
-* xref:day2-devspaces-overview.adoc[Dev Spaces Overview]
 * xref:day2-devspaces-install.adoc[Configure Dev Spaces]
 * xref:day2-devspaces-integrations.adoc[GitLab Integration & Shared Secrets]
-* xref:day2-devspaces-devfiles.adoc[Devfiles & Base Images]
-* xref:day2-devspaces-workspace.adoc[Create a Workspace]
-** Lab 1: Software Factory
 * xref:day2-lab1-devspaces.adoc[Dev Spaces & IDE Setup]
 * xref:day2-lab1-supporting-services.adoc[Supporting Services]
 * xref:day2-lab1-ci-pipeline.adoc[CI Pipeline]

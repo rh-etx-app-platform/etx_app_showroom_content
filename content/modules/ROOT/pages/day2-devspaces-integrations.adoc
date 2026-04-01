@@ -156,4 +156,4 @@ You now have:
 
 == Next Steps
 
-Proceed to xref:day2-devspaces-devfiles.adoc[Devfiles] to learn how to define workspace environments.
+Proceed to xref:day2-lab1-devspaces.adoc[Dev Spaces & IDE Setup] to create your workspace.

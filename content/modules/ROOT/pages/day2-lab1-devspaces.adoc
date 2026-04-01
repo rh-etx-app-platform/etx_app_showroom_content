@@ -1,17 +1,9 @@
-= Lab 1: Dev Spaces and IDE Configuration
+= Lab 1: Dev Spaces and IDE Setup
 :navtitle: Dev Spaces & IDE Setup
 
 == Overview
 
-In this lab you will create a Dev Spaces workspace for the Parasol Insurance application, verify Git integration, and confirm the AI Code Assistant is working.
-
-== Prerequisites
-
-Complete the following sections before starting this lab:
-
-* xref:day2-cluster-setup.adoc[Cluster Setup] -- operator installed
-* xref:day2-devspaces-install.adoc[Configure Dev Spaces] -- CheCluster deployed and `Active`
-* xref:day2-devspaces-integrations.adoc[GitLab Integration & Shared Secrets] -- Git OAuth and LLM credentials configured
+In this lab you will create a Dev Spaces workspace for the Parasol Insurance application, verify Git and AI assistant integration, and run Quarkus Dev Services with nested containers.
 
 == Get the Dashboard URL
 
@@ -25,17 +17,30 @@ Open this URL in your browser and log in with your OpenShift credentials.
 
 == Create the Lab Workspace
 
-From the Dev Spaces dashboard, create a workspace for the Parasol Insurance application:
+The simplest way to create a workspace is by URL.
+Construct the URL as:
 
-. Click btn:[Create Workspace]
-. Paste the Git repository URL for the Parasol Insurance application
-. Click btn:[Create & Open]
+----
+https://<devspaces_dashboard_url>/#<git_repo_url>
+----
 
-Alternatively, construct the URL directly:
+For example, to create a workspace from the Parasol Insurance application:
 
 ----
 https://<devspaces_dashboard_url>/#https://<gitlab_host>/parasol-insurance
 ----
+
+You can also specify a branch:
+
+----
+https://<devspaces_dashboard_url>/#https://<gitlab_host>/parasol-insurance/tree/main
+----
+
+Alternatively, from the Dev Spaces dashboard:
+
+. Click btn:[Create Workspace]
+. Paste the Git repository URL for the Parasol Insurance application
+. Click btn:[Create & Open]
 
 Dev Spaces will clone the repository, read the `devfile.yaml`, pull the container image, and open the VS Code IDE in your browser.
 
@@ -92,7 +97,49 @@ podman version
 podman run --rm registry.access.redhat.com/ubi9-minimal:latest echo "Nested containers work"
 ----
 
-This capability is required for Quarkus Dev Services in later steps.
+Starting with Dev Spaces 3.25 on OpenShift 4.20+, nested containers work without special pod annotations or SCC configuration.
+See the https://docs.redhat.com/en/documentation/red_hat_openshift_dev_spaces/3.25/html/release_notes_and_known_issues/new-features[Dev Spaces 3.25 Release Notes] for details.
+
+When `disableContainerRunCapabilities: false` is set in the CheCluster CR, workspace pods get the capabilities needed to run Podman in rootless mode.
+Quarkus Dev Services uses Testcontainers under the hood, which calls Podman to start service containers (databases, message brokers, etc.).
+
+== Run Quarkus Dev Services
+
+Open a terminal in the IDE and start Quarkus in dev mode:
+
+[source,bash]
+----
+./mvnw compile quarkus:dev
+----
+
+Quarkus Dev Services will detect that the application needs a PostgreSQL database and automatically start one using Podman inside the workspace.
+You should see log output indicating the database container is starting:
+
+----
+Dev Services for default datasource (postgresql) started
+----
+
+The application will be available on port 8080.
+Click the endpoint notification in the IDE or find the URL in the *Endpoints* panel.
+
+== Workspace Lifecycle
+
+Some useful operations:
+
+*Stop a workspace* (preserves state on the PVC):
+
+* From the dashboard, click the stop icon next to your workspace
+* The workspace pod is deleted, but the PVC retains your files
+
+*Restart a workspace*:
+
+* Click the workspace name in the dashboard to restart it
+* Your source code, Maven cache, and other volume-mounted data persist
+
+*Delete a workspace*:
+
+* From the dashboard, select the workspace and click btn:[Delete]
+* This removes the workspace pod and its PVC
 
 == Next Steps
 
