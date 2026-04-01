@@ -1,0 +1,86 @@
+= Developer Hub Overview
+:navtitle: Developer Hub
+
+== What is Red Hat Developer Hub?
+
+Red Hat Developer Hub is an enterprise-grade internal developer portal built on the Backstage open source project.
+It provides a single pane of glass where developers can discover services, create new projects from templates, and access documentation -- all without needing to understand the underlying infrastructure.
+
+== Why an Internal Developer Portal?
+
+As organizations adopt microservices, GitOps, and platform engineering, developers face increasing complexity: multiple Git repositories, CI/CD tools, deployment targets, and observability platforms.
+An internal developer portal addresses this by providing:
+
+* *Discoverability* -- A searchable software catalog of all services, APIs, and infrastructure components
+* *Self-service* -- Golden Path templates that let developers create new projects with all the scaffolding pre-configured
+* *Consistency* -- Every new project follows organizational standards for CI/CD, security, and observability
+* *Reduced cognitive load* -- Developers interact with one portal instead of navigating dozens of tools
+
+== Architecture
+
+Developer Hub has several core components:
+
+*Software Catalog*::
+A centralized registry of all software components (services, APIs, libraries, infrastructure) in the organization.
+Each component has an owner, lifecycle stage, and links to its repository, CI pipelines, and documentation.
+
+*Golden Path Templates*::
+Parameterized project scaffolds that generate complete, ready-to-deploy projects.
+A template typically creates a Git repository, CI pipeline, GitOps manifests, devfile, and catalog registration -- all in one click.
+
+*Plugins*::
+Extend Developer Hub with integrations for external tools.
+Common plugins include Tekton (pipeline status), Argo CD (deployment status), Topology (OpenShift view), and Dev Spaces (launch workspace).
+
+*TechDocs*::
+Documentation-as-code that renders Markdown docs alongside catalog entries.
+Developers find API documentation, runbooks, and architecture decisions in the same portal where they manage their services.
+
+== Key Concepts
+
+Software Catalog Entity::
+A YAML file (`catalog-info.yaml`) at the root of a repository that registers the component in the catalog.
+Defines metadata like name, owner, type, lifecycle, and relationships to other components.
+
+Golden Path Template::
+A `template.yaml` that defines parameters (user inputs), steps (actions to execute), and outputs (what gets created).
+Steps can create repositories, render files from skeletons, register catalog entities, and trigger pipelines.
+
+Plugin::
+A frontend or backend module that adds functionality to the portal.
+Red Hat Developer Hub ships with curated plugins for OpenShift ecosystem tools.
+
+== How Developer Hub Fits the Software Factory
+
+Developer Hub ties together all the tools from Day 2 into a unified developer experience:
+
+[cols="1,2"]
+|===
+| Tool | Developer Hub Integration
+
+| Dev Spaces
+| Launch a workspace directly from a catalog component
+
+| Tekton
+| View pipeline runs and status for each component
+
+| Argo CD
+| See deployment status across environments
+
+| GitLab
+| Link to source repositories and merge requests
+
+| OpenTelemetry
+| Access observability dashboards from the component page
+|===
+
+A developer's workflow becomes:
+
+. Open Developer Hub
+. Create a new project from a Golden Path template
+. Launch a Dev Spaces workspace from the catalog
+. Write code, push, and watch the pipeline run -- all visible in the portal
+
+== Next Steps
+
+When you are ready for the hands-on lab, proceed to xref:day2-cluster-setup.adoc[Cluster Setup] to begin Lab 1.

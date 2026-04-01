@@ -249,4 +249,4 @@ The `init-continue` command reads `LLM_API_KEY` and `LLM_BASE_URL` from the envi
 
 == Next Steps
 
-When you are ready for the hands-on lab, proceed to xref:day2-cluster-setup.adoc[Cluster Setup] to begin Lab 1.
+Proceed to xref:day2-appmod-overview.adoc[Application Modernization Overview].

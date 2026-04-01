@@ -1,0 +1,66 @@
+= Application Modernization Overview
+:navtitle: Application Modernization
+
+== Why Modernize?
+
+Many organizations have large portfolios of Java applications built on older frameworks and application servers.
+These applications work, but they carry increasing costs: slower release cycles, difficulty attracting developers, security patching burdens, and poor fit for container and Kubernetes-based deployment.
+
+Application modernization is the process of updating these applications to use modern runtimes, frameworks, and deployment patterns -- without rewriting from scratch.
+
+== Migration Toolkit for Applications (MTA)
+
+Red Hat's Migration Toolkit for Applications (MTA) accelerates large-scale application modernization by providing:
+
+*Analysis Engine*::
+Scans application source code, configuration, and dependencies to identify migration issues.
+Produces detailed reports with effort estimates, mandatory changes, and optional improvements.
+
+*Rule Sets*::
+Pre-built rules that detect patterns requiring changes when migrating between runtimes, frameworks, or deployment targets.
+Examples: JBoss EAP to Quarkus, Spring Boot version upgrades, Java EE to Jakarta EE, monolith to microservices.
+
+*Web Console*::
+A UI for managing application portfolios, running assessments, and tracking migration progress across teams.
+
+*CLI (MTA CLI)*::
+A command-line interface for running analysis as part of CI pipelines or developer workflows.
+Integrates with Dev Spaces for in-IDE analysis.
+
+== Modernization Strategies
+
+MTA supports multiple modernization strategies depending on the application and business goals:
+
+Replatform::
+Move the application to containers and OpenShift with minimal code changes.
+Replace the legacy application server with a supported runtime like JBoss EAP on OpenShift.
+
+Refactor::
+Update the application framework and dependencies to a modern runtime like Quarkus or Spring Boot.
+Adopt cloud-native patterns (health checks, externalized configuration, observability).
+
+Re-architect::
+Break a monolith into microservices or event-driven components.
+This is the most effort-intensive strategy but provides the most flexibility.
+
+== Red Hat Runtimes
+
+After modernization, applications run on a supported Red Hat Runtime:
+
+* *Red Hat build of Quarkus* -- Kubernetes-native Java framework optimized for fast startup and low memory
+* *JBoss EAP* -- Full Jakarta EE application server for enterprise workloads
+* *Red Hat build of Spring Boot* -- Supported distribution of Spring Boot with Red Hat libraries and security patches
+* *Runtimes for Node.js, .NET, Go* -- Supported runtimes for polyglot environments
+
+== How MTA Fits the Software Factory
+
+In this training, MTA connects the modernization workflow to the CI/CD pipeline built in Lab 1:
+
+. *Analyze* -- Run MTA against a legacy application to identify migration issues
+. *Modernize* -- Apply code changes to adopt a Red Hat Runtime
+. *Integrate* -- Push the modernized application into the existing CI pipeline
+. *Deploy* -- Argo CD deploys the updated application through the GitOps workflow
+
+== Next Steps
+
+Proceed to xref:day2-devhub-overview.adoc[Developer Hub Overview].

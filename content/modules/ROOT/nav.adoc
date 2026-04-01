@@ -8,6 +8,8 @@
 ** Overview
 * xref:day2-devspaces-overview.adoc[Dev Spaces]
 * xref:day2-devspaces-devfiles.adoc[Devfiles & Base Images]
+* xref:day2-appmod-overview.adoc[Application Modernization]
+* xref:day2-devhub-overview.adoc[Developer Hub]
 ** Lab 1: Software Factory
 * xref:day2-cluster-setup.adoc[Cluster Setup]
 * xref:day2-devspaces-install.adoc[Configure Dev Spaces]
