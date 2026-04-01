@@ -1,0 +1,136 @@
+= Create a Workspace with Nested Containers
+:navtitle: Create a Workspace
+
+== Overview
+
+In this section you will create a workspace from a Quarkus application repository and use nested containers (Podman inside the workspace) to run Quarkus Dev Services with a PostgreSQL database.
+
+Quarkus Dev Services automatically starts required services (like databases) in containers during development.
+For this to work in Dev Spaces, the workspace needs the ability to run containers -- this is what "nested containers" means.
+
+== Prerequisites
+
+Before creating a workspace, ensure:
+
+* The Dev Spaces operator is installed and the CheCluster is `Active`
+* `disableContainerRunCapabilities` is set to `false` in the CheCluster CR (covered in the install section)
+* GitLab OAuth is configured (if using a GitLab-hosted repo)
+
+== Enable Nested Containers
+
+Nested containers require the `container-build` security context constraint (SCC).
+On OpenShift 4.18, apply the following to enable it cluster-wide in your CheCluster:
+
+[source,bash]
+----
+oc patch checluster/devspaces -n openshift-devspaces \
+  --type='merge' \
+  -p '{
+    "spec": {
+      "devEnvironments": {
+        "disableContainerRunCapabilities": false,
+        "workspacesPodAnnotations": {
+          "io.kubernetes.cri-o.Devices": "/dev/fuse"
+        }
+      }
+    }
+  }'
+----
+
+This grants workspace pods access to `/dev/fuse` (required for fuse-overlayfs, the storage driver Podman uses in rootless mode).
+
+If you created the `container-storage-config` ConfigMap from the xref:day2-devspaces-integrations.adoc[integrations section], workspaces will automatically use fuse-overlayfs.
+
+== Create a Workspace from a Git Repository
+
+The simplest way to create a workspace is by URL.
+Construct the URL as:
+
+----
+https://<devspaces_dashboard_url>/#<git_repo_url>
+----
+
+For example, to create a workspace from the Parasol Insurance application:
+
+----
+https://<devspaces_dashboard_url>/#https://github.com/redhat-ads-tech/parasol-insurance
+----
+
+You can also specify a branch:
+
+----
+https://<devspaces_dashboard_url>/#https://github.com/redhat-ads-tech/parasol-insurance/tree/main
+----
+
+Alternatively, from the Dev Spaces dashboard:
+
+. Click btn:[Create Workspace]
+. Paste the Git repository URL
+. Click btn:[Create & Open]
+
+Dev Spaces will:
+
+. Clone the repository
+. Read the `devfile.yaml`
+. Pull the container image
+. Create the workspace pod with the configured resources, volumes, and endpoints
+. Open the VS Code IDE in your browser
+
+== Run Quarkus Dev Services
+
+Once your workspace is running, open a terminal in the IDE and start Quarkus in dev mode:
+
+[source,bash]
+----
+./mvnw compile quarkus:dev
+----
+
+Quarkus Dev Services will detect that the application needs a PostgreSQL database and automatically start one using Podman inside the workspace.
+You should see log output indicating the database container is starting:
+
+----
+Dev Services for default datasource (postgresql) started
+----
+
+The application will be available on port 8080.
+Click the endpoint notification in the IDE or find the URL in the *Endpoints* panel.
+
+== How Nested Containers Work
+
+When `disableContainerRunCapabilities: false` is set:
+
+* Workspace pods get the capabilities needed to run Podman in rootless mode
+* Podman runs containers as nested processes within the workspace pod
+* `/dev/fuse` access enables the fuse-overlayfs storage driver for efficient layer management
+
+This is the same mechanism that enables `podman build` and `podman run` inside workspaces.
+Quarkus Dev Services uses Testcontainers under the hood, which calls Podman to start service containers (databases, message brokers, etc.).
+
+== Workspace Lifecycle
+
+Some useful operations:
+
+*Stop a workspace* (preserves state on the PVC):
+
+* From the dashboard, click the stop icon next to your workspace
+* The workspace pod is deleted, but the PVC retains your files
+
+*Restart a workspace*:
+
+* Click the workspace name in the dashboard to restart it
+* Your source code, Maven cache, and other volume-mounted data persist
+
+*Delete a workspace*:
+
+* From the dashboard, select the workspace and click btn:[Delete]
+* This removes the workspace pod and its PVC
+
+== Summary
+
+You now have a working Dev Spaces environment where you can:
+
+* Create workspaces from any Git repository with a devfile
+* Run nested containers for Quarkus Dev Services (or any Podman workflow)
+* Use the Continue AI assistant with the qwen3 model via MaaS
+* Access GitLab repositories with automatic credential injection
+* Persist data across workspace restarts with per-workspace PVCs

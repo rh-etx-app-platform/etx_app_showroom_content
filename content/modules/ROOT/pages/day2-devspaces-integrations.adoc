@@ -1,0 +1,160 @@
+= GitLab Integration and Shared Secrets
+:navtitle: GitLab Integration & Shared Secrets
+
+== GitLab OAuth for SCM Integration
+
+Connecting Dev Spaces to GitLab allows automatic Git credential injection into workspaces -- developers can clone, push, and pull without manually configuring tokens.
+
+=== Create a GitLab OAuth Application
+
+. In GitLab, go to menu:Admin Area[Applications] (or your group settings for group-level OAuth)
+. Create a new application with the following settings:
++
+[cols="1,2"]
+|===
+| Name | `devspaces`
+| Redirect URI | `pass:a[https://devspaces.apps.<cluster_domain>/api/oauth/callback]`
+| Confidential | Checked
+| Scopes | `api`, `write_repository`, `openid`
+|===
+
+. Note the *Application ID* and *Secret*
+
+=== Create the OAuth Secret
+
+Create a Kubernetes secret that Dev Spaces will use to authenticate against GitLab.
+The labels and annotations are required -- Dev Spaces discovers the secret automatically based on them.
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitlab-oauth-config
+  namespace: openshift-devspaces
+  labels:
+    app.kubernetes.io/part-of: che.eclipse.org
+    app.kubernetes.io/component: oauth-scm-configuration
+  annotations:
+    che.eclipse.org/oauth-scm-server: gitlab
+    che.eclipse.org/scm-server-endpoint: https://<gitlab_host> # <1>
+type: Opaque
+stringData:
+  id: <application_id>
+  secret: <application_secret>
+----
+<1> Replace with your GitLab instance URL (e.g. `https://gitlab.apps.cluster.example.com`).
+
+Apply it:
+
+[source,bash]
+----
+oc apply -f gitlab-oauth-config.yaml
+----
+
+=== Register GitLab in the CheCluster
+
+Add the `gitServices` section to your CheCluster CR:
+
+[source,bash]
+----
+oc patch checluster/devspaces -n openshift-devspaces \
+  --type='merge' \
+  -p '{"spec":{"gitServices":{"gitlab":[{"secretName":"gitlab-oauth-config","endpoint":"https://<gitlab_host>"}]}}}'
+----
+
+After patching, new workspaces will automatically have Git credentials for your GitLab instance.
+
+== Mounting Shared Secrets into Workspaces
+
+Dev Spaces can automatically mount Kubernetes Secrets (and ConfigMaps) into every workspace pod using labels and annotations.
+This is useful for providing API keys, service credentials, or shared configuration to all developers without them having to configure it manually.
+
+=== How It Works
+
+Any Secret or ConfigMap in the `openshift-devspaces` namespace with the label `app.kubernetes.io/part-of: che.eclipse.org` and the annotation `controller.devfile.io/mount-as` will be automatically mounted into workspace containers.
+
+Mount options:
+
+* `mount-as: env` -- Inject as environment variables
+* `mount-as: file` -- Mount as files at a specified path
+* `mount-as: subpath` -- Mount individual keys as separate files
+
+=== Example: AI Code Assistant (Continue) Credentials
+
+This example creates a secret that injects LLM API credentials as environment variables into every workspace.
+
+First, obtain an API key from the https://litellm-prod-frontend.apps.maas.redhatworkshops.io/home[Red Hat Demo Platform MaaS]:
+
+. Navigate to *Models* and find *qwen3*
+. Click *Subscribe* to subscribe to the model
+. Go to *API Keys* and click *Create API Key*
+. Provide a name for the key and select the qwen3 subscription
+. Save the generated key somewhere safe
+
+Then create the secret:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Secret
+metadata:
+  name: continue-llm-credentials
+  namespace: openshift-devspaces
+  labels:
+    app.kubernetes.io/part-of: che.eclipse.org
+    app.kubernetes.io/component: workspaces-config
+  annotations:
+    controller.devfile.io/mount-as: env
+type: Opaque
+stringData:
+  LLM_API_KEY: <your_api_key>
+  LLM_BASE_URL: https://litellm-prod.apps.maas.redhatworkshops.io
+----
+
+Apply it:
+
+[source,bash]
+----
+oc apply -f continue-llm-credentials.yaml
+----
+
+Every new workspace will now have `LLM_API_KEY` and `LLM_BASE_URL` available as environment variables.
+The devfile's `postStart` command can use these to configure the Continue extension automatically (see xref:day2-devspaces-devfiles.adoc[Devfiles]).
+
+=== Example: Mounting Configuration Files
+
+You can also mount ConfigMaps as files.
+For example, to provide a shared `containers/storage.conf` to enable fuse-overlayfs in all workspaces:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: container-storage-config
+  namespace: openshift-devspaces
+  labels:
+    app.kubernetes.io/part-of: che.eclipse.org
+    app.kubernetes.io/component: workspaces-config
+  annotations:
+    controller.devfile.io/mount-as: subpath
+    controller.devfile.io/mount-path: /home/user/.config/containers/
+data:
+  storage.conf: |
+    [storage]
+    driver = "overlay"
+    [storage.options.overlay]
+    mount_program="/usr/bin/fuse-overlayfs"
+----
+
+== Summary
+
+You now have:
+
+* GitLab OAuth integration for seamless Git access from workspaces
+* A pattern for mounting shared secrets and configuration into all workspaces automatically
+
+== Next Steps
+
+Proceed to xref:day2-devspaces-devfiles.adoc[Devfiles] to learn how to define workspace environments.

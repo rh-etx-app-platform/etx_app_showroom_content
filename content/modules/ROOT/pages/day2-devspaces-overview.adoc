@@ -1,0 +1,64 @@
+= Dev Spaces Overview
+:navtitle: Dev Spaces Overview
+
+== What is Red Hat OpenShift Dev Spaces?
+
+Red Hat OpenShift Dev Spaces provides Cloud Development Environments (CDEs) -- fully configured, containerized workspaces that run on OpenShift.
+Instead of spending time setting up a local development environment, developers get a browser-based VS Code or JetBrains IDE backed by a workspace pod with all the tools, runtimes, and dependencies they need.
+
+Key benefits:
+
+* *Consistency* -- Every developer works in the same environment, eliminating "works on my machine" issues
+* *Speed* -- New team members can start coding in minutes, not days
+* *Security* -- Source code stays on the cluster; nothing lives on developer laptops
+* *Kubernetes-native* -- Workspaces are pods, so developers build and test in the same platform where their apps run
+
+== Architecture
+
+Dev Spaces has a few core components:
+
+*Dev Spaces Operator*::
+Manages the lifecycle of the platform.
+Installed from OperatorHub.
+
+*CheCluster Custom Resource*::
+The single configuration object for the entire Dev Spaces deployment.
+Controls everything from resource limits to storage strategy to Git integration.
+
+*DevWorkspace Operator*::
+Extends the OpenShift API to manage individual workspace pods.
+Installed automatically as a dependency.
+
+*User Dashboard*::
+Web UI where developers create, start, stop, and manage their workspaces.
+
+*Gateway*::
+A Traefik-based reverse proxy that handles authentication (via OpenShift OAuth) and routes traffic to workspace pods.
+
+*Plugin Registry*::
+Serves IDE extensions.
+By default an embedded Open VSX registry with a limited set of extensions -- you will want to point this at the public Open VSX registry.
+
+*Devfile Registry*::
+Provides sample workspace definitions for the dashboard's "getting started" experience.
+
+== Key Concepts
+
+Devfile::
+A YAML file (typically `devfile.yaml` at the repo root) that declares the workspace environment: container image, resource limits, endpoints, commands, and volumes.
+Devfiles are versioned alongside application code.
+
+Universal Developer Image (UDI)::
+A pre-built container image (`quay.io/devfile/universal-developer-image:ubi9-latest`) that includes common tools and runtimes (Java, Node.js, Python, Go, C/C++, etc.) plus Podman and Buildah.
+If a repository has no devfile, Dev Spaces uses UDI by default.
+
+CheCluster CR::
+The primary configuration surface.
+Rather than editing multiple config files, you configure Dev Spaces by patching one CheCluster resource.
+
+Workspace Namespace::
+Each user gets an auto-provisioned namespace (`<username>-devspaces`) where their workspace pods run.
+
+== Next Steps
+
+Proceed to xref:day2-devspaces-install.adoc[Install & Configure Dev Spaces].

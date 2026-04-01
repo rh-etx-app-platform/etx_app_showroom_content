@@ -1,0 +1,148 @@
+= Install and Configure Dev Spaces
+:navtitle: Install & Configure Dev Spaces
+
+== Install the Operator
+
+=== Create the Namespace
+
+[source,bash]
+----
+oc create namespace openshift-devspaces
+----
+
+=== Install via OperatorHub
+
+. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Search for *Red Hat OpenShift Dev Spaces*
+. Click btn:[Install]
+. Accept the defaults (All namespaces, Automatic approval) and click btn:[Install]
+. Wait for the operator to reach the `Succeeded` phase
+
+Verify from the CLI:
+
+[source,bash]
+----
+oc get csv -n openshift-operators | grep devspaces
+----
+
+The DevWorkspace Operator is installed automatically as a dependency.
+
+== Create the CheCluster
+
+The CheCluster custom resource is the single configuration object for your Dev Spaces deployment.
+Apply the following to create an instance with sensible defaults for a workshop environment:
+
+[source,yaml]
+----
+apiVersion: org.eclipse.che/v2
+kind: CheCluster
+metadata:
+  name: devspaces
+  namespace: openshift-devspaces
+spec:
+  components:
+    cheServer:
+      debug: false
+      logLevel: INFO
+    dashboard: {}
+    devWorkspace: {}
+    devfileRegistry: {}
+    imagePuller:
+      enable: false # <1>
+    metrics:
+      enable: true
+    pluginRegistry:
+      openVSXURL: "https://open-vsx.org" # <2>
+  containerRegistry: {}
+  devEnvironments:
+    startTimeoutSeconds: 600
+    secondsOfRunBeforeIdling: -1 # <3>
+    secondsOfInactivityBeforeIdling: 1800
+    maxNumberOfWorkspacesPerUser: 5
+    maxNumberOfRunningWorkspacesPerUser: 2
+    defaultContainerResources:
+      limits:
+        cpu: "2"
+        memory: 6Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    disableContainerRunCapabilities: false # <4>
+    defaultEditor: che-incubator/che-code/latest
+    defaultNamespace:
+      autoProvision: true
+      template: <username>-devspaces
+    storage:
+      pvcStrategy: per-workspace # <5>
+  networking:
+    auth:
+      gateway:
+        configLabels:
+          app: che
+          component: che-gateway-config
+----
+<1> Image puller pre-caches images on nodes to speed up workspace startup. Disable for small clusters; enable if startup time matters.
+<2> Points at the public Open VSX registry so developers can install any extension. The default embedded registry has a very limited set.
+<3> Set to `-1` to disable run-time idling (useful during workshops). In production, set a reasonable value.
+<4> Required for nested containers (Podman-in-workspace). Must be `false`.
+<5> `per-workspace` gives each workspace its own PVC. This supports multiple workspaces per user without conflicts and provides clean isolation. Alternative: `per-user` shares a single PVC across all workspaces.
+
+Apply it:
+
+[source,bash]
+----
+oc apply -f checluster.yaml
+----
+
+Wait for the deployment to complete:
+
+[source,bash]
+----
+oc get checluster/devspaces -n openshift-devspaces -o jsonpath='{.status.chePhase}'
+----
+
+The output should be `Active`.
+You can also watch the pods come up:
+
+[source,bash]
+----
+oc get pods -n openshift-devspaces -w
+----
+
+== Useful Configuration Commands
+
+Patch any CheCluster setting without re-applying the full YAML:
+
+[source,bash]
+----
+# Change storage strategy
+oc patch checluster/devspaces -n openshift-devspaces \
+  --type='merge' \
+  -p '{"spec":{"devEnvironments":{"storage":{"pvcStrategy":"per-workspace"}}}}'
+
+# Change max workspaces per user
+oc patch checluster/devspaces -n openshift-devspaces \
+  --type='merge' \
+  -p '{"spec":{"devEnvironments":{"maxNumberOfWorkspacesPerUser":10}}}'
+
+# Read a specific setting
+oc get checluster/devspaces -n openshift-devspaces \
+  -o jsonpath='{.spec.devEnvironments.storage.pvcStrategy}'
+----
+
+== Access the Dashboard
+
+Once the CheCluster is `Active`, get the dashboard URL:
+
+[source,bash]
+----
+oc get checluster/devspaces -n openshift-devspaces \
+  -o jsonpath='{.status.cheURL}'
+----
+
+Open this URL in your browser.
+You will authenticate through OpenShift OAuth -- users log in with whatever identity provider is configured on the cluster.
+
+== Next Steps
+
+Proceed to xref:day2-devspaces-integrations.adoc[GitLab Integration & Shared Secrets].
