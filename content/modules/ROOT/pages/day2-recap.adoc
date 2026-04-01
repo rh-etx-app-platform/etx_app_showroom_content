@@ -20,7 +20,8 @@ Over the course of Day 2, you assembled a complete Software Factory on OpenShift
 
 === Developer Hub
 
-* *Golden Path Templates* -- Standardized project creation
+* *Install and configure* -- Red Hat Developer Hub Operator, `app-config` ConfigMap, and `Backstage` custom resource in the `setup-rhdh` namespace
+* *Golden Path Templates* -- Standardized project creation (see xref:day2-lab2-dh2-golden-paths.adoc[Developer Hub: templates and integrations])
 * *Self-Service Portal* -- Unified developer experience across all tools
 
 == Looking Ahead to Day 3

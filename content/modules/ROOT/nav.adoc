@@ -12,8 +12,8 @@
 * xref:day2-lab1-app-deployment.adoc[Application Deployment]
 ** Lab 2: Application Modernization
 * xref:day2-lab2-mta.adoc[Application Modernization (MTA)]
-** Developer Hub
-* xref:day2-developer-hub.adoc[Developer Hub]
+* xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub]
+* xref:day2-lab2-dh2-golden-paths.adoc[Developer Hub: templates and integrations]
 * xref:day2-recap.adoc[Day 2 Recap]
 
 .Day 3: Trusted Software Supply Chain

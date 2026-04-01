@@ -1,5 +1,7 @@
-= Developer Hub
-:navtitle: Developer Hub
+= Developer Hub: templates and integrations
+:navtitle: Developer Hub: templates and integrations
+
+Complete xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub] before this section so you have a running instance.
 
 == Overview
 
