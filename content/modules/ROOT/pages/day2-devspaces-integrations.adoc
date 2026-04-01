@@ -63,7 +63,8 @@ oc patch checluster/devspaces -n openshift-devspaces \
   -p '{"spec":{"gitServices":{"gitlab":[{"secretName":"gitlab-oauth-config","endpoint":"https://<gitlab_host>"}]}}}'
 ----
 
-After patching, new workspaces will automatically have Git credentials for your GitLab instance.
+When a user opens a workspace that references a GitLab repository, they will be prompted to authenticate with GitLab via OAuth.
+This grants push/pull access using their personal GitLab credentials.
 
 == Mounting Shared Secrets into Workspaces
 
@@ -82,7 +83,7 @@ Mount options:
 
 === Example: AI Code Assistant (Continue) Credentials
 
-This example creates a secret that injects LLM API credentials as environment variables into every workspace.
+This example creates a secret that injects LLM API credentials as environment variables into every workspace. These can be provided to an extension such as Roo, Cline, or Continue to enable LLM-assisted coding.
 
 First, obtain an API key from the https://litellm-prod-frontend.apps.maas.redhatworkshops.io/home[Red Hat Demo Platform MaaS]:
 
@@ -122,30 +123,28 @@ oc apply -f continue-llm-credentials.yaml
 Every new workspace will now have `LLM_API_KEY` and `LLM_BASE_URL` available as environment variables.
 The devfile's `postStart` command can use these to configure the Continue extension automatically (see xref:day2-devspaces-devfiles.adoc[Devfiles]).
 
-=== Example: Mounting Configuration Files
+=== Example: Mounting a Shared .npmrc
 
 You can also mount ConfigMaps as files.
-For example, to provide a shared `containers/storage.conf` to enable fuse-overlayfs in all workspaces:
+For example, to provide a shared `.npmrc` that points at a private registry for all workspaces:
 
 [source,yaml]
 ----
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: container-storage-config
+  name: npmrc-config
   namespace: openshift-devspaces
   labels:
     app.kubernetes.io/part-of: che.eclipse.org
     app.kubernetes.io/component: workspaces-config
   annotations:
     controller.devfile.io/mount-as: subpath
-    controller.devfile.io/mount-path: /home/user/.config/containers/
+    controller.devfile.io/mount-path: /home/user/
 data:
-  storage.conf: |
-    [storage]
-    driver = "overlay"
-    [storage.options.overlay]
-    mount_program="/usr/bin/fuse-overlayfs"
+  .npmrc: |
+    registry=https://npm.registry.example.com/
+    //npm.registry.example.com/:_authToken=${NPM_TOKEN}
 ----
 
 == Summary

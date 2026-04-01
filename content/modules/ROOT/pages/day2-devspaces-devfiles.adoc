@@ -1,5 +1,5 @@
-= Devfiles
-:navtitle: Devfiles
+= Devfiles and Workspace Base Images
+:navtitle: Devfiles & Base Images
 
 == What is a Devfile?
 
@@ -74,7 +74,7 @@ components:
 
 == Commands
 
-Commands define tasks available in the IDE's command palette:
+Commands define tasks available in the IDE's command palette. Think of these as shortcuts for executing commands without having to memorize them:
 
 [source,yaml]
 ----
@@ -113,8 +113,8 @@ This runs the command with `id: init-continue` after the workspace container sta
 
 == IDE Extensions
 
-Recommend VS Code extensions by adding an `extensions.json` attribute.
-Dev Spaces installs these automatically when the workspace starts:
+Specify recommended VS Code extensions by adding an `extensions.json` attribute.
+When the workspace opens, the IDE will suggest these extensions for installation:
 
 [source,yaml]
 ----
@@ -132,6 +132,9 @@ attributes:
 
 Extension IDs come from the Open VSX registry (https://open-vsx.org).
 Find the extension page and convert the URL path from `namespace/extension` to `namespace.extension`.
+
+To force extensions to install automatically (rather than just recommend them), add a `.vscode/extensions.json` file directly to your Git repository with the same format.
+When Dev Spaces clones the repo and opens the workspace, the IDE will pick up the file from the repo and install the listed extensions without prompting.
 
 == Universal Developer Image (UDI)
 
@@ -171,16 +174,6 @@ Here is a full Quarkus devfile with UDI, Maven caching, endpoint definitions, an
 schemaVersion: 2.2.0
 metadata:
   name: quarkus-workspace
-attributes:
-  .vscode/extensions.json: |
-    {
-      "recommendations": [
-        "redhat.java",
-        "continue.continue",
-        "redhat.vscode-yaml",
-        "redhat.vscode-quarkus"
-      ]
-    }
 components:
   - name: development-tooling
     container:

@@ -10,8 +10,8 @@ Ensure all requirements are met before proceeding.
 
 === OpenShift Cluster
 
-You will need an OpenShift Single Node cluster for the labs.
-Order one from the https://catalog.demo.redhat.com/catalog?search=openshift&item=babylon-catalog-prod%2Fopenshift-cnv.ocpmulti-single-node-cnv.prod[Red Hat Demo Platform catalog] with the following options:
+You will need an OpenShift Container Platform cluster for the labs.
+Order a https://catalog.demo.redhat.com/catalog/babylon-catalog-prod/order/published.ocp4-cluster.prod[Red Hat OpenShift Container Platform Cluster (Multi-Cloud)] from the Red Hat Demo Platform with the following options:
 
 [cols="1,2",options="header"]
 |===
@@ -23,17 +23,23 @@ Order one from the https://catalog.demo.redhat.com/catalog?search=openshift&item
 | Purpose
 | Conduct internal training/enablement
 
-| Features
-| Enable Cert Manager
-
-| Cores
-| 32
-
-| Memory
-| 64
+| Cloud Provider
+| cnv
 
 | OpenShift Version
-| 4.18
+| 4.20
+
+| Cluster Size
+| multinode
+
+| OpenShift Worker Count
+| 3
+
+| Create Users on Cluster
+| 5
+
+| Enable OpenShift Lightspeed
+| Disabled
 |===
 
 IMPORTANT: Order your cluster *before* the lab begins -- provisioning can take up to 60 minutes.

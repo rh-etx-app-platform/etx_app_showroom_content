@@ -130,6 +130,8 @@ oc get checluster/devspaces -n openshift-devspaces \
   -o jsonpath='{.spec.devEnvironments.storage.pvcStrategy}'
 ----
 
+WARNING: Do not run these today. Just consider them a reference. 
+
 == Access the Dashboard
 
 Once the CheCluster is `Active`, get the dashboard URL:

@@ -18,28 +18,17 @@ Before creating a workspace, ensure:
 
 == Enable Nested Containers
 
-Nested containers require the `container-build` security context constraint (SCC).
-On OpenShift 4.18, apply the following to enable it cluster-wide in your CheCluster:
+Starting with Dev Spaces 3.25 on OpenShift 4.20+, nested containers work without special pod annotations or SCC configuration.
+See the https://docs.redhat.com/en/documentation/red_hat_openshift_dev_spaces/3.25/html/release_notes_and_known_issues/new-features[Dev Spaces 3.25 Release Notes] for details.
+
+Ensure `disableContainerRunCapabilities` is set to `false` in your CheCluster CR:
 
 [source,bash]
 ----
 oc patch checluster/devspaces -n openshift-devspaces \
   --type='merge' \
-  -p '{
-    "spec": {
-      "devEnvironments": {
-        "disableContainerRunCapabilities": false,
-        "workspacesPodAnnotations": {
-          "io.kubernetes.cri-o.Devices": "/dev/fuse"
-        }
-      }
-    }
-  }'
+  -p '{"spec":{"devEnvironments":{"disableContainerRunCapabilities":false}}}'
 ----
-
-This grants workspace pods access to `/dev/fuse` (required for fuse-overlayfs, the storage driver Podman uses in rootless mode).
-
-If you created the `container-storage-config` ConfigMap from the xref:day2-devspaces-integrations.adoc[integrations section], workspaces will automatically use fuse-overlayfs.
 
 == Create a Workspace from a Git Repository
 
@@ -97,11 +86,8 @@ Click the endpoint notification in the IDE or find the URL in the *Endpoints* pa
 
 == How Nested Containers Work
 
-When `disableContainerRunCapabilities: false` is set:
-
-* Workspace pods get the capabilities needed to run Podman in rootless mode
-* Podman runs containers as nested processes within the workspace pod
-* `/dev/fuse` access enables the fuse-overlayfs storage driver for efficient layer management
+When `disableContainerRunCapabilities: false` is set, workspace pods get the capabilities needed to run Podman in rootless mode.
+Podman runs containers as nested processes within the workspace pod.
 
 This is the same mechanism that enables `podman build` and `podman run` inside workspaces.
 Quarkus Dev Services uses Testcontainers under the hood, which calls Podman to start service containers (databases, message brokers, etc.).

@@ -7,7 +7,7 @@ In this section you will provision your lab environment, deploy Red Hat OpenShif
 
 == Provision the Lab Environment
 
-If you have not already done so on Day 1, order an OpenShift Single Node cluster from the https://catalog.demo.redhat.com/catalog?search=openshift&item=babylon-catalog-prod%2Fopenshift-cnv.ocpmulti-single-node-cnv.prod[Red Hat Demo Platform catalog] with the following options:
+If you have not already done so on Day 1, order a https://catalog.demo.redhat.com/catalog/babylon-catalog-prod/order/published.ocp4-cluster.prod[Red Hat OpenShift Container Platform Cluster (Multi-Cloud)] from the Red Hat Demo Platform with the following options:
 
 [cols="1,2",options="header"]
 |===
@@ -19,17 +19,23 @@ If you have not already done so on Day 1, order an OpenShift Single Node cluster
 | Purpose
 | Conduct internal training/enablement
 
-| Features
-| Enable Cert Manager
-
-| Cores
-| 32
-
-| Memory
-| 64
+| Cloud Provider
+| cnv
 
 | OpenShift Version
-| 4.18
+| 4.20
+
+| Cluster Size
+| multinode
+
+| OpenShift Worker Count
+| 3
+
+| Create Users on Cluster
+| 5
+
+| Enable OpenShift Lightspeed
+| Disabled
 |===
 
 Once your cluster is provisioned, log in and verify access:
