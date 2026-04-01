@@ -1,5 +1,28 @@
 * xref:index.adoc[What is Showroom?]
 
+.Day 1: Lab Setup & Git Foundations
+* xref:day1-requirements.adoc[Requirements & Environment Setup]
+* xref:day1-branching-strategies.adoc[Branching Strategies]
+
+.Day 2: Software Factory & Application Lifecycle
+** Lab 1: Software Factory
+* xref:day2-lab1-devspaces.adoc[Dev Spaces & IDE Setup]
+* xref:day2-lab1-supporting-services.adoc[Supporting Services]
+* xref:day2-lab1-ci-pipeline.adoc[CI Pipeline]
+* xref:day2-lab1-app-deployment.adoc[Application Deployment]
+** Lab 2: Application Modernization
+* xref:day2-lab2-mta.adoc[Application Modernization (MTA)]
+** Developer Hub
+* xref:day2-developer-hub.adoc[Developer Hub]
+* xref:day2-recap.adoc[Day 2 Recap]
+
+.Day 3: Trusted Software Supply Chain
+** Lab 3: TSSC
+* xref:day3-lab3-tssc-deploy.adoc[Deploy TSSC Components]
+* xref:day3-lab3-tas.adoc[Trusted Artifact Signer (TAS)]
+* xref:day3-lab3-tpa.adoc[Trusted Profile Analyzer (TPA)]
+* xref:day3-lab3-tssc-pipeline.adoc[TSSC Pipeline Exercise]
+
 .Content Developer Guide
 * xref:quick-start.adoc[Quick Start]
 * xref:content-repo.adoc[Creating a Content Repository]

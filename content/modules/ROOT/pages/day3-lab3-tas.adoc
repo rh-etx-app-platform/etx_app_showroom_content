@@ -1,0 +1,44 @@
+= Lab 3: Trusted Artifact Signer (TAS)
+:navtitle: Trusted Artifact Signer (TAS)
+
+== Overview
+
+Trusted Artifact Signer (TAS) provides keyless signing for container images and other software artifacts using Sigstore technologies: cosign, Fulcio, and Rekor.
+
+== Deploy TAS
+
+// TODO: Add TAS deployment steps (may reference existing TL3 content)
+
+== Configure TAS
+
+. Configure Fulcio as the certificate authority
+. Set up Rekor as the transparency log
+. Verify cosign can communicate with the TAS services
+
+// TODO: Add TAS configuration steps
+
+== Exercise: Sign a Container Image
+
+Sign the container image built in Lab 1 using cosign and TAS:
+
+[source,bash]
+----
+cosign sign --fulcio-url=<fulcio-url> --rekor-url=<rekor-url> <image-reference>
+----
+
+== Exercise: Verify a Signed Image
+
+Verify the signature of a signed container image:
+
+[source,bash]
+----
+cosign verify --rekor-url=<rekor-url> <image-reference>
+----
+
+== Summary
+
+You have deployed TAS and used it to sign and verify container images, establishing a foundation for supply chain integrity.
+
+== Next Steps
+
+Proceed to xref:day3-lab3-tpa.adoc[Trusted Profile Analyzer (TPA)].

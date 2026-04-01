@@ -1,0 +1,29 @@
+= Day 2 Recap
+:navtitle: Day 2 Recap
+
+== What You Built
+
+Over the course of Day 2, you assembled a complete Software Factory on OpenShift:
+
+=== Lab 1: Software Factory
+
+* *Dev Spaces* -- Cloud-based IDE with Git integration and AI Code Assistant
+* *Supporting Services* -- HashiCorp Vault for secrets, Tekton for CI, OpenTelemetry for observability
+* *CI Pipeline* -- Automated build, test, and push triggered by Git webhooks
+* *GitOps Deployment* -- Argo CD managing multi-environment application delivery
+
+=== Lab 2: Application Modernization
+
+* *MTA Analysis* -- Identified migration paths for a legacy Java application
+* *Red Hat Runtime* -- Adopted a supported runtime for the modernized application
+* *Pipeline Integration* -- Brought the modernized application into the existing CI/CD workflow
+
+=== Developer Hub
+
+* *Golden Path Templates* -- Standardized project creation
+* *Self-Service Portal* -- Unified developer experience across all tools
+
+== Looking Ahead to Day 3
+
+On Day 3, you will secure the software supply chain using the Trusted Software Supply Chain (TSSC) components: Trusted Artifact Signer (TAS) and Trusted Profile Analyzer (TPA).
+You will integrate these into the pipeline from Lab 1 to produce signed, attested, and verified software artifacts.

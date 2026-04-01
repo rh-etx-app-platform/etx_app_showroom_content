@@ -1,0 +1,80 @@
+= Lab Setup and Requirements
+:navtitle: Requirements & Environment Setup
+
+== Overview
+
+This initial setup session establishes the foundational environment used throughout the remaining labs on Day 2 and Day 3.
+Ensure all requirements are met before proceeding.
+
+== Requirements
+
+=== OpenShift Cluster
+
+You will need an OpenShift Single Node cluster for the labs.
+Order one from the https://catalog.demo.redhat.com/catalog?search=openshift&item=babylon-catalog-prod%2Fopenshift-cnv.ocpmulti-single-node-cnv.prod[Red Hat Demo Platform catalog] with the following options:
+
+[cols="1,2",options="header"]
+|===
+| Option | Value
+
+| Activity
+| Practice / Enablement
+
+| Purpose
+| Conduct internal training/enablement
+
+| Features
+| Enable Cert Manager
+
+| Cores
+| 32
+
+| Memory
+| 64
+
+| OpenShift Version
+| 4.18
+|===
+
+IMPORTANT: Order your cluster *before* the lab begins -- provisioning can take up to 60 minutes.
+Once provisioning is complete you will receive an email with your cluster credentials and console URL.
+
+=== Git Server Access
+
+* Access to the provided Git server instance
+* Repository permissions confirmed
+
+=== Laptop Setup
+
+* Git client installed and configured
+* Terminal or IDE with Git integration
+* SSH key or personal access token configured for the Git server
+
+== Environment Verification
+
+Verify your OpenShift cluster is accessible:
+
+[source,bash,subs="attributes"]
+----
+oc login --server=<your-api-url>
+oc whoami
+oc get nodes
+----
+
+Verify your Git client is installed:
+
+[source,bash,subs="attributes"]
+----
+git --version
+----
+
+Confirm you can authenticate to the Git server:
+
+[source,bash,subs="attributes"]
+----
+git clone <your-repo-url>
+----
+
+== Next Steps
+
+Once your environment is verified, proceed to xref:day1-branching-strategies.adoc[Branching Strategies].

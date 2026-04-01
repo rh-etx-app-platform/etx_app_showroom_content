@@ -1,0 +1,42 @@
+= Lab 2: Application Modernization with MTA
+:navtitle: Application Modernization (MTA)
+
+== Overview
+
+Use the Migration Toolkit for Applications (MTA) to analyze, migrate, and modernize a Java application.
+The modernized application will then be integrated into the CI pipeline you built in Lab 1.
+
+== Analyze the Application
+
+Run MTA analysis against the existing Java application to identify:
+
+* Migration issues and effort estimates
+* Mandatory code changes
+* Optional improvements and best practices
+
+// TODO: Add MTA analysis steps (CLI or web console)
+
+== Migrate and Modernize
+
+Apply the recommended changes to modernize the application:
+
+. Address mandatory migration issues identified by MTA
+. Update dependencies to use a Red Hat Runtime (e.g., Red Hat build of Quarkus, Spring Boot, or JBoss EAP)
+. Validate the application builds and passes tests
+
+// TODO: Add specific migration steps
+
+== Integrate with the CI Pipeline
+
+Bring the modernized application into the existing CI pipeline from Lab 1:
+
+. Push the updated source code to the Git repository
+. Verify the webhook triggers the pipeline
+. Confirm the pipeline builds, tests, and pushes the modernized application image
+. Verify Argo CD deploys the updated application
+
+// TODO: Add integration verification steps
+
+== Summary
+
+You have modernized a Java application using MTA, adopted a Red Hat Runtime, and integrated it into your existing CI/CD workflow.

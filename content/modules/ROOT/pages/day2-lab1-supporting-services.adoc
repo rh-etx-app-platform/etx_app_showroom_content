@@ -1,0 +1,48 @@
+= Lab 1: Deploy Supporting Services
+:navtitle: Supporting Services
+
+== Overview
+
+Deploy and configure the third-party and platform services required to support the CI/CD pipeline and application observability.
+
+== Deploy HashiCorp Vault
+
+Deploy Vault to manage secrets for your pipeline and application.
+
+// TODO: Add Vault deployment steps (Helm chart or Operator)
+
+=== Configure Vault
+
+. Initialize and unseal Vault
+. Enable the KV secrets engine
+. Create secrets for container registry authentication
+. Configure a Kubernetes authentication method
+
+// TODO: Add Vault configuration commands
+
+== Deploy Tekton Pipelines
+
+Install the OpenShift Pipelines operator (Tekton) to provide CI pipeline capabilities.
+
+// TODO: Add Tekton operator installation steps
+
+=== Verify Tekton Installation
+
+[source,bash]
+----
+oc get pods -n openshift-pipelines
+----
+
+== Deploy the OpenTelemetry Operator
+
+Install the OpenTelemetry (OTEL) Operator to enable distributed tracing and observability for your application.
+
+// TODO: Add OTEL Operator installation steps
+
+=== Configure the OpenTelemetry Collector
+
+// TODO: Add collector configuration
+
+== Next Steps
+
+With the supporting services in place, proceed to xref:day2-lab1-ci-pipeline.adoc[Application CI Pipeline].

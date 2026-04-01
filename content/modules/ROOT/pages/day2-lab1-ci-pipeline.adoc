@@ -1,0 +1,51 @@
+= Lab 1: Application CI Pipeline
+:navtitle: CI Pipeline
+
+== Overview
+
+Create a Tekton CI pipeline that builds your application, authenticates to the container registry using Vault secrets, pushes the image, and integrates with your Git server via webhooks.
+
+== Create the Pipeline
+
+Define a Tekton `Pipeline` resource with the following tasks:
+
+. Clone the source repository
+. Build the application
+. Run tests
+. Build and push the container image
+
+// TODO: Add pipeline YAML definition
+
+== Authenticate with Vault Secrets
+
+Configure the pipeline to retrieve registry credentials from Vault at runtime.
+
+// TODO: Add Vault secret retrieval task
+
+== Push the Image to the Registry
+
+Configure the build task to push the container image to the internal OpenShift registry or an external registry.
+
+// TODO: Add image push configuration
+
+== Create a Webhook
+
+Set up a webhook on the Git server to trigger the pipeline automatically on code changes.
+
+. Create an `EventListener` and `TriggerTemplate` in Tekton
+. Configure the webhook URL on the Git server
+. Test the integration by pushing a commit
+
+// TODO: Add webhook and trigger configuration
+
+== Verify the Pipeline
+
+Push a change to your repository and verify that:
+
+* The webhook triggers the pipeline
+* The pipeline runs all tasks successfully
+* The container image is available in the registry
+
+== Next Steps
+
+Proceed to xref:day2-lab1-app-deployment.adoc[Application Deployment with Argo CD].

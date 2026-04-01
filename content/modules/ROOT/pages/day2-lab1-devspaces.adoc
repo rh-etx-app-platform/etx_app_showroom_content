@@ -1,0 +1,92 @@
+= Lab 1: Dev Spaces and IDE Configuration
+:navtitle: Dev Spaces & IDE Setup
+
+== Overview
+
+In this section you will provision your lab environment, deploy Red Hat OpenShift Dev Spaces, and configure your development tools including Git integration and the AI Code Assistant.
+
+== Provision the Lab Environment
+
+If you have not already done so on Day 1, order an OpenShift Single Node cluster from the https://catalog.demo.redhat.com/catalog?search=openshift&item=babylon-catalog-prod%2Fopenshift-cnv.ocpmulti-single-node-cnv.prod[Red Hat Demo Platform catalog] with the following options:
+
+[cols="1,2",options="header"]
+|===
+| Option | Value
+
+| Activity
+| Practice / Enablement
+
+| Purpose
+| Conduct internal training/enablement
+
+| Features
+| Enable Cert Manager
+
+| Cores
+| 32
+
+| Memory
+| 64
+
+| OpenShift Version
+| 4.18
+|===
+
+Once your cluster is provisioned, log in and verify access:
+
+[source,bash,subs="attributes"]
+----
+oc login --server=<your-api-url>
+oc whoami
+oc get nodes
+----
+
+== Deploy Dev Spaces
+
+Deploy Red Hat OpenShift Dev Spaces into your OpenShift cluster.
+
+// TODO: Add Dev Spaces deployment steps
+
+== Configure the IDE and Git Integration
+
+Once Dev Spaces is running, configure your workspace:
+
+. Open Dev Spaces from the OpenShift console
+. Create a new workspace from your Git repository
+. Verify Git integration by checking the source control panel
+. Confirm you can commit and push changes from the IDE
+
+// TODO: Add detailed steps with screenshots
+
+== Configure AI Code Assistant
+
+Enable the AI Code Assistant within your Dev Spaces workspace to accelerate development.
+
+// TODO: Add AI Code Assistant configuration steps
+
+== Create a Dev File
+
+Create a `devfile.yaml` to define your workspace configuration, including:
+
+* Base container image
+* IDE plugins and extensions
+* Git repository sources
+* Resource limits
+
+[source,yaml]
+----
+schemaVersion: 2.2.0
+metadata:
+  name: my-workspace
+components:
+  - name: tools
+    container:
+      image: registry.redhat.io/devspaces/udi-rhel8
+      memoryLimit: 4Gi
+----
+
+// TODO: Expand devfile example for the specific lab application
+
+== Next Steps
+
+Proceed to xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services].

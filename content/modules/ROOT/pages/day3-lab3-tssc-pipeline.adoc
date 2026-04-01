@@ -1,0 +1,53 @@
+= Lab 3: End-to-End TSSC Pipeline
+:navtitle: TSSC Pipeline Exercise
+
+== Overview
+
+In this final exercise, you will integrate TAS and TPA into the CI/CD pipeline from Lab 1 to create a complete Trusted Software Supply Chain.
+The application will be built, signed, attested, analyzed, and deployed through a secured pipeline.
+
+== Integrate TSSC into the CI Pipeline
+
+Extend the Tekton pipeline from Lab 1 with TSSC tasks:
+
+. *Build* -- Build the application container image
+. *Generate SBOM* -- Produce an SBOM for the built image
+. *Sign* -- Sign the container image using TAS (cosign + Fulcio + Rekor)
+. *Attest* -- Create and sign an attestation for the build provenance
+. *Analyze* -- Submit the SBOM to TPA for vulnerability analysis
+. *Deploy* -- Deploy the verified, signed image via Argo CD
+
+// TODO: Add pipeline task definitions
+
+== Run the Secured Pipeline
+
+Trigger the pipeline by pushing a change to the application repository:
+
+[source,bash]
+----
+git commit --allow-empty -m "chore: trigger TSSC pipeline"
+git push
+----
+
+Monitor the pipeline run and verify each task completes successfully.
+
+// TODO: Add pipeline monitoring steps
+
+== Verify the Supply Chain
+
+Confirm the full supply chain is intact:
+
+. *Signature verification* -- Verify the deployed image is signed
+. *Attestation verification* -- Verify build provenance attestations exist
+. *SBOM analysis* -- Confirm TPA has a trust profile for the deployed image
+. *Transparency log* -- Verify the signing event is recorded in Rekor
+
+// TODO: Add verification commands
+
+== Summary
+
+You have completed the 3-day workshop. Your application now flows through a complete Software Factory with:
+
+* *Day 1* -- Git branching workflows and environment setup
+* *Day 2* -- Automated CI/CD with Dev Spaces, Tekton, Vault, Argo CD, and OpenTelemetry
+* *Day 3* -- Trusted Software Supply Chain with TAS signing, TPA analysis, and end-to-end attestation

@@ -1,0 +1,61 @@
+= Lab 1: Application Deployment with Argo CD
+:navtitle: Application Deployment
+
+== Overview
+
+Deploy and configure Red Hat OpenShift GitOps (Argo CD) to manage application deployments across environments using a GitOps workflow.
+
+== Deploy and Configure Argo CD
+
+. Install the OpenShift GitOps operator
+. Access the Argo CD dashboard
+. Connect Argo CD to your Git repository
+
+// TODO: Add Argo CD setup steps
+
+== Integrate Argo CD into the SDLC Process
+
+Configure Argo CD to work with your CI pipeline:
+
+* Argo CD monitors the GitOps repository for manifest changes
+* The CI pipeline updates image tags in the GitOps repository after a successful build
+* Argo CD automatically syncs the updated manifests to the cluster
+
+// TODO: Add integration configuration
+
+== Enable Auto Instrumentation
+
+Enable OpenTelemetry auto-instrumentation for the application so that traces and metrics are collected without code changes.
+
+// TODO: Add auto-instrumentation annotation or configuration
+
+== Promote the Application
+
+Promote the application from the development environment to a second environment:
+
+. Verify the application is running in the first environment
+. Update the GitOps repository to deploy to the second environment
+. Observe Argo CD syncing the deployment
+
+// TODO: Add promotion steps
+
+== Deploy to the Second Environment
+
+Confirm the application is running successfully in both environments:
+
+[source,bash]
+----
+oc get pods -n <second-environment>
+----
+
+// TODO: Add verification steps
+
+== Summary
+
+You have completed Lab 1. Your application now has:
+
+* A fully automated CI pipeline triggered by Git webhooks
+* Container images stored in the registry
+* GitOps-driven deployments managed by Argo CD
+* Observability instrumentation via OpenTelemetry
+* Multi-environment promotion workflow

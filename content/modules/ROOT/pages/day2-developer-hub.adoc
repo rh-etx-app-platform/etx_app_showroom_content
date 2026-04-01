@@ -1,0 +1,44 @@
+= Developer Hub
+:navtitle: Developer Hub
+
+== Overview
+
+Red Hat Developer Hub provides a self-service portal for developers, built on Backstage.
+In this section you will create a Golden Path template, integrate with Dev Spaces, and configure authentication.
+
+== Create a Golden Path Template
+
+A Golden Path defines a standardized, opinionated way to create new projects that follow organizational best practices.
+
+Your Golden Path template will include:
+
+* Pre-configured CI pipeline (Tekton)
+* GitOps repository structure for Argo CD
+* Dev Spaces devfile for consistent development environments
+* Observability configuration (OpenTelemetry)
+
+// TODO: Add Golden Path template creation steps
+
+== Integrate with Dev Spaces
+
+Configure Developer Hub to launch Dev Spaces workspaces directly from the catalog:
+
+. Register the Dev Spaces plugin
+. Configure the workspace URL template
+. Test launching a workspace from a catalog component
+
+// TODO: Add Dev Spaces integration steps
+
+== Configure Authentication
+
+Set up authentication for Developer Hub:
+
+. Configure an identity provider (e.g., OpenShift OAuth, RHSSO/Keycloak)
+. Define role-based access for catalog entities
+. Verify login and permissions
+
+// TODO: Add authentication configuration steps
+
+== Summary
+
+Developer Hub provides a self-service portal that ties together all the tools from the previous labs into a unified developer experience.

@@ -1,0 +1,45 @@
+= Lab 3: Trusted Profile Analyzer (TPA)
+:navtitle: Trusted Profile Analyzer (TPA)
+
+== Overview
+
+Trusted Profile Analyzer (TPA) ingests SBOMs (Software Bill of Materials) and vulnerability data to produce trust profiles for your software artifacts.
+It helps you understand the security posture of your software before and after deployment.
+
+== Deploy TPA
+
+// TODO: Add TPA deployment steps (may reference existing TL3 content)
+
+== Configure TPA
+
+. Configure SBOM ingestion sources
+. Set up vulnerability database feeds
+. Verify the TPA dashboard is accessible
+
+// TODO: Add TPA configuration steps
+
+== Exercise: Analyze an SBOM
+
+Generate an SBOM for the application built in Lab 1 and submit it to TPA for analysis:
+
+. Generate the SBOM during the CI pipeline build
+. Upload the SBOM to TPA
+. Review the trust profile and vulnerability findings in the TPA dashboard
+
+// TODO: Add SBOM generation and upload steps
+
+== Exercise: Review Vulnerability Data
+
+* Examine the vulnerability report for the application
+* Identify any critical or high-severity findings
+* Understand the remediation recommendations
+
+// TODO: Add vulnerability review walkthrough
+
+== Summary
+
+You have deployed TPA, analyzed your application's SBOM, and reviewed its vulnerability profile.
+
+== Next Steps
+
+Proceed to xref:day3-lab3-tssc-pipeline.adoc[End-to-End TSSC Pipeline] to bring everything together.

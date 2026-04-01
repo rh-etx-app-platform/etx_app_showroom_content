@@ -1,0 +1,39 @@
+= Lab 3: Deploy TSSC Components
+:navtitle: Deploy TSSC Components
+
+== Overview
+
+Deploy the Trusted Software Supply Chain (TSSC) components piece by piece onto your OpenShift cluster.
+TSSC provides cryptographic signing, attestation, and vulnerability analysis to secure your software delivery process.
+
+== Architecture
+
+The TSSC architecture consists of the following components:
+
+* *Trusted Artifact Signer (TAS)* -- Provides keyless code signing using Sigstore (cosign, Fulcio, Rekor)
+* *Trusted Profile Analyzer (TPA)* -- Analyzes SBOMs and vulnerability data to produce trust profiles for software artifacts
+
+// TODO: Add architecture diagram
+
+== Deploy TSSC
+
+Deploy the TSSC components step by step:
+
+. Install the TSSC operator
+. Verify the operator is running
+. Review the custom resources available
+
+// TODO: Add TSSC deployment steps
+
+== Verify the Deployment
+
+[source,bash]
+----
+oc get pods -n <tssc-namespace>
+----
+
+Confirm all TSSC components are running and healthy before proceeding to the individual component exercises.
+
+== Next Steps
+
+Proceed to xref:day3-lab3-tas.adoc[Trusted Artifact Signer (TAS)].
