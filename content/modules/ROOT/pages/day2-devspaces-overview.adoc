@@ -61,4 +61,4 @@ Each user gets an auto-provisioned namespace (`<username>-devspaces`) where thei
 
 == Next Steps
 
-Proceed to xref:day2-devspaces-install.adoc[Install & Configure Dev Spaces].
+Proceed to xref:day2-devspaces-install.adoc[Configure Dev Spaces].

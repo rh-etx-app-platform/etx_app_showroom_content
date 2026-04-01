@@ -3,95 +3,96 @@
 
 == Overview
 
-In this section you will provision your lab environment, deploy Red Hat OpenShift Dev Spaces, and configure your development tools including Git integration and the AI Code Assistant.
+In this lab you will create a Dev Spaces workspace for the Parasol Insurance application, verify Git integration, and confirm the AI Code Assistant is working.
 
-== Provision the Lab Environment
+== Prerequisites
 
-If you have not already done so on Day 1, order a https://catalog.demo.redhat.com/catalog/babylon-catalog-prod/order/published.ocp4-cluster.prod[Red Hat OpenShift Container Platform Cluster (Multi-Cloud)] from the Red Hat Demo Platform with the following options:
+Complete the following sections before starting this lab:
 
-[cols="1,2",options="header"]
-|===
-| Option | Value
+* xref:day2-cluster-setup.adoc[Cluster Setup] -- operator installed
+* xref:day2-devspaces-install.adoc[Configure Dev Spaces] -- CheCluster deployed and `Active`
+* xref:day2-devspaces-integrations.adoc[GitLab Integration & Shared Secrets] -- Git OAuth and LLM credentials configured
 
-| Activity
-| Practice / Enablement
+== Get the Dashboard URL
 
-| Purpose
-| Conduct internal training/enablement
-
-| Cloud Provider
-| cnv
-
-| OpenShift Version
-| 4.20
-
-| Cluster Size
-| multinode
-
-| OpenShift Worker Count
-| 3
-
-| Create Users on Cluster
-| 5
-
-| Enable OpenShift Lightspeed
-| Disabled
-|===
-
-Once your cluster is provisioned, log in and verify access:
-
-[source,bash,subs="attributes"]
+[source,bash]
 ----
-oc login --server=<your-api-url>
-oc whoami
-oc get nodes
+oc get checluster/devspaces -n openshift-devspaces \
+  -o jsonpath='{.status.cheURL}'
 ----
 
-== Deploy Dev Spaces
+Open this URL in your browser and log in with your OpenShift credentials.
 
-Deploy Red Hat OpenShift Dev Spaces into your OpenShift cluster.
+== Create the Lab Workspace
 
-// TODO: Add Dev Spaces deployment steps
+From the Dev Spaces dashboard, create a workspace for the Parasol Insurance application:
 
-== Configure the IDE and Git Integration
+. Click btn:[Create Workspace]
+. Paste the Git repository URL for the Parasol Insurance application
+. Click btn:[Create & Open]
 
-Once Dev Spaces is running, configure your workspace:
+Alternatively, construct the URL directly:
 
-. Open Dev Spaces from the OpenShift console
-. Create a new workspace from your Git repository
-. Verify Git integration by checking the source control panel
-. Confirm you can commit and push changes from the IDE
-
-// TODO: Add detailed steps with screenshots
-
-== Configure AI Code Assistant
-
-Enable the AI Code Assistant within your Dev Spaces workspace to accelerate development.
-
-// TODO: Add AI Code Assistant configuration steps
-
-== Create a Dev File
-
-Create a `devfile.yaml` to define your workspace configuration, including:
-
-* Base container image
-* IDE plugins and extensions
-* Git repository sources
-* Resource limits
-
-[source,yaml]
 ----
-schemaVersion: 2.2.0
-metadata:
-  name: my-workspace
-components:
-  - name: tools
-    container:
-      image: registry.redhat.io/devspaces/udi-rhel8
-      memoryLimit: 4Gi
+https://<devspaces_dashboard_url>/#https://<gitlab_host>/parasol-insurance
 ----
 
-// TODO: Expand devfile example for the specific lab application
+Dev Spaces will clone the repository, read the `devfile.yaml`, pull the container image, and open the VS Code IDE in your browser.
+
+NOTE: The first workspace creation may take a few minutes while the container image is pulled to the node.
+
+== Verify Git Integration
+
+Once the workspace opens:
+
+. Open the *Source Control* panel (Ctrl+Shift+G)
+. Confirm the repository is loaded and shows the correct branch
+. If prompted to authenticate with GitLab, follow the OAuth flow -- this is the integration configured in the xref:day2-devspaces-integrations.adoc[GitLab Integration] section
+
+Test that you can push changes:
+
+. Create or edit a file (e.g. add a comment to `README.md`)
+. Stage, commit, and push the change from the Source Control panel
+. Verify the commit appears in GitLab
+
+== Verify the AI Code Assistant
+
+Open a terminal in the workspace and confirm the LLM environment variables are set:
+
+[source,bash]
+----
+echo $LLM_API_KEY
+echo $LLM_BASE_URL
+----
+
+Both should return values injected by the shared secret configured in the xref:day2-devspaces-integrations.adoc[Shared Secrets] section.
+
+Check that the Continue extension is configured:
+
+. Open the Continue panel in the sidebar (the Continue icon)
+. Send a test message such as "Hello, what model are you?"
+. Confirm you receive a response from the qwen3 model
+
+If Continue does not appear, check that the `postStart` event ran successfully:
+
+[source,bash]
+----
+cat ~/.continue/config.yaml
+----
+
+The file should contain the model configuration with your API key and base URL.
+
+== Verify Nested Containers
+
+Confirm Podman is available inside the workspace:
+
+[source,bash]
+----
+podman version
+podman run --rm registry.access.redhat.com/ubi9-minimal:latest echo "Nested containers work"
+----
+
+This capability is required for Quarkus Dev Services in later steps.
 
 == Next Steps
 

@@ -10,25 +10,11 @@ For this to work in Dev Spaces, the workspace needs the ability to run container
 
 == Prerequisites
 
-Before creating a workspace, ensure:
+Before creating a workspace, ensure you have completed:
 
-* The Dev Spaces operator is installed and the CheCluster is `Active`
-* `disableContainerRunCapabilities` is set to `false` in the CheCluster CR (covered in the install section)
-* GitLab OAuth is configured (if using a GitLab-hosted repo)
-
-== Enable Nested Containers
-
-Starting with Dev Spaces 3.25 on OpenShift 4.20+, nested containers work without special pod annotations or SCC configuration.
-See the https://docs.redhat.com/en/documentation/red_hat_openshift_dev_spaces/3.25/html/release_notes_and_known_issues/new-features[Dev Spaces 3.25 Release Notes] for details.
-
-Ensure `disableContainerRunCapabilities` is set to `false` in your CheCluster CR:
-
-[source,bash]
-----
-oc patch checluster/devspaces -n openshift-devspaces \
-  --type='merge' \
-  -p '{"spec":{"devEnvironments":{"disableContainerRunCapabilities":false}}}'
-----
+* xref:day2-cluster-setup.adoc[Cluster Setup] -- operator installed
+* xref:day2-devspaces-install.adoc[Configure Dev Spaces] -- CheCluster is `Active` with `disableContainerRunCapabilities: false`
+* xref:day2-devspaces-integrations.adoc[GitLab Integration & Shared Secrets] -- OAuth configured (if using a GitLab-hosted repo)
 
 == Create a Workspace from a Git Repository
 
@@ -85,6 +71,9 @@ The application will be available on port 8080.
 Click the endpoint notification in the IDE or find the URL in the *Endpoints* panel.
 
 == How Nested Containers Work
+
+Starting with Dev Spaces 3.25 on OpenShift 4.20+, nested containers work without special pod annotations or SCC configuration.
+See the https://docs.redhat.com/en/documentation/red_hat_openshift_dev_spaces/3.25/html/release_notes_and_known_issues/new-features[Dev Spaces 3.25 Release Notes] for details.
 
 When `disableContainerRunCapabilities: false` is set, workspace pods get the capabilities needed to run Podman in rootless mode.
 Podman runs containers as nested processes within the workspace pod.

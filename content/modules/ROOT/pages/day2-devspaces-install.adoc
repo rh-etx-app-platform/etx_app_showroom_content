@@ -1,31 +1,5 @@
-= Install and Configure Dev Spaces
-:navtitle: Install & Configure Dev Spaces
-
-== Install the Operator
-
-=== Create the Namespace
-
-[source,bash]
-----
-oc create namespace openshift-devspaces
-----
-
-=== Install via OperatorHub
-
-. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
-. Search for *Red Hat OpenShift Dev Spaces*
-. Click btn:[Install]
-. Accept the defaults (All namespaces, Automatic approval) and click btn:[Install]
-. Wait for the operator to reach the `Succeeded` phase
-
-Verify from the CLI:
-
-[source,bash]
-----
-oc get csv -n openshift-operators | grep devspaces
-----
-
-The DevWorkspace Operator is installed automatically as a dependency.
+= Configure Dev Spaces
+:navtitle: Configure Dev Spaces
 
 == Create the CheCluster
 

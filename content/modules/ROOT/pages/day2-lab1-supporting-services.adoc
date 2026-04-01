@@ -3,46 +3,257 @@
 
 == Overview
 
-Deploy and configure the third-party and platform services required to support the CI/CD pipeline and application observability.
+Deploy and configure the platform services required by the CI/CD pipeline and application observability: HashiCorp Vault for secrets management, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
 
 == Deploy HashiCorp Vault
 
-Deploy Vault to manage secrets for your pipeline and application.
+Vault provides centralized secrets management.
+The pipeline will retrieve container registry credentials from Vault at runtime instead of storing them in Kubernetes Secrets.
 
-// TODO: Add Vault deployment steps (Helm chart or Operator)
+=== Install Vault via Helm
+
+Add the HashiCorp Helm repository and install Vault in standalone mode:
+
+[source,bash]
+----
+helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo update
+----
+
+Create a namespace and install:
+
+[source,bash]
+----
+oc new-project vault
+
+helm install vault hashicorp/vault \
+  --namespace vault \
+  --set "global.openshift=true" \
+  --set "server.dev.enabled=true" \  # <1>
+  --set "injector.enabled=false"
+----
+<1> Dev mode runs Vault unsealed with an in-memory backend. This is suitable for labs only -- never use dev mode in production.
+
+Wait for the pod to be ready:
+
+[source,bash]
+----
+oc get pods -n vault -w
+----
 
 === Configure Vault
 
-. Initialize and unseal Vault
-. Enable the KV secrets engine
-. Create secrets for container registry authentication
-. Configure a Kubernetes authentication method
+Exec into the Vault pod to configure secrets and authentication:
 
-// TODO: Add Vault configuration commands
+[source,bash]
+----
+oc exec -it vault-0 -n vault -- /bin/sh
+----
 
-== Deploy Tekton Pipelines
+Enable the KV v2 secrets engine and store registry credentials:
 
-Install the OpenShift Pipelines operator (Tekton) to provide CI pipeline capabilities.
+[source,bash]
+----
+vault secrets enable -path=secret kv-v2
 
-// TODO: Add Tekton operator installation steps
+vault kv put secret/registry \
+  username=<registry_username> \
+  password=<registry_password> \
+  server=<registry_server>
+----
 
-=== Verify Tekton Installation
+=== Configure Kubernetes Authentication
+
+Enable the Kubernetes auth method so that pipeline ServiceAccounts can authenticate to Vault:
+
+[source,bash]
+----
+vault auth enable kubernetes
+
+vault write auth/kubernetes/config \
+  kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443"
+
+vault policy write pipeline-read - <<EOF
+path "secret/data/registry" {
+  capabilities = ["read"]
+}
+EOF
+
+vault write auth/kubernetes/role/pipeline \
+  bound_service_account_names=pipeline \
+  bound_service_account_namespaces=<your_namespace> \
+  policies=pipeline-read \
+  ttl=1h
+----
+
+Type `exit` to leave the Vault pod.
+
+=== Verify Vault
+
+Confirm you can read the secret from outside the pod:
+
+[source,bash]
+----
+oc exec vault-0 -n vault -- vault kv get secret/registry
+----
+
+== Install OpenShift Pipelines (Tekton)
+
+OpenShift Pipelines provides the Tekton-based CI engine used to build, test, and push container images.
+
+=== Install via OperatorHub
+
+. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Search for *Red Hat OpenShift Pipelines*
+. Click btn:[Install]
+. Accept the defaults and click btn:[Install]
+. Wait for the operator to reach the `Succeeded` phase
+
+Verify from the CLI:
+
+[source,bash]
+----
+oc get csv -n openshift-operators | grep pipelines
+----
+
+=== Verify Tekton Components
+
+Confirm the Tekton controller pods are running:
 
 [source,bash]
 ----
 oc get pods -n openshift-pipelines
 ----
 
-== Deploy the OpenTelemetry Operator
+You should see pods for `tekton-pipelines-controller`, `tekton-triggers-controller`, and related components.
 
-Install the OpenTelemetry (OTEL) Operator to enable distributed tracing and observability for your application.
+Verify the `tkn` CLI is available in your Dev Spaces workspace:
 
-// TODO: Add OTEL Operator installation steps
+[source,bash]
+----
+tkn version
+----
 
-=== Configure the OpenTelemetry Collector
+NOTE: The `tkn` CLI is included in the Universal Developer Image (UDI).
 
-// TODO: Add collector configuration
+== Install the OpenTelemetry Operator
+
+The OpenTelemetry Operator manages the deployment of OpenTelemetry Collectors for distributed tracing and metrics collection.
+
+=== Install via OperatorHub
+
+. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Search for *Red Hat build of OpenTelemetry*
+. Click btn:[Install]
+. Accept the defaults and click btn:[Install]
+. Wait for the operator to reach the `Succeeded` phase
+
+Verify from the CLI:
+
+[source,bash]
+----
+oc get csv -n openshift-operators | grep opentelemetry
+----
+
+=== Deploy an OpenTelemetry Collector
+
+Create a collector instance in your application namespace.
+This collector will receive traces from instrumented applications and export them to the cluster's tracing backend:
+
+[source,yaml]
+----
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel-collector
+  namespace: <your_namespace>
+spec:
+  mode: deployment
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      batch: {}
+    exporters:
+      otlp:
+        endpoint: "tempo-distributor.tempo:4317" # <1>
+        tls:
+          insecure: true
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp]
+----
+<1> Adjust the exporter endpoint to match your tracing backend (e.g. Tempo, Jaeger).
+
+Apply it:
+
+[source,bash]
+----
+oc apply -f otel-collector.yaml
+----
+
+Verify the collector pod is running:
+
+[source,bash]
+----
+oc get pods -l app.kubernetes.io/name=otel-collector-collector -n <your_namespace>
+----
+
+=== Enable Auto-Instrumentation
+
+Create an `Instrumentation` resource to enable automatic trace injection for Java applications:
+
+[source,yaml]
+----
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: java-instrumentation
+  namespace: <your_namespace>
+spec:
+  exporter:
+    endpoint: http://otel-collector-collector:4317
+  propagators:
+    - tracecontext
+    - baggage
+  java:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:latest
+----
+
+Apply it:
+
+[source,bash]
+----
+oc apply -f java-instrumentation.yaml
+----
+
+To instrument a deployment, add the following annotation to its pod template:
+
+[source,yaml]
+----
+metadata:
+  annotations:
+    instrumentation.opentelemetry.io/inject-java: "true"
+----
+
+This will be used when deploying the application in xref:day2-lab1-app-deployment.adoc[Application Deployment].
+
+== Summary
+
+You now have the following services deployed:
+
+* *Vault* -- secrets management with Kubernetes authentication for pipeline access
+* *OpenShift Pipelines* -- Tekton CI engine ready to run pipelines
+* *OpenTelemetry* -- collector and auto-instrumentation configured for distributed tracing
 
 == Next Steps
 
-With the supporting services in place, proceed to xref:day2-lab1-ci-pipeline.adoc[Application CI Pipeline].
+Proceed to xref:day2-lab1-ci-pipeline.adoc[CI Pipeline] to build the application pipeline.
