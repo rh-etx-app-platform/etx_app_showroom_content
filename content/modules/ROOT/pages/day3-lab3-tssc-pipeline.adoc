@@ -3,46 +3,43 @@
 
 == Overview
 
-In this final exercise, you will integrate TAS and TPA into the CI/CD pipeline from Lab 1 to create a complete Trusted Software Supply Chain.
-The application will be built, signed, attested, analyzed, and deployed through a secured pipeline.
+In this final exercise, you will complete the end-to-end RHADS module that ties together everything from the previous sections.
+The application from Lab 1 will be deployed through the full production-ready development lifecycle with TSSC integrated at every stage.
 
-== Integrate TSSC into the CI Pipeline
+== RHADS End-to-End: Production-Ready Development Lifecycle (Module 10)
 
-Extend the Tekton pipeline from Lab 1 with TSSC tasks:
+Complete *Module 10: RHADS End-to-End: Production-Ready Development Lifecycle* in the TL3 lab.
 
-. *Build* -- Build the application container image
-. *Generate SBOM* -- Produce an SBOM for the built image
-. *Sign* -- Sign the container image using TAS (cosign + Fulcio + Rekor)
-. *Attest* -- Create and sign an attestation for the build provenance
-. *Analyze* -- Submit the SBOM to TPA for vulnerability analysis
-. *Deploy* -- Deploy the verified, signed image via Argo CD
+This module demonstrates the complete developer workflow:
 
-// TODO: Add pipeline task definitions
+* Template-based project creation
+* CI/CD pipeline execution with signing and attestation
+* Promotion from development through staging to production
+* Verification of supply chain integrity at each stage
 
-== Run the Secured Pipeline
+== Integrate with Lab 1
 
-Trigger the pipeline by pushing a change to the application repository:
+After completing Module 10, apply what you have learned to the application from Lab 1:
 
+. Extend the Tekton pipeline from Lab 1 with TSSC tasks:
+* *Generate SBOM* -- Produce an SBOM for the built image
+* *Sign* -- Sign the container image using TAS (cosign + Fulcio + Rekor)
+* *Attest* -- Create and sign an attestation for the build provenance
+* *Analyze* -- Submit the SBOM to TPA for vulnerability analysis
+
+. Trigger the pipeline by pushing a change to the application repository:
++
 [source,bash]
 ----
 git commit --allow-empty -m "chore: trigger TSSC pipeline"
 git push
 ----
 
-Monitor the pipeline run and verify each task completes successfully.
-
-// TODO: Add pipeline monitoring steps
-
-== Verify the Supply Chain
-
-Confirm the full supply chain is intact:
-
-. *Signature verification* -- Verify the deployed image is signed
-. *Attestation verification* -- Verify build provenance attestations exist
-. *SBOM analysis* -- Confirm TPA has a trust profile for the deployed image
-. *Transparency log* -- Verify the signing event is recorded in Rekor
-
-// TODO: Add verification commands
+. Verify the full supply chain is intact:
+* *Signature verification* -- Verify the deployed image is signed
+* *Attestation verification* -- Verify build provenance attestations exist
+* *SBOM analysis* -- Confirm TPA has a trust profile for the deployed image
+* *Transparency log* -- Verify the signing event is recorded in Rekor
 
 == Summary
 

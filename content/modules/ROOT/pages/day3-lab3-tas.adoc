@@ -5,40 +5,35 @@
 
 Trusted Artifact Signer (TAS) provides keyless signing for container images and other software artifacts using Sigstore technologies: cosign, Fulcio, and Rekor.
 
-== Deploy TAS
+In this section you will complete the TAS-focused modules from the TL3 lab, covering security best practices, attestations, and policy enforcement.
 
-// TODO: Add TAS deployment steps (may reference existing TL3 content)
+== Security Best Practices (Module 7)
 
-== Configure TAS
+Complete *Module 7: Getting Started with Security Best Practices* in the TL3 lab.
 
-. Configure Fulcio as the certificate authority
-. Set up Rekor as the transparency log
-. Verify cosign can communicate with the TAS services
+This module covers:
 
-// TODO: Add TAS configuration steps
+* Keyless signing technology fundamentals
+* Signing container images with cosign
+* Verifying commit signatures
+* Tracking build provenance
+* Generating SBOMs
 
-== Exercise: Sign a Container Image
+== Attestations, Tekton Chains & Enterprise Contract (Module 9)
 
-Sign the container image built in Lab 1 using cosign and TAS:
+Complete *Module 9: Attestations, Tekton Chains & Enterprise Contract with TAS* in the TL3 lab.
 
-[source,bash]
-----
-cosign sign --fulcio-url=<fulcio-url> --rekor-url=<rekor-url> <image-reference>
-----
+This module covers:
 
-== Exercise: Verify a Signed Image
-
-Verify the signature of a signed container image:
-
-[source,bash]
-----
-cosign verify --rekor-url=<rekor-url> <image-reference>
-----
+* Pipeline attestations with Tekton Chains
+* Conforma (Enterprise Contract) policy configuration
+* Admission controllers using Sigstore and RHACS
+* Policy enforcement mechanisms
 
 == Summary
 
-You have deployed TAS and used it to sign and verify container images, establishing a foundation for supply chain integrity.
+You have practiced signing artifacts, verifying signatures, creating attestations, and enforcing policies using TAS.
 
 == Next Steps
 
-Proceed to xref:day3-lab3-tpa.adoc[Trusted Profile Analyzer (TPA)].
+Proceed to xref:day3-lab3-tpa.adoc[Trusted Profile Analyzer (TPA) Exercises].

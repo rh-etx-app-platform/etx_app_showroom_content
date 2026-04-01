@@ -6,6 +6,18 @@
 Deploy the Trusted Software Supply Chain (TSSC) components piece by piece onto your OpenShift cluster.
 TSSC provides cryptographic signing, attestation, and vulnerability analysis to secure your software delivery process.
 
+The exercises in Day 3 use the existing Red Hat Advanced Developer Suite (RHADS) TL3 enablement content.
+You will provision a dedicated lab environment and complete selected modules that cover TPA and TAS setup.
+
+== Provision the TL3 Lab Environment
+
+Order the https://catalog.demo.redhat.com/catalog?search=tl3&item=babylon-catalog-prod%2Fpert.redhat-rhads.prod[Product Enablement: Red Hat Advanced Developer Suite (TL3)] from the Red Hat Demo Platform catalog.
+
+IMPORTANT: Provisioning can take up to 60 minutes.
+Order your environment early so it is ready when you reach Day 3.
+
+Once provisioned you will receive an email with credentials and access instructions for the TL3 lab environment. You will complete a specific set of modules using the lab environment, outlined below.
+
 == Architecture
 
 The TSSC architecture consists of the following components:
@@ -13,27 +25,26 @@ The TSSC architecture consists of the following components:
 * *Trusted Artifact Signer (TAS)* -- Provides keyless code signing using Sigstore (cosign, Fulcio, Rekor)
 * *Trusted Profile Analyzer (TPA)* -- Analyzes SBOMs and vulnerability data to produce trust profiles for software artifacts
 
-// TODO: Add architecture diagram
+== Deploy TPA (Module 3)
 
-== Deploy TSSC
+Complete *Module 3: Setup Trusted Profile Analyzer* in the TL3 lab.
 
-Deploy the TSSC components step by step:
+This module walks you through deploying and configuring TPA on OpenShift, including:
 
-. Install the TSSC operator
-. Verify the operator is running
-. Review the custom resources available
+* Installing the TPA operator
+* Configuring the TPA instance
+* Verifying the deployment
 
-// TODO: Add TSSC deployment steps
+== Deploy TAS (Module 4)
 
-== Verify the Deployment
+Complete *Module 4: Setup Trusted Artifact Signer* in the TL3 lab.
 
-[source,bash]
-----
-oc get pods -n <tssc-namespace>
-----
+This module covers deploying TAS on OpenShift, including:
 
-Confirm all TSSC components are running and healthy before proceeding to the individual component exercises.
+* Installing the TAS operator
+* Configuring Fulcio, Rekor, and cosign
+* Verifying the deployment
 
 == Next Steps
 
-Proceed to xref:day3-lab3-tas.adoc[Trusted Artifact Signer (TAS)].
+With both TPA and TAS deployed, proceed to xref:day3-lab3-tas.adoc[Trusted Artifact Signer (TAS) Exercises].
