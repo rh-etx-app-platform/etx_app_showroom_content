@@ -3,48 +3,323 @@
 
 == Overview
 
-Create a Tekton CI pipeline that builds your application, authenticates to the container registry using Vault secrets, pushes the image, and integrates with your Git server via webhooks.
+Create a Tekton CI pipeline that clones your application source, builds and tests it, retrieves registry credentials from Vault, and pushes the container image.
+Then wire up Tekton Triggers to fire the pipeline automatically when code is pushed to GitLab.
+
+== Pipeline Workspace and ServiceAccount
+
+Create a workspace PVC and a ServiceAccount for the pipeline:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pipeline-workspace-pvc
+  namespace: <your_namespace>
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pipeline
+  namespace: <your_namespace>
+----
+
+Apply them:
+
+[source,bash]
+----
+oc apply -f pipeline-workspace.yaml
+----
+
+== Retrieve Registry Credentials from Vault
+
+Create a Tekton Task that authenticates to Vault using the Kubernetes auth method configured in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section and writes registry credentials to the workspace:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: vault-fetch-registry-creds
+  namespace: <your_namespace>
+spec:
+  workspaces:
+    - name: source
+  results:
+    - name: registry-server
+    - name: registry-username
+    - name: registry-password
+  steps:
+    - name: fetch
+      image: quay.io/curl/curl:latest
+      script: |
+        #!/bin/sh
+        set -e
+
+        # Authenticate to Vault using ServiceAccount token
+        VAULT_ADDR="http://vault.vault.svc:8200"
+        SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+
+        VAULT_TOKEN=$(curl -s --request POST \
+          "${VAULT_ADDR}/v1/auth/kubernetes/login" \
+          --data "{\"role\":\"pipeline\",\"jwt\":\"${SA_TOKEN}\"}" \
+          | grep -o '"client_token":"[^"]*"' | cut -d'"' -f4)
+
+        # Fetch registry credentials
+        CREDS=$(curl -s --header "X-Vault-Token: ${VAULT_TOKEN}" \
+          "${VAULT_ADDR}/v1/secret/data/registry")
+
+        echo "${CREDS}" | grep -o '"server":"[^"]*"' | cut -d'"' -f4 \
+          | tr -d '\n' > $(results.registry-server.path)
+        echo "${CREDS}" | grep -o '"username":"[^"]*"' | cut -d'"' -f4 \
+          | tr -d '\n' > $(results.registry-username.path)
+        echo "${CREDS}" | grep -o '"password":"[^"]*"' | cut -d'"' -f4 \
+          | tr -d '\n' > $(results.registry-password.path)
+----
 
 == Create the Pipeline
 
-Define a Tekton `Pipeline` resource with the following tasks:
+Define the CI pipeline with four tasks: clone, build/test, fetch credentials, and build/push the container image:
 
-. Clone the source repository
-. Build the application
-. Run tests
-. Build and push the container image
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: parasol-ci
+  namespace: <your_namespace>
+spec:
+  params:
+    - name: git-url
+      type: string
+    - name: git-revision
+      type: string
+      default: main
+    - name: image-name
+      type: string
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: clone
+      taskRef:
+        name: git-clone
+        kind: ClusterTask
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-revision)
+      workspaces:
+        - name: output
+          workspace: shared-workspace
 
-// TODO: Add pipeline YAML definition
+    - name: build-and-test
+      runAfter: [clone]
+      taskRef:
+        name: maven
+        kind: ClusterTask
+      params:
+        - name: GOALS
+          value: ["package", "-DskipTests=false"]
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+        - name: maven-settings
+          workspace: shared-workspace
 
-== Authenticate with Vault Secrets
+    - name: fetch-creds
+      runAfter: [clone]
+      taskRef:
+        name: vault-fetch-registry-creds
+      workspaces:
+        - name: source
+          workspace: shared-workspace
 
-Configure the pipeline to retrieve registry credentials from Vault at runtime.
+    - name: build-image
+      runAfter: [build-and-test, fetch-creds]
+      taskRef:
+        name: buildah
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: $(params.image-name):$(params.git-revision)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+----
 
-// TODO: Add Vault secret retrieval task
+NOTE: `git-clone`, `maven`, and `buildah` are ClusterTasks provided by OpenShift Pipelines. Run `tkn clustertask list` to verify they are available.
 
-== Push the Image to the Registry
+Apply the tasks and pipeline:
 
-Configure the build task to push the container image to the internal OpenShift registry or an external registry.
+[source,bash]
+----
+oc apply -f vault-fetch-task.yaml
+oc apply -f parasol-ci-pipeline.yaml
+----
 
-// TODO: Add image push configuration
+== Test the Pipeline Manually
 
-== Create a Webhook
+Run the pipeline once to verify it works before adding webhooks:
 
-Set up a webhook on the Git server to trigger the pipeline automatically on code changes.
+[source,bash]
+----
+tkn pipeline start parasol-ci \
+  --param git-url=https://<gitlab_host>/parasol-insurance \
+  --param git-revision=main \
+  --param image-name=image-registry.openshift-image-registry.svc:5000/<your_namespace>/parasol-insurance \
+  --workspace name=shared-workspace,claimName=pipeline-workspace-pvc \
+  --serviceaccount pipeline \
+  --showlog
+----
 
-. Create an `EventListener` and `TriggerTemplate` in Tekton
-. Configure the webhook URL on the Git server
-. Test the integration by pushing a commit
+Watch the logs to confirm all tasks complete successfully.
 
-// TODO: Add webhook and trigger configuration
+== Set Up Webhooks with Tekton Triggers
+
+Create the trigger resources so the pipeline runs automatically when code is pushed to GitLab.
+
+=== TriggerBinding
+
+Maps fields from the GitLab webhook payload to pipeline parameters:
+
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: gitlab-push-binding
+  namespace: <your_namespace>
+spec:
+  params:
+    - name: git-url
+      value: $(body.repository.git_http_url)
+    - name: git-revision
+      value: $(body.checkout_sha)
+----
+
+=== TriggerTemplate
+
+Creates a PipelineRun when triggered:
+
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: gitlab-push-template
+  namespace: <your_namespace>
+spec:
+  params:
+    - name: git-url
+    - name: git-revision
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: parasol-ci-
+      spec:
+        pipelineRef:
+          name: parasol-ci
+        params:
+          - name: git-url
+            value: $(tt.params.git-url)
+          - name: git-revision
+            value: $(tt.params.git-revision)
+          - name: image-name
+            value: image-registry.openshift-image-registry.svc:5000/<your_namespace>/parasol-insurance
+        workspaces:
+          - name: shared-workspace
+            persistentVolumeClaim:
+              claimName: pipeline-workspace-pvc
+        taskRunTemplate:
+          serviceAccountName: pipeline
+----
+
+=== EventListener
+
+Exposes an HTTP endpoint that GitLab can send webhooks to:
+
+[source,yaml]
+----
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: gitlab-listener
+  namespace: <your_namespace>
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: gitlab-push
+      bindings:
+        - ref: gitlab-push-binding
+      template:
+        ref: gitlab-push-template
+----
+
+Apply all trigger resources:
+
+[source,bash]
+----
+oc apply -f trigger-binding.yaml
+oc apply -f trigger-template.yaml
+oc apply -f event-listener.yaml
+----
+
+=== Expose the EventListener
+
+Create a route so GitLab can reach the EventListener:
+
+[source,bash]
+----
+oc expose svc el-gitlab-listener -n <your_namespace>
+----
+
+Get the webhook URL:
+
+[source,bash]
+----
+echo "$(oc get route el-gitlab-listener -n <your_namespace> -o jsonpath='{.spec.host}')"
+----
+
+=== Configure GitLab
+
+. In GitLab, go to your repository's menu:Settings[Webhooks]
+. Add a new webhook:
+  * *URL*: `http://<event_listener_route>`
+  * *Trigger*: Push events
+  * *SSL verification*: Disable (for lab environments)
+. Click btn:[Add webhook]
+. Click btn:[Test] and select *Push events* to send a test payload
 
 == Verify the Pipeline
 
-Push a change to your repository and verify that:
+Push a change to your repository and confirm:
 
-* The webhook triggers the pipeline
-* The pipeline runs all tasks successfully
-* The container image is available in the registry
+[source,bash]
+----
+# Check for new pipeline runs
+tkn pipelinerun list -n <your_namespace>
+
+# Follow the latest run
+tkn pipelinerun logs -f -n <your_namespace>
+----
+
+Verify the image was pushed:
+
+[source,bash]
+----
+oc get imagestream parasol-insurance -n <your_namespace>
+----
+
+You should see the image tagged with the commit SHA.
 
 == Next Steps
 

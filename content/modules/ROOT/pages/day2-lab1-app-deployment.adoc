@@ -3,59 +3,311 @@
 
 == Overview
 
-Deploy and configure Red Hat OpenShift GitOps (Argo CD) to manage application deployments across environments using a GitOps workflow.
+Deploy Red Hat OpenShift GitOps (Argo CD) to manage application deployments using a GitOps workflow.
+The CI pipeline from the previous section pushes container images; Argo CD watches a GitOps repository and syncs Kubernetes manifests to the cluster.
 
-== Deploy and Configure Argo CD
+== Install OpenShift GitOps
 
-. Install the OpenShift GitOps operator
-. Access the Argo CD dashboard
-. Connect Argo CD to your Git repository
+=== Install via OperatorHub
 
-// TODO: Add Argo CD setup steps
+. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Search for *Red Hat OpenShift GitOps*
+. Click btn:[Install]
+. Accept the defaults and click btn:[Install]
+. Wait for the operator to reach the `Succeeded` phase
 
-== Integrate Argo CD into the SDLC Process
-
-Configure Argo CD to work with your CI pipeline:
-
-* Argo CD monitors the GitOps repository for manifest changes
-* The CI pipeline updates image tags in the GitOps repository after a successful build
-* Argo CD automatically syncs the updated manifests to the cluster
-
-// TODO: Add integration configuration
-
-== Enable Auto Instrumentation
-
-Enable OpenTelemetry auto-instrumentation for the application so that traces and metrics are collected without code changes.
-
-// TODO: Add auto-instrumentation annotation or configuration
-
-== Promote the Application
-
-Promote the application from the development environment to a second environment:
-
-. Verify the application is running in the first environment
-. Update the GitOps repository to deploy to the second environment
-. Observe Argo CD syncing the deployment
-
-// TODO: Add promotion steps
-
-== Deploy to the Second Environment
-
-Confirm the application is running successfully in both environments:
+Verify from the CLI:
 
 [source,bash]
 ----
-oc get pods -n <second-environment>
+oc get csv -n openshift-operators | grep gitops
 ----
 
-// TODO: Add verification steps
+The operator creates an Argo CD instance in the `openshift-gitops` namespace automatically.
+
+=== Access the Argo CD Dashboard
+
+Get the Argo CD route:
+
+[source,bash]
+----
+oc get route openshift-gitops-server -n openshift-gitops \
+  -o jsonpath='{.spec.host}'
+----
+
+Get the default admin password:
+
+[source,bash]
+----
+oc get secret openshift-gitops-cluster -n openshift-gitops \
+  -o jsonpath='{.data.admin\.password}' | base64 -d
+----
+
+Log in with username `admin` and the password above.
+
+== Prepare the GitOps Repository
+
+Create a GitOps repository in GitLab with the following structure.
+This repository holds the Kubernetes manifests that Argo CD will sync:
+
+----
+parasol-gitops/
+├── environments/
+│   ├── dev/
+│   │   ├── namespace.yaml
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── route.yaml
+│   └── stage/
+│       ├── namespace.yaml
+│       ├── deployment.yaml
+│       ├── service.yaml
+│       └── route.yaml
+└── README.md
+----
+
+=== Dev Environment Deployment
+
+Create the deployment manifest for the dev environment:
+
+[source,yaml]
+----
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: parasol-insurance
+  namespace: parasol-dev
+  labels:
+    app: parasol-insurance
+  annotations:
+    instrumentation.opentelemetry.io/inject-java: "true" # <1>
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: parasol-insurance
+  template:
+    metadata:
+      labels:
+        app: parasol-insurance
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true" # <1>
+    spec:
+      containers:
+        - name: parasol-insurance
+          image: image-registry.openshift-image-registry.svc:5000/<your_namespace>/parasol-insurance:latest # <2>
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+----
+<1> Enables OpenTelemetry auto-instrumentation. The Instrumentation CR created in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section will inject the Java agent automatically.
+<2> The CI pipeline updates this image tag after a successful build.
+
+Create the Service and Route:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: Service
+metadata:
+  name: parasol-insurance
+  namespace: parasol-dev
+spec:
+  selector:
+    app: parasol-insurance
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: parasol-insurance
+  namespace: parasol-dev
+spec:
+  to:
+    kind: Service
+    name: parasol-insurance
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+----
+
+Push these manifests to the `environments/dev/` directory in your GitOps repository.
+Create equivalent manifests for `environments/stage/` with `namespace: parasol-stage`.
+
+== Create the Argo CD Application
+
+=== Grant Argo CD Namespace Access
+
+Argo CD needs permission to manage resources in your application namespaces:
+
+[source,bash]
+----
+oc create namespace parasol-dev
+oc create namespace parasol-stage
+
+oc label namespace parasol-dev argocd.argoproj.io/managed-by=openshift-gitops
+oc label namespace parasol-stage argocd.argoproj.io/managed-by=openshift-gitops
+----
+
+=== Create the Application CR
+
+Create an Argo CD Application that watches the `dev` environment:
+
+[source,yaml]
+----
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: parasol-dev
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: https://<gitlab_host>/parasol-gitops.git
+    targetRevision: main
+    path: environments/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: parasol-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+----
+
+Apply it:
+
+[source,bash]
+----
+oc apply -f parasol-dev-app.yaml
+----
+
+Create a second Application CR for `parasol-stage` pointing at `environments/stage`.
+
+== Integrate CI and GitOps
+
+The CI pipeline needs to update the image tag in the GitOps repository after a successful build.
+Add a final task to the pipeline that commits the new image tag:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: update-gitops-repo
+  namespace: <your_namespace>
+spec:
+  params:
+    - name: gitops-repo-url
+      type: string
+    - name: image-tag
+      type: string
+    - name: environment
+      type: string
+      default: dev
+  workspaces:
+    - name: source
+  steps:
+    - name: update-image
+      image: quay.io/devfile/universal-developer-image:ubi9-latest
+      script: |
+        #!/bin/bash
+        set -e
+        git clone $(params.gitops-repo-url) /tmp/gitops
+        cd /tmp/gitops/environments/$(params.environment)
+
+        # Update the image tag in the deployment manifest
+        sed -i "s|image:.*parasol-insurance:.*|image: image-registry.openshift-image-registry.svc:5000/<your_namespace>/parasol-insurance:$(params.image-tag)|" deployment.yaml
+
+        git config user.email "pipeline@openshift.local"
+        git config user.name "Tekton Pipeline"
+        git add .
+        git commit -m "Update parasol-insurance image to $(params.image-tag)"
+        git push
+----
+
+When the pipeline pushes the updated manifest, Argo CD detects the change and automatically syncs the new image to the cluster.
+
+== Verify the Deployment
+
+Check that Argo CD has synced the application:
+
+[source,bash]
+----
+# Argo CD application status
+oc get application parasol-dev -n openshift-gitops \
+  -o jsonpath='{.status.sync.status}'
+----
+
+The output should be `Synced`.
+
+Verify the application is running:
+
+[source,bash]
+----
+oc get pods -n parasol-dev
+oc get route parasol-insurance -n parasol-dev -o jsonpath='{.spec.host}'
+----
+
+Open the route URL in your browser to confirm the application is accessible.
+
+== Verify OpenTelemetry Auto-Instrumentation
+
+Check that the Java agent was injected into the application pod:
+
+[source,bash]
+----
+oc get pod -n parasol-dev -l app=parasol-insurance \
+  -o jsonpath='{.items[0].spec.initContainers[*].name}'
+----
+
+You should see an `opentelemetry-auto-instrumentation` init container.
+
+Verify traces are being collected:
+
+[source,bash]
+----
+oc logs -n parasol-dev -l app=parasol-insurance | grep -i "opentelemetry"
+----
+
+== Promote to Stage
+
+To promote the application to the stage environment:
+
+. Update the image tag in `environments/stage/deployment.yaml` in the GitOps repository (either manually or by extending the CI pipeline with a promotion task)
+. Push the change to GitLab
+. Argo CD automatically syncs the stage Application
+
+Verify the stage deployment:
+
+[source,bash]
+----
+oc get pods -n parasol-stage
+oc get route parasol-insurance -n parasol-stage -o jsonpath='{.spec.host}'
+----
 
 == Summary
 
 You have completed Lab 1. Your application now has:
 
-* A fully automated CI pipeline triggered by Git webhooks
-* Container images stored in the registry
-* GitOps-driven deployments managed by Argo CD
-* Observability instrumentation via OpenTelemetry
-* Multi-environment promotion workflow
+* A fully automated CI pipeline triggered by GitLab webhooks
+* Registry credentials managed securely by Vault
+* Container images stored in the OpenShift internal registry
+* GitOps-driven deployments managed by Argo CD with automated sync
+* OpenTelemetry auto-instrumentation for distributed tracing
+* Multi-environment promotion workflow (dev → stage)
+
+== Next Steps
+
+Proceed to xref:day2-lab2-mta.adoc[Application Modernization (MTA)].

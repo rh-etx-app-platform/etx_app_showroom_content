@@ -3,40 +3,251 @@
 
 == Overview
 
-Use the Migration Toolkit for Applications (MTA) to analyze, migrate, and modernize a Java application.
-The modernized application will then be integrated into the CI pipeline you built in Lab 1.
+Use the Migration Toolkit for Applications (MTA) to analyze a legacy Java application, identify migration issues, and modernize it to run on a Red Hat Runtime.
+The modernized application will then be integrated into the CI pipeline built in Lab 1.
+
+== Install MTA
+
+=== Install via OperatorHub
+
+. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Search for *Migration Toolkit for Applications*
+. Click btn:[Install]
+. Accept the defaults and click btn:[Install]
+. Wait for the operator to reach the `Succeeded` phase
+
+Verify from the CLI:
+
+[source,bash]
+----
+oc get csv -n openshift-operators | grep mta
+----
+
+=== Deploy the MTA Web Console
+
+Create a Tackle CR to deploy the MTA web console:
+
+[source,yaml]
+----
+apiVersion: tackle.konveyor.io/v1alpha1
+kind: Tackle
+metadata:
+  name: mta
+  namespace: openshift-mta
+spec: {}
+----
+
+Apply it:
+
+[source,bash]
+----
+oc create namespace openshift-mta
+oc apply -f mta-tackle.yaml
+----
+
+Wait for the pods to be ready:
+
+[source,bash]
+----
+oc get pods -n openshift-mta -w
+----
+
+Get the MTA console route:
+
+[source,bash]
+----
+oc get route -n openshift-mta
+----
+
+Open the URL in your browser.
 
 == Analyze the Application
 
-Run MTA analysis against the existing Java application to identify:
+=== Create an Application in MTA
 
-* Migration issues and effort estimates
-* Mandatory code changes
-* Optional improvements and best practices
+. In the MTA web console, go to menu:Applications[Application inventory]
+. Click btn:[Create new]
+. Fill in the application details:
+  * *Name*: `parasol-legacy`
+  * *Source repository*: Your GitLab repository URL for the legacy application
+  * *Branch*: `main`
+. Click btn:[Create]
 
-// TODO: Add MTA analysis steps (CLI or web console)
+=== Run the Analysis
 
-== Migrate and Modernize
+. Select the application and click btn:[Analyze]
+. Configure the analysis:
+  * *Source*: Source code
+  * *Target*: Quarkus
+  * *Scope*: Application and internal dependencies
+. Click btn:[Run]
 
-Apply the recommended changes to modernize the application:
+The analysis scans the source code, dependencies, and configuration files against MTA's rule sets.
+This may take a few minutes depending on the size of the application.
 
-. Address mandatory migration issues identified by MTA
-. Update dependencies to use a Red Hat Runtime (e.g., Red Hat build of Quarkus, Spring Boot, or JBoss EAP)
-. Validate the application builds and passes tests
+=== Review the Analysis Report
 
-// TODO: Add specific migration steps
+Once the analysis completes:
+
+. Click on the application name to view the report
+. Review the categories:
+  * *Mandatory* -- Changes required for the migration to succeed
+  * *Optional* -- Improvements that are recommended but not required
+  * *Information* -- Context and documentation links
+. Note the *Story Points* -- an effort estimate for the migration
+
+Common findings when migrating to Quarkus:
+
+* Replace `javax.*` imports with `jakarta.*`
+* Replace Spring-specific annotations with CDI equivalents
+* Update persistence configuration from `persistence.xml` to `application.properties`
+* Replace JAX-RS application class with Quarkus RESTEasy Reactive
+
+=== CLI Analysis (Alternative)
+
+You can also run analysis from the command line inside your Dev Spaces workspace:
+
+[source,bash]
+----
+mta-cli analyze \
+  --input /projects/parasol-legacy \
+  --output /tmp/mta-report \
+  --target quarkus
+----
+
+Open `/tmp/mta-report/index.html` in the IDE's preview to review results.
+
+== Modernize the Application
+
+Apply the changes identified by MTA.
+Work through the mandatory issues first:
+
+=== Update Dependencies
+
+Update `pom.xml` to use Quarkus BOM and extensions:
+
+[source,xml]
+----
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>io.quarkus.platform</groupId>
+      <artifactId>quarkus-bom</artifactId>
+      <version>${quarkus.platform.version}</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
+----
+
+=== Update Imports and Annotations
+
+Replace `javax` with `jakarta` package imports:
+
+[source,java]
+----
+// Before
+import javax.inject.Inject;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+
+// After
+import jakarta.inject.Inject;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+----
+
+=== Update Configuration
+
+Move configuration from XML files to `application.properties`:
+
+[source,properties]
+----
+# Database configuration
+quarkus.datasource.db-kind=postgresql
+quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/parasol
+quarkus.datasource.username=${DB_USER:parasol}
+quarkus.datasource.password=${DB_PASSWORD:parasol}
+
+# Hibernate
+quarkus.hibernate-orm.database.generation=update
+----
+
+=== Validate the Build
+
+Build and test the modernized application in your Dev Spaces workspace:
+
+[source,bash]
+----
+./mvnw clean package -DskipTests=false
+----
+
+Start the application in dev mode to verify it runs:
+
+[source,bash]
+----
+./mvnw compile quarkus:dev
+----
+
+Quarkus Dev Services will start a PostgreSQL container automatically.
 
 == Integrate with the CI Pipeline
 
-Bring the modernized application into the existing CI pipeline from Lab 1:
+Push the modernized application into the CI pipeline from Lab 1:
 
-. Push the updated source code to the Git repository
-. Verify the webhook triggers the pipeline
-. Confirm the pipeline builds, tests, and pushes the modernized application image
-. Verify Argo CD deploys the updated application
+. Commit and push the modernized source code to GitLab:
++
+[source,bash]
+----
+git add .
+git commit -m "Modernize application to Quarkus"
+git push
+----
 
-// TODO: Add integration verification steps
+. The GitLab webhook triggers the Tekton pipeline automatically
+
+. Monitor the pipeline run:
++
+[source,bash]
+----
+tkn pipelinerun logs -f -n <your_namespace>
+----
+
+. Verify the pipeline completes all tasks:
+  * Source clone
+  * Maven build and test
+  * Vault credential retrieval
+  * Container image build and push
+
+. Confirm Argo CD syncs the updated image:
++
+[source,bash]
+----
+oc get application parasol-dev -n openshift-gitops \
+  -o jsonpath='{.status.sync.status}'
+----
+
+. Verify the modernized application is running:
++
+[source,bash]
+----
+oc get pods -n parasol-dev
+oc get route parasol-insurance -n parasol-dev -o jsonpath='{.spec.host}'
+----
+
+Open the route URL to confirm the modernized application is accessible and functional.
 
 == Summary
 
-You have modernized a Java application using MTA, adopted a Red Hat Runtime, and integrated it into your existing CI/CD workflow.
+You have:
+
+* Installed MTA and analyzed a legacy Java application
+* Identified mandatory and optional migration issues with effort estimates
+* Modernized the application to use Quarkus and Jakarta EE APIs
+* Integrated the modernized application into the existing CI/CD pipeline
+* Verified end-to-end deployment through the GitOps workflow
+
+== Next Steps
+
+Proceed to xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub].
