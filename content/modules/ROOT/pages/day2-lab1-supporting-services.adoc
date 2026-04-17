@@ -41,6 +41,8 @@ Wait for the pod to be ready:
 oc get pods -n vault -w
 ----
 
+Press Ctrl+C when the `vault-0` pod shows `1/1 Ready`.
+
 === Configure Vault
 
 Exec into the Vault pod to configure secrets and authentication:
@@ -56,11 +58,20 @@ Enable the KV v2 secrets engine and store registry credentials:
 ----
 vault secrets enable -path=secret kv-v2
 
+# Store internal registry credentials (for dev environment)
 vault kv put secret/registry \
-  username=<registry_username> \
-  password=<registry_password> \
-  server=<registry_server>
+  username=unused \
+  password=unused \
+  server=image-registry.openshift-image-registry.svc:5000
+
+# Optionally, store Quay credentials (for stage/prod)
+# vault kv put secret/quay \
+#   username=<your_quay_username> \
+#   password=<your_quay_password> \
+#   server=quay-registry-quay.apps.cluster-cgd7r.dynamic.redhatworkshops.io
 ----
+
+NOTE: The OpenShift internal registry uses ServiceAccount tokens for authentication, so username/password are not used. The Tekton pipeline will authenticate using its ServiceAccount automatically.
 
 === Configure Kubernetes Authentication
 
@@ -77,11 +88,14 @@ vault policy write pipeline-read - <<EOF
 path "secret/data/registry" {
   capabilities = ["read"]
 }
+path "secret/data/quay" {
+  capabilities = ["read"]
+}
 EOF
 
 vault write auth/kubernetes/role/pipeline \
   bound_service_account_names=pipeline \
-  bound_service_account_namespaces=<your_namespace> \
+  bound_service_account_namespaces=parasol-dev \
   policies=pipeline-read \
   ttl=1h
 ----
@@ -97,6 +111,8 @@ Confirm you can read the secret from outside the pod:
 oc exec vault-0 -n vault -- vault kv get secret/registry
 ----
 
+You should see the stored credentials.
+
 == Install OpenShift Pipelines (Tekton)
 
 OpenShift Pipelines provides the Tekton-based CI engine used to build, test, and push container images.
@@ -106,7 +122,11 @@ OpenShift Pipelines provides the Tekton-based CI engine used to build, test, and
 . In the OpenShift Web Console, go to menu:Operators[OperatorHub]
 . Search for *Red Hat OpenShift Pipelines*
 . Click btn:[Install]
-. Accept the defaults and click btn:[Install]
+. Accept the defaults:
+  * **Update channel:** latest
+  * **Installation mode:** All namespaces
+  * **Installed Namespace:** openshift-operators
+. Click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
 Verify from the CLI:
@@ -115,6 +135,8 @@ Verify from the CLI:
 ----
 oc get csv -n openshift-operators | grep pipelines
 ----
+
+You should see the Pipelines operator listed with phase `Succeeded`.
 
 === Verify Tekton Components
 
@@ -145,7 +167,11 @@ The OpenTelemetry Operator manages the deployment of OpenTelemetry Collectors fo
 . In the OpenShift Web Console, go to menu:Operators[OperatorHub]
 . Search for *Red Hat build of OpenTelemetry*
 . Click btn:[Install]
-. Accept the defaults and click btn:[Install]
+. Accept the defaults:
+  * **Update channel:** stable
+  * **Installation mode:** All namespaces
+  * **Installed Namespace:** openshift-operators
+. Click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
 Verify from the CLI:
@@ -155,10 +181,12 @@ Verify from the CLI:
 oc get csv -n openshift-operators | grep opentelemetry
 ----
 
+You should see the OpenTelemetry operator listed with phase `Succeeded`.
+
 === Deploy an OpenTelemetry Collector
 
 Create a collector instance in your application namespace.
-This collector will receive traces from instrumented applications and export them to the cluster's tracing backend:
+This collector will receive traces from instrumented applications and export them to the console for demonstration purposes:
 
 [source,yaml]
 ----
@@ -166,7 +194,7 @@ apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: otel-collector
-  namespace: <your_namespace>
+  namespace: parasol-dev
 spec:
   mode: deployment
   config:
@@ -180,18 +208,19 @@ spec:
     processors:
       batch: {}
     exporters:
-      otlp:
-        endpoint: "tempo-distributor.tempo:4317" # <1>
-        tls:
-          insecure: true
+      logging:
+        loglevel: debug # <1>
     service:
       pipelines:
         traces:
           receivers: [otlp]
           processors: [batch]
-          exporters: [otlp]
+          exporters: [logging] # <2>
 ----
-<1> Adjust the exporter endpoint to match your tracing backend (e.g. Tempo, Jaeger).
+<1> Set log level to debug to see trace details
+<2> Export traces to stdout (visible in collector pod logs)
+
+TIP: For production, replace the `logging` exporter with a real tracing backend like Tempo, Jaeger, or a cloud provider's tracing service.
 
 Apply it:
 
@@ -204,7 +233,7 @@ Verify the collector pod is running:
 
 [source,bash]
 ----
-oc get pods -l app.kubernetes.io/name=otel-collector-collector -n <your_namespace>
+oc get pods -l app.kubernetes.io/name=otel-collector-collector -n parasol-dev
 ----
 
 === Enable Auto-Instrumentation
@@ -217,7 +246,7 @@ apiVersion: opentelemetry.io/v1alpha1
 kind: Instrumentation
 metadata:
   name: java-instrumentation
-  namespace: <your_namespace>
+  namespace: parasol-dev
 spec:
   exporter:
     endpoint: http://otel-collector-collector:4317
@@ -250,9 +279,9 @@ This will be used when deploying the application in xref:day2-lab1-app-deploymen
 
 You now have the following services deployed:
 
-* *Vault* -- secrets management with Kubernetes authentication for pipeline access
-* *OpenShift Pipelines* -- Tekton CI engine ready to run pipelines
-* *OpenTelemetry* -- collector and auto-instrumentation configured for distributed tracing
+* ✅ **Vault** -- secrets management with Kubernetes authentication for pipeline access
+* ✅ **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
+* ✅ **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing
 
 == Next Steps
 

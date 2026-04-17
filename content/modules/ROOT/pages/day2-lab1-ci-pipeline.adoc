@@ -16,7 +16,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pipeline-workspace-pvc
-  namespace: <your_namespace>
+  namespace: parasol-dev
 spec:
   accessModes:
     - ReadWriteOnce
@@ -28,7 +28,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: pipeline
-  namespace: <your_namespace>
+  namespace: parasol-dev
 ----
 
 Apply them:
@@ -37,6 +37,19 @@ Apply them:
 ----
 oc apply -f pipeline-workspace.yaml
 ----
+
+=== Grant ServiceAccount Permissions
+
+The pipeline ServiceAccount needs permission to push images and manage resources in the namespace:
+
+[source,bash]
+----
+oc adm policy add-role-to-user edit \
+  system:serviceaccount:parasol-dev:pipeline \
+  -n parasol-dev
+----
+
+This grants the `edit` role, allowing the pipeline to create ImageStreams, Deployments, and other resources.
 
 == Retrieve Registry Credentials from Vault
 
@@ -48,7 +61,7 @@ apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: vault-fetch-registry-creds
-  namespace: <your_namespace>
+  namespace: parasol-dev
 spec:
   workspaces:
     - name: source
@@ -84,6 +97,13 @@ spec:
           | tr -d '\n' > $(results.registry-password.path)
 ----
 
+Apply the task:
+
+[source,bash]
+----
+oc apply -f vault-fetch-task.yaml
+----
+
 == Create the Pipeline
 
 Define the CI pipeline with four tasks: clone, build/test, fetch credentials, and build/push the container image:
@@ -94,7 +114,7 @@ apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: parasol-ci
-  namespace: <your_namespace>
+  namespace: parasol-dev
 spec:
   params:
     - name: git-url
@@ -157,11 +177,10 @@ spec:
 
 NOTE: `git-clone`, `maven`, and `buildah` are ClusterTasks provided by OpenShift Pipelines. Run `tkn clustertask list` to verify they are available.
 
-Apply the tasks and pipeline:
+Apply the pipeline:
 
 [source,bash]
 ----
-oc apply -f vault-fetch-task.yaml
 oc apply -f parasol-ci-pipeline.yaml
 ----
 
@@ -172,9 +191,9 @@ Run the pipeline once to verify it works before adding webhooks:
 [source,bash]
 ----
 tkn pipeline start parasol-ci \
-  --param git-url=https://<gitlab_host>/parasol-insurance \
+  --param git-url=http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-insurance-lab \
   --param git-revision=main \
-  --param image-name=image-registry.openshift-image-registry.svc:5000/<your_namespace>/parasol-insurance \
+  --param image-name=image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance \
   --workspace name=shared-workspace,claimName=pipeline-workspace-pvc \
   --serviceaccount pipeline \
   --showlog
@@ -196,7 +215,7 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerBinding
 metadata:
   name: gitlab-push-binding
-  namespace: <your_namespace>
+  namespace: parasol-dev
 spec:
   params:
     - name: git-url
@@ -215,7 +234,7 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
 metadata:
   name: gitlab-push-template
-  namespace: <your_namespace>
+  namespace: parasol-dev
 spec:
   params:
     - name: git-url
@@ -234,7 +253,7 @@ spec:
           - name: git-revision
             value: $(tt.params.git-revision)
           - name: image-name
-            value: image-registry.openshift-image-registry.svc:5000/<your_namespace>/parasol-insurance
+            value: image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance
         workspaces:
           - name: shared-workspace
             persistentVolumeClaim:
@@ -253,7 +272,7 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
   name: gitlab-listener
-  namespace: <your_namespace>
+  namespace: parasol-dev
 spec:
   serviceAccountName: pipeline
   triggers:
@@ -279,47 +298,76 @@ Create a route so GitLab can reach the EventListener:
 
 [source,bash]
 ----
-oc expose svc el-gitlab-listener -n <your_namespace>
+oc expose svc el-gitlab-listener -n parasol-dev
 ----
 
 Get the webhook URL:
 
 [source,bash]
 ----
-echo "$(oc get route el-gitlab-listener -n <your_namespace> -o jsonpath='{.spec.host}')"
+echo "http://$(oc get route el-gitlab-listener -n parasol-dev -o jsonpath='{.spec.host}')"
 ----
 
-=== Configure GitLab
+Copy this URL for the next step.
 
-. In GitLab, go to your repository's menu:Settings[Webhooks]
+=== Configure GitLab Webhook
+
+. Log into GitLab: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+. Navigate to your repository: *student/parasol-insurance-lab*
+. Go to menu:Settings[Webhooks]
 . Add a new webhook:
-  * *URL*: `http://<event_listener_route>`
-  * *Trigger*: Push events
-  * *SSL verification*: Disable (for lab environments)
+  * *URL*: Paste the EventListener route URL from above
+  * *Trigger*: Check *Push events*
+  * *SSL verification*: Leave unchecked (HTTP endpoint)
 . Click btn:[Add webhook]
-. Click btn:[Test] and select *Push events* to send a test payload
+. Click btn:[Test] → *Push events* to send a test payload
 
 == Verify the Pipeline
 
-Push a change to your repository and confirm:
+Push a change to your repository and confirm the pipeline triggers:
 
 [source,bash]
 ----
-# Check for new pipeline runs
-tkn pipelinerun list -n <your_namespace>
+# Make a trivial change
+echo "# CI/CD test" >> README.md
+git add README.md
+git commit -m "Test webhook trigger"
+git push origin main
+----
 
-# Follow the latest run
-tkn pipelinerun logs -f -n <your_namespace>
+Check for new pipeline runs:
+
+[source,bash]
+----
+tkn pipelinerun list -n parasol-dev
+----
+
+You should see a new `parasol-ci-*` PipelineRun.
+
+Follow the latest run logs:
+
+[source,bash]
+----
+tkn pipelinerun logs -f -n parasol-dev
 ----
 
 Verify the image was pushed:
 
 [source,bash]
 ----
-oc get imagestream parasol-insurance -n <your_namespace>
+oc get imagestream parasol-insurance -n parasol-dev
 ----
 
 You should see the image tagged with the commit SHA.
+
+== Summary
+
+You now have:
+
+* ✅ Tekton CI pipeline with Vault secrets integration
+* ✅ Automated builds triggered by GitLab webhooks
+* ✅ Container images pushed to OpenShift internal registry
+* ✅ Maven-based Java/Quarkus build and test automation
 
 == Next Steps
 
