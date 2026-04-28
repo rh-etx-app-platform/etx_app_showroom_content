@@ -1,0 +1,506 @@
+= Lab 1: Promotion Pipeline
+:navtitle: Promotion Pipeline
+
+== Overview
+
+In the previous exercises, you set up a CI pipeline that builds container images and deploys them to the dev environment automatically.
+Now you'll create a promotion pipeline that moves tested images from dev to staging on the secondary cluster.
+
+This promotion pipeline:
+
+* Copies container images from the internal registry to Quay (for cross-cluster access)
+* Updates the GitOps repository with the new image tag for staging
+* Triggers Argo CD to sync the staging environment on the secondary cluster
+
+== Prerequisites
+
+Before starting this exercise, ensure you have completed:
+
+* xref:day2-lab1-ci-pipeline.adoc[Application CI Pipeline]
+* xref:day2-lab1-app-deployment.adoc[Application Deployment]
+
+You should have:
+
+* A working CI pipeline that builds and pushes images
+* Argo CD managing both dev and stage environments
+* Access to Quay registry (pre-configured by bootstrap)
+
+== Understanding the Promotion Flow
+
+[plantuml]
+----
+@startuml
+skinparam backgroundColor #FEFEFE
+
+participant "Developer" as dev
+participant "GitLab" as gitlab
+participant "Promotion\nPipeline" as promo
+participant "Internal\nRegistry" as internal
+participant "Quay\nRegistry" as quay
+participant "GitOps\nRepo" as gitops
+participant "Argo CD" as argocd
+participant "Staging\nCluster" as staging
+
+dev -> gitlab: Approves promotion\n(manual trigger)
+gitlab -> promo: Triggers pipeline
+promo -> internal: Pull image by SHA
+promo -> quay: Push image with 'stable' tag
+promo -> gitops: Update stage/deployment.yaml
+gitops --> argocd: Detects change
+argocd -> staging: Syncs new image
+
+@enduml
+----
+
+**Key points:**
+
+* Dev environment uses images from internal registry (fast, local)
+* Staging environment uses images from Quay (cross-cluster accessible)
+* Promotion is explicit - you decide when code is ready for staging
+* GitOps ensures staging deployments are version-controlled
+
+== Create Promotion Pipeline Resources
+
+=== Pipeline Workspace
+
+The promotion pipeline needs a workspace for cloning the GitOps repository:
+
+[source,yaml]
+----
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: promotion-workspace-pvc
+  namespace: parasol-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+----
+
+Apply it:
+
+[source,bash,role=execute]
+----
+oc apply -f promotion-workspace.yaml
+----
+
+=== Fetch Quay Credentials from Vault
+
+Create a task to retrieve Quay credentials from Vault:
+
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: vault-fetch-quay-creds
+  namespace: parasol-dev
+spec:
+  results:
+    - name: quay-server
+    - name: quay-username
+    - name: quay-password
+  steps:
+    - name: fetch
+      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+      script: |
+        #!/bin/sh
+        set -e
+
+        # Install curl and jq
+        microdnf install -y curl jq && microdnf clean all
+
+        # Authenticate to Vault using ServiceAccount token
+        VAULT_ADDR="{vault_url}"
+        SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+
+        VAULT_TOKEN=$(curl -s --request POST \
+          "${VAULT_ADDR}/v1/auth/kubernetes/login" \
+          --data "{\"role\":\"pipeline\",\"jwt\":\"${SA_TOKEN}\"}" \
+          | jq -r '.auth.client_token')
+
+        # Fetch Quay credentials
+        CREDS=$(curl -s --header "X-Vault-Token: ${VAULT_TOKEN}" \
+          "${VAULT_ADDR}/v1/secret/data/registry/quay")
+
+        echo "${CREDS}" | jq -r '.data.data.server' \
+          | tr -d '\n' > $(results.quay-server.path)
+        echo "${CREDS}" | jq -r '.data.data.username' \
+          | tr -d '\n' > $(results.quay-username.path)
+        echo "${CREDS}" | jq -r '.data.data.password' \
+          | tr -d '\n' > $(results.quay-password.path)
+----
+
+Apply the task:
+
+[source,bash,role=execute]
+----
+oc apply -f vault-fetch-quay-task.yaml
+----
+
+=== Copy Image to Quay
+
+Create a task that copies the image from the internal registry to Quay using Skopeo:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: copy-image-to-quay
+  namespace: parasol-dev
+spec:
+  params:
+    - name: source-image
+      type: string
+      description: Source image URL (internal registry)
+    - name: dest-image
+      type: string
+      description: Destination image URL (Quay)
+    - name: dest-username
+      type: string
+    - name: dest-password
+      type: string
+  steps:
+    - name: copy
+      image: quay.io/skopeo/stable:latest
+      script: |
+        #!/bin/bash
+        set -e
+
+        echo "Copying image from internal registry to Quay..."
+        echo "Source: $(params.source-image)"
+        echo "Destination: $(params.dest-image)"
+
+        # Copy image using skopeo
+        skopeo copy \
+          --src-tls-verify=false \
+          --dest-tls-verify=false \
+          --dest-creds="$(params.dest-username):$(params.dest-password)" \
+          "docker://$(params.source-image)" \
+          "docker://$(params.dest-image)"
+
+        echo "Image copied successfully!"
+----
+
+Apply the task:
+
+[source,bash,role=execute]
+----
+oc apply -f copy-image-task.yaml
+----
+
+=== Update GitOps Repository
+
+Create a task to update the staging deployment manifest with the new image tag:
+
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: update-gitops-staging
+  namespace: parasol-dev
+spec:
+  params:
+    - name: gitops-repo-url
+      type: string
+    - name: image-url
+      type: string
+      description: Full image URL to update in staging manifest
+    - name: git-username
+      type: string
+      default: "Tekton Pipeline"
+    - name: git-email
+      type: string
+      default: "pipeline@openshift.local"
+  workspaces:
+    - name: source
+  steps:
+    - name: update
+      image: registry.access.redhat.com/ubi9/ubi:latest
+      script: |
+        #!/bin/bash
+        set -e
+
+        # Install git
+        dnf install -y git && dnf clean all
+
+        # Clone GitOps repo
+        git clone $(params.gitops-repo-url) /workspace/gitops
+        cd /workspace/gitops
+
+        # Update the image in staging deployment
+        sed -i "s|image:.*parasol-insurance:.*|image: $(params.image-url)|" \
+          environments/stage/deployment.yaml
+
+        # Commit and push
+        git config user.email "$(params.git-email)"
+        git config user.name "$(params.git-username)"
+        git add environments/stage/deployment.yaml
+        git commit -m "Promote to staging: $(params.image-url)"
+        git push origin main
+
+        echo "GitOps repository updated successfully!"
+----
+
+Apply the task:
+
+[source,bash,role=execute]
+----
+oc apply -f update-gitops-staging-task.yaml
+----
+
+== Create the Promotion Pipeline
+
+Now combine all tasks into a promotion pipeline:
+
+[source,yaml,subs="attributes+"]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: parasol-promotion
+  namespace: parasol-dev
+spec:
+  params:
+    - name: source-image-tag
+      type: string
+      description: Image tag to promote (e.g., commit SHA)
+    - name: dest-image-tag
+      type: string
+      default: stable
+      description: Tag to use in Quay (e.g., stable, v1.0.0)
+    - name: gitops-repo-url
+      type: string
+      default: {gitlab_url}/software-factory/parasol-gitops.git
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: fetch-quay-creds
+      taskRef:
+        name: vault-fetch-quay-creds
+
+    - name: copy-to-quay
+      runAfter: [fetch-quay-creds]
+      taskRef:
+        name: copy-image-to-quay
+      params:
+        - name: source-image
+          value: image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance:$(params.source-image-tag)
+        - name: dest-image
+          value: $(tasks.fetch-quay-creds.results.quay-server)/parasol/parasol-insurance:$(params.dest-image-tag)
+        - name: dest-username
+          value: $(tasks.fetch-quay-creds.results.quay-username)
+        - name: dest-password
+          value: $(tasks.fetch-quay-creds.results.quay-password)
+
+    - name: update-gitops
+      runAfter: [copy-to-quay]
+      taskRef:
+        name: update-gitops-staging
+      params:
+        - name: gitops-repo-url
+          value: $(params.gitops-repo-url)
+        - name: image-url
+          value: $(tasks.fetch-quay-creds.results.quay-server)/parasol/parasol-insurance:$(params.dest-image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+----
+
+NOTE: Replace `{gitlab_url}` with your actual GitLab URL before applying.
+
+Apply the pipeline:
+
+[source,bash,role=execute]
+----
+oc apply -f parasol-promotion-pipeline.yaml
+----
+
+== Test the Promotion Pipeline
+
+=== Get a Valid Image Tag
+
+First, find a recent image tag from your dev environment:
+
+[source,bash,role=execute]
+----
+# List recent images from dev CI pipeline
+oc get imagestream parasol-insurance -n parasol-dev -o json | \
+  jq -r '.status.tags[].tag' | head -5
+----
+
+Pick one of the commit SHA tags from the output.
+
+=== Run the Promotion Pipeline
+
+Trigger the promotion pipeline manually:
+
+[source,bash,role=execute,subs="attributes+"]
+----
+# Replace <COMMIT_SHA> with an actual image tag from above
+tkn pipeline start parasol-promotion \
+  --param source-image-tag=<COMMIT_SHA> \
+  --param dest-image-tag=stable \
+  --param gitops-repo-url={gitlab_url}/software-factory/parasol-gitops.git \
+  --workspace name=shared-workspace,claimName=promotion-workspace-pvc \
+  --serviceaccount pipeline \
+  --showlog
+----
+
+Watch the pipeline logs. You should see:
+
+1. Vault credentials retrieved
+2. Image copied from internal registry to Quay
+3. GitOps repository updated
+
+=== Verify the Promotion
+
+Check that the GitOps repository was updated:
+
+[source,bash,role=execute]
+----
+cd parasol-gitops
+git pull origin main
+cat environments/stage/deployment.yaml | grep image:
+----
+
+You should see the Quay image URL with the `stable` tag.
+
+Check the Argo CD application status:
+
+[source,bash,role=execute]
+----
+oc get application parasol-stage -n parasol-dev -o jsonpath='{.status.sync.status}'
+----
+
+The output should be `Synced`.
+
+View in Argo CD UI:
+
+. Open the Argo CD dashboard
+. Click on the `parasol-stage` application
+. You should see it's synced and healthy
+. The deployment should show the new image from Quay
+
+== Automate Promotion with Approval
+
+For a more realistic workflow, you can add a manual approval step before promotion.
+
+=== Option 1: Manual Trigger (Current Approach)
+
+The current setup requires manually triggering the promotion pipeline.
+This is suitable for:
+
+* Small teams
+* Infrequent deployments
+* High-touch release processes
+
+=== Option 2: Automatic with Manual Approval
+
+Add a manual approval task using Tekton:
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: manual-approval
+  namespace: parasol-dev
+spec:
+  description: |
+    Pauses pipeline execution until manual approval.
+    Requires operator intervention to continue.
+  steps:
+    - name: wait-for-approval
+      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+      script: |
+        #!/bin/sh
+        echo "⏸️  Pipeline paused - waiting for manual approval"
+        echo "Run: oc patch taskrun <taskrun-name> -p '{\"spec\":{\"status\":\"Succeeded\"}}'"
+        sleep infinity
+----
+
+Add this task as the first step in your promotion pipeline to require approval before promoting to staging.
+
+=== Option 3: GitLab Merge Request Trigger
+
+Create a webhook that triggers the promotion pipeline when a merge request is merged:
+
+. Create a promotion branch in your application repo
+. Open a merge request for promotion
+. Add reviewers for approval
+. On merge, trigger the promotion pipeline via GitLab webhook
+
+This approach provides:
+
+* Code review for promotion decisions
+* Audit trail in Git
+* Team collaboration
+
+== Rollback Strategy
+
+If you need to rollback a staging deployment:
+
+=== Method 1: Revert Git Commit
+
+[source,bash,role=execute]
+----
+cd parasol-gitops
+git log environments/stage/deployment.yaml
+git revert <commit-hash>
+git push origin main
+----
+
+Argo CD will automatically sync the previous version.
+
+=== Method 2: Update to Previous Tag
+
+Run the promotion pipeline with a previous image tag:
+
+[source,bash,role=execute]
+----
+tkn pipeline start parasol-promotion \
+  --param source-image-tag=<PREVIOUS_SHA> \
+  --param dest-image-tag=stable \
+  --workspace name=shared-workspace,claimName=promotion-workspace-pvc \
+  --serviceaccount pipeline
+----
+
+== Summary
+
+You have completed the Promotion Pipeline exercise. You now have:
+
+* ✅ Automated image promotion from internal registry to Quay
+* ✅ GitOps-based staging deployments
+* ✅ Secure credential management via Vault
+* ✅ Multi-cluster deployment capability
+* ✅ Rollback capability through Git history
+
+== Key Takeaways
+
+**Promotion != Re-build:**
+
+* The same container image (by SHA) is promoted from dev to staging
+* No code changes between environments - only configuration
+* This ensures you test exactly what you deploy
+
+**GitOps ensures consistency:**
+
+* All deployment state is in Git
+* Changes are auditable and reversible
+* Argo CD provides automatic sync and drift detection
+
+**Multi-cluster architecture:**
+
+* Dev uses internal registry (fast, local)
+* Staging uses Quay (cross-cluster accessible)
+* Argo CD manages both from single control plane
+
+== Next Steps
+
+Proceed to xref:day2-lab2-mta.adoc[Lab 2: Application Modernization (MTA)] to learn how to modernize legacy Java applications.

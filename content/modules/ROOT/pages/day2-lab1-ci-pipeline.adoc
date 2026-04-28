@@ -33,7 +33,7 @@ metadata:
 
 Apply them:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f pipeline-workspace.yaml
 ----
@@ -42,7 +42,7 @@ oc apply -f pipeline-workspace.yaml
 
 The pipeline ServiceAccount needs permission to push images and manage resources in the namespace:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc adm policy add-role-to-user edit \
   system:serviceaccount:parasol-dev:pipeline \
@@ -71,35 +71,38 @@ spec:
     - name: registry-password
   steps:
     - name: fetch
-      image: quay.io/curl/curl:latest
+      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
       script: |
         #!/bin/sh
         set -e
 
+        # Install curl
+        microdnf install -y curl jq && microdnf clean all
+
         # Authenticate to Vault using ServiceAccount token
-        VAULT_ADDR="http://vault.vault.svc:8200"
+        VAULT_ADDR="{vault_url}"
         SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 
         VAULT_TOKEN=$(curl -s --request POST \
           "${VAULT_ADDR}/v1/auth/kubernetes/login" \
           --data "{\"role\":\"pipeline\",\"jwt\":\"${SA_TOKEN}\"}" \
-          | grep -o '"client_token":"[^"]*"' | cut -d'"' -f4)
+          | jq -r '.auth.client_token')
 
         # Fetch registry credentials
         CREDS=$(curl -s --header "X-Vault-Token: ${VAULT_TOKEN}" \
           "${VAULT_ADDR}/v1/secret/data/registry")
 
-        echo "${CREDS}" | grep -o '"server":"[^"]*"' | cut -d'"' -f4 \
+        echo "${CREDS}" | jq -r '.data.data.server' \
           | tr -d '\n' > $(results.registry-server.path)
-        echo "${CREDS}" | grep -o '"username":"[^"]*"' | cut -d'"' -f4 \
+        echo "${CREDS}" | jq -r '.data.data.username' \
           | tr -d '\n' > $(results.registry-username.path)
-        echo "${CREDS}" | grep -o '"password":"[^"]*"' | cut -d'"' -f4 \
+        echo "${CREDS}" | jq -r '.data.data.password' \
           | tr -d '\n' > $(results.registry-password.path)
 ----
 
 Apply the task:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f vault-fetch-task.yaml
 ----
@@ -179,7 +182,7 @@ NOTE: `git-clone`, `maven`, and `buildah` are ClusterTasks provided by OpenShift
 
 Apply the pipeline:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f parasol-ci-pipeline.yaml
 ----
@@ -188,10 +191,10 @@ oc apply -f parasol-ci-pipeline.yaml
 
 Run the pipeline once to verify it works before adding webhooks:
 
-[source,bash]
+[source,bash,role=execute,subs="attributes+"]
 ----
 tkn pipeline start parasol-ci \
-  --param git-url=http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-insurance-lab \
+  --param git-url={gitlab_url}/software-factory/parasol-insurance-lab \
   --param git-revision=main \
   --param image-name=image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance \
   --workspace name=shared-workspace,claimName=pipeline-workspace-pvc \
@@ -285,7 +288,7 @@ spec:
 
 Apply all trigger resources:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f trigger-binding.yaml
 oc apply -f trigger-template.yaml
@@ -296,14 +299,14 @@ oc apply -f event-listener.yaml
 
 Create a route so GitLab can reach the EventListener:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc expose svc el-gitlab-listener -n parasol-dev
 ----
 
 Get the webhook URL:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 echo "http://$(oc get route el-gitlab-listener -n parasol-dev -o jsonpath='{.spec.host}')"
 ----
@@ -312,8 +315,14 @@ Copy this URL for the next step.
 
 === Configure GitLab Webhook
 
-. Log into GitLab: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io
-. Navigate to your repository: *student/parasol-insurance-lab*
+. Log into GitLab:
++
+[source,text,subs="attributes+"]
+----
+{gitlab_url}
+----
++
+. Navigate to your repository: *software-factory/parasol-insurance-lab*
 . Go to menu:Settings[Webhooks]
 . Add a new webhook:
   * *URL*: Paste the EventListener route URL from above
@@ -326,7 +335,7 @@ Copy this URL for the next step.
 
 Push a change to your repository and confirm the pipeline triggers:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Make a trivial change
 echo "# CI/CD test" >> README.md
@@ -337,7 +346,7 @@ git push origin main
 
 Check for new pipeline runs:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 tkn pipelinerun list -n parasol-dev
 ----
@@ -346,14 +355,14 @@ You should see a new `parasol-ci-*` PipelineRun.
 
 Follow the latest run logs:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 tkn pipelinerun logs -f -n parasol-dev
 ----
 
 Verify the image was pushed:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get imagestream parasol-insurance -n parasol-dev
 ----
