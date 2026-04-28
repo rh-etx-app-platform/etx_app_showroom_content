@@ -1,65 +1,420 @@
 = Branching Strategies
 :navtitle: Branching Strategies
 
+*Duration:* 30-35 minutes
+
 == Overview
 
-In this lab you will explore common Git branching strategies and apply them in practice.
-Understanding branching models is essential for the CI/CD workflows you will build in later labs.
+In this session you will validate your Git setup and explore common Git branching strategies.
+Understanding branching models is essential for the CI/CD and GitOps workflows you will build in Day 2 labs.
+
+This session includes:
+
+* Git basics validation (5 minutes)
+* Branching models presentation (15-20 minutes)
+* Hands-on branching exercise (10-15 minutes)
+
+== Git Basics Validation
+
+Before diving into branching strategies, let's verify your Git environment is working correctly.
+
+=== Step 1: Clone the Workshop Repository
+
+Clone the Parasol Insurance application repository:
+
+[source,bash,role=execute]
+----
+cd ~
+git clone {gitlab_url}/software-factory/parasol-insurance-lab.git
+cd parasol-insurance-lab
+----
+
+.Expected Output
+[source,text]
+----
+Cloning into 'parasol-insurance-lab'...
+remote: Enumerating objects: 150, done.
+remote: Counting objects: 100% (150/150), done.
+Receiving objects: 100% (150/150), done.
+----
+
+=== Step 2: Verify Basic Git Commands
+
+[source,bash,role=execute]
+----
+# Check repository status
+git status
+
+# View current branch
+git branch
+
+# View recent commits
+git log --oneline -5
+----
+
+.What You Should See
+* Current branch: `main`
+* Working directory: clean
+* Recent commit history displayed
+
+[TIP]
+====
+If any of these commands fail, verify:
+
+* Git client is installed: `git --version`
+* Git is configured: `git config --global --list`
+* You have network access to GitLab
+====
+
+=== Step 3: Configure Git (If Needed)
+
+If this is your first time using Git on this system:
+
+[source,bash,role=execute]
+----
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+----
+
+✅ **Validation Complete** - You're ready to work with branches.
 
 == Branching Models
 
+Different teams use different branching strategies based on their release cadence, team size, and deployment practices.
+
 === Trunk-Based Development
 
-* All developers commit to a single main branch
-* Short-lived feature branches merged frequently
-* Best suited for teams practicing continuous delivery
+image::https://trunkbaseddevelopment.com/trunk1b.png[Trunk-Based Development,400]
+
+**Characteristics:**
+
+* All developers commit to a single `main` branch
+* Short-lived feature branches (hours to days)
+* Frequent integration (multiple times per day)
+* Continuous Integration runs on every commit
+* Feature flags for incomplete features
+
+**Best suited for:**
+
+* Teams practicing Continuous Delivery
+* Small to medium teams (2-10 developers)
+* Projects with automated testing
+* Cloud-native applications
+
+**Example workflow:**
+
+[source,bash]
+----
+# Create short-lived feature branch
+git checkout -b feature/add-validation
+
+# Work, commit frequently
+git commit -am "add email validation"
+
+# Merge back quickly (same day)
+git checkout main
+git merge feature/add-validation
+git push origin main
+----
 
 === GitFlow
 
-* Separate branches for features, releases, and hotfixes
-* Well-defined promotion path from development to production
-* Suited for teams with scheduled release cycles
+image::https://nvie.com/img/git-model@2x.png[GitFlow,400]
+
+**Characteristics:**
+
+* Multiple long-lived branches: `main`, `develop`, `release/*`, `hotfix/*`
+* Feature branches created from `develop`
+* Release branches for production preparation
+* Hotfix branches for urgent production fixes
+* Well-defined promotion path
+
+**Best suited for:**
+
+* Teams with scheduled release cycles (monthly, quarterly)
+* Larger teams with dedicated release managers
+* Projects requiring multiple supported versions
+* Enterprise applications with formal change control
+
+**Branch structure:**
+
+* `main` - Production-ready code
+* `develop` - Integration branch for features
+* `feature/*` - New features (from develop)
+* `release/*` - Preparing next production release
+* `hotfix/*` - Emergency production fixes (from main)
 
 === GitHub Flow
 
-* Simplified model with a single main branch and feature branches
-* Pull requests trigger CI and review before merging
-* Ideal for continuous deployment workflows
+image::https://guides.github.com/activities/hello-world/branching.png[GitHub Flow,400]
 
-== Lab Exercise
+**Characteristics:**
 
-=== Create a Feature Branch
+* Simplified model with `main` + feature branches
+* Pull Requests for all changes
+* CI/CD runs on every PR
+* Deploy from `main` after merge
+* No separate develop branch
 
-[source,bash]
-----
-git checkout -b feature/my-first-change
-----
+**Best suited for:**
 
-=== Make Changes and Commit
+* Teams practicing Continuous Deployment
+* Web applications deployed frequently
+* Projects with strong automated testing
+* Open source projects
 
-[source,bash]
-----
-# Edit a file
-git add .
-git commit -m "feat: add initial change"
-----
-
-=== Open a Merge Request
-
-Push your branch and create a merge request on the Git server.
+**Example workflow:**
 
 [source,bash]
 ----
-git push origin feature/my-first-change
+# Create feature branch
+git checkout -b feature/user-profile
+
+# Work and push frequently
+git commit -am "add user profile page"
+git push origin feature/user-profile
+
+# Open Pull Request in GitLab
+# CI runs automatically
+# Deploy to staging for review
+# Merge to main after approval
+# Deploy to production automatically
 ----
 
-=== Review and Merge
+=== Choosing the Right Model
 
-* Review the changes in the merge request
-* Approve and merge into the main branch
-* Delete the feature branch after merge
+[cols="1,2,2,2",options="header"]
+|===
+|Model |Release Frequency |Team Size |Complexity
+
+|Trunk-Based
+|Continuous
+|Small-Medium
+|Low
+
+|GitFlow
+|Scheduled
+|Medium-Large
+|High
+
+|GitHub Flow
+|Continuous
+|Any
+|Medium
+|===
+
+**For this workshop**, we use **Trunk-Based Development** concepts:
+
+* Short-lived feature branches
+* Frequent integration
+* CI/CD automation
+* GitOps for deployment
+
+== Lab Exercise: Branching in Practice
+
+Now let's practice the fundamental branching operations you'll use throughout Day 2 labs.
+
+=== Exercise 1: Create a Feature Branch
+
+Create a new branch for your changes:
+
+[source,bash,role=execute]
+----
+# Ensure you're on main
+git checkout main
+
+# Create and switch to feature branch
+git checkout -b feature/update-readme
+
+# Verify you're on the new branch
+git branch
+----
+
+.Expected Output
+[source,text]
+----
+* feature/update-readme
+  main
+----
+
+The asterisk (*) indicates your current branch.
+
+[NOTE]
+====
+**Branch naming convention:**
+
+* `feature/` - New features
+* `fix/` - Bug fixes
+* `docs/` - Documentation changes
+* `refactor/` - Code refactoring
+
+Example: `feature/add-authentication`, `fix/login-bug`
+====
+
+=== Exercise 2: Make Changes and Commit
+
+Make a simple change to the README:
+
+[source,bash,role=execute]
+----
+# Add your name to the README
+cat >> README.md << 'EOF'
+
+## Workshop Participant
+- Name: Your Name
+- Date: $(date +%Y-%m-%d)
+EOF
+
+# View what changed
+git status
+git diff README.md
+----
+
+Stage and commit your changes:
+
+[source,bash,role=execute]
+----
+# Stage the file
+git add README.md
+
+# Commit with a descriptive message
+git commit -m "docs: add workshop participant information"
+
+# View your commit
+git log --oneline -1
+----
+
+.Commit Message Format
+[TIP]
+====
+Use conventional commit format:
+
+* `feat:` - New feature
+* `fix:` - Bug fix
+* `docs:` - Documentation
+* `refactor:` - Code restructuring
+* `test:` - Adding tests
+
+Example: `feat: add user authentication`
+====
+
+=== Exercise 3: Push to Remote
+
+Push your branch to GitLab:
+
+[source,bash,role=execute]
+----
+# Push to remote (first time for this branch)
+git push -u origin feature/update-readme
+----
+
+.Expected Output
+[source,text]
+----
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Writing objects: 100% (3/3), 312 bytes | 312.00 KiB/s, done.
+Total 3 (delta 0), reused 0 (delta 0)
+To {gitlab_url}/software-factory/parasol-insurance-lab.git
+ * [new branch]      feature/update-readme -> feature/update-readme
+----
+
+=== Exercise 4: Verify in GitLab UI
+
+1. Open GitLab in your browser: `{gitlab_url}`
+2. Navigate to: **software-factory** → **parasol-insurance-lab**
+3. Click on **Repository** → **Branches**
+4. You should see your `feature/update-readme` branch
+
+=== Exercise 5: Merge Your Changes
+
+In a real workflow, you'd create a Merge Request for review. For this exercise, merge directly:
+
+[source,bash,role=execute]
+----
+# Switch to main
+git checkout main
+
+# Merge your feature branch
+git merge feature/update-readme
+----
+
+.Expected Output (Fast-forward merge)
+[source,text]
+----
+Updating a1b2c3d..e4f5g6h
+Fast-forward
+ README.md | 4 ++++
+ 1 file changed, 4 insertions(+)
+----
+
+[NOTE]
+====
+**Fast-forward merge:** Git simply moves the `main` pointer forward because no other changes were made to `main`. This is the simplest type of merge.
+====
+
+Push the merged changes:
+
+[source,bash,role=execute]
+----
+git push origin main
+----
+
+Clean up the feature branch:
+
+[source,bash,role=execute]
+----
+# Delete local branch
+git branch -d feature/update-readme
+
+# Delete remote branch
+git push origin --delete feature/update-readme
+----
 
 == Summary
 
-You have practiced creating branches, committing changes, and merging through a pull/merge request workflow.
-This branching workflow forms the basis for the CI/CD pipelines you will build on Day 2.
+In this session you:
+
+✅ Validated your Git environment
+✅ Learned three branching models:
+  * Trunk-Based Development (continuous delivery)
+  * GitFlow (scheduled releases)
+  * GitHub Flow (continuous deployment)
+✅ Practiced core Git operations:
+  * Creating branches
+  * Making commits
+  * Pushing to remote
+  * Merging changes
+
+== Key Takeaways
+
+**Branching enables parallel development:**
+* Multiple developers work on different features simultaneously
+* Isolated changes until ready for integration
+* Code review through merge requests
+* CI/CD automation on every push
+
+**Different models suit different needs:**
+* Choose based on release cadence, team size, and deployment frequency
+* This workshop uses Trunk-Based Development principles
+* Day 2 labs will integrate branches with CI/CD pipelines
+
+**Best practices:**
+* Keep branches short-lived (hours to days)
+* Use descriptive branch names and commit messages
+* Push frequently to back up your work
+* Delete branches after merging
+
+== Next Steps
+
+You're now ready for Day 2:
+
+* **xref:day2-lab1-environment.adoc[Lab 1: Software Factory]** - Build CI/CD pipelines with Tekton
+* **xref:day2-lab1-app-deployment.adoc[Application Deployment]** - Deploy with Argo CD using GitOps
+* **xref:day2-lab1-ci-pipeline.adoc[CI Pipeline]** - Automate builds on every Git push
+
+The branching concepts you learned today form the foundation for GitOps workflows where Git commits drive infrastructure and application state.
+
+---
+
+**Estimated completion time:** 30-35 minutes

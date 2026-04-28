@@ -2,7 +2,6 @@
 
 .Day 1: Lab Setup & Git Foundations
 * xref:day1-requirements.adoc[Requirements & Environment Setup]
-* xref:day1-git-fundamentals.adoc[Git Fundamentals Lab]
 * xref:day1-branching-strategies.adoc[Branching Strategies]
 
 .Day 2: Software Factory & Application Lifecycle
