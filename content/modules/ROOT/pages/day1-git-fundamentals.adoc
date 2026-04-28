@@ -5,22 +5,22 @@
 // This file includes modular partials to enable parallel development
 // Each partial can be edited independently without conflicts
 
-include::partial$git-fundamentals/introduction.adoc[]
+include::partial$git-fundamentals/introduction.adoc[leveloffset=+1]
 
-include::partial$git-fundamentals/exercise-01-clone.adoc[]
+include::partial$git-fundamentals/exercise-01-clone.adoc[leveloffset=+1]
 
-include::partial$git-fundamentals/exercise-02-changes.adoc[]
+include::partial$git-fundamentals/exercise-02-changes.adoc[leveloffset=+1]
 
-include::partial$git-fundamentals/exercise-03-branches.adoc[]
+include::partial$git-fundamentals/exercise-03-branches.adoc[leveloffset=+1]
 
-include::partial$git-fundamentals/exercise-04-merging.adoc[]
+include::partial$git-fundamentals/exercise-04-merging.adoc[leveloffset=+1]
 
-include::partial$git-fundamentals/exercise-05-remote.adoc[]
+include::partial$git-fundamentals/exercise-05-remote.adoc[leveloffset=+1]
 
-include::partial$git-fundamentals/exercise-06-conflicts.adoc[]
+include::partial$git-fundamentals/exercise-06-conflicts.adoc[leveloffset=+1]
 
-include::partial$git-fundamentals/exercise-07-pull.adoc[]
+include::partial$git-fundamentals/exercise-07-pull.adoc[leveloffset=+1]
 
-include::partial$git-fundamentals/summary.adoc[]
+include::partial$git-fundamentals/summary.adoc[leveloffset=+1]
 
-include::partial$git-fundamentals/reference.adoc[]
+include::partial$git-fundamentals/reference.adoc[leveloffset=+1]
