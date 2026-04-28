@@ -1,0 +1,34 @@
+// Quick Reference Card
+
+== Quick Reference Card
+
+[source,bash]
+----
+# Essential Git Commands
+git clone <url>                    # Clone repository
+git status                         # Check current state
+git add <file>                     # Stage changes
+git commit -m "message"            # Commit staged changes
+git push origin <branch>           # Push to remote
+git pull origin <branch>           # Pull from remote
+
+# Branch Operations
+git branch                         # List branches
+git branch <name>                  # Create branch
+git checkout <branch>              # Switch branch
+git checkout -b <branch>           # Create and switch
+git merge <branch>                 # Merge branch
+git branch -d <branch>             # Delete branch
+
+# Inspection
+git log --oneline --graph --all    # Visual commit history
+git diff                           # Show changes
+git show <commit>                  # Show commit details
+
+# Undo Changes
+git restore <file>                 # Discard working changes
+git reset HEAD <file>              # Unstage changes
+git revert <commit>                # Revert commit
+----
+
+Congratulations! You've completed the Git Fundamentals lab and are ready to apply these skills in the Software Factory platform.

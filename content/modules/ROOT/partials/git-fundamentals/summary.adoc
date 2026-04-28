@@ -1,0 +1,85 @@
+// Summary and Key Concepts
+
+== Key Concepts Summary
+
+[cols="1,3",options="header"]
+|===
+|Concept |Description
+
+|`git clone`
+|Creates a local copy of a remote repository
+
+|`git add`
+|Stages changes for commit (adds to "staging area")
+
+|`git commit`
+|Saves staged changes to local repository history
+
+|`git branch`
+|Creates, lists, or deletes branches
+
+|`git checkout`
+|Switches branches or restores files
+
+|`git merge`
+|Combines changes from different branches
+
+|`git push`
+|Sends local commits to remote repository
+
+|`git pull`
+|Fetches and merges remote changes to local branch
+
+|`git status`
+|Shows working tree status and staged changes
+
+|`git log`
+|Displays commit history
+|===
+
+== Git Workflow for CI/CD and GitOps
+
+Understanding these Git fundamentals is crucial for the ETX Application Platform:
+
+[plantuml,git-workflow,svg,opts=inline]
+----
+@startuml
+skinparam backgroundColor transparent
+skinparam defaultFontName "DejaVu Sans Mono"
+
+:Developer clones repository;
+:Create feature branch;
+:Make changes to code;
+:Commit changes locally;
+:Push to GitLab;
+note right: Triggers CI Pipeline
+:Create Merge Request;
+:Code review and approval;
+:Merge to main branch;
+note right: Triggers CD Pipeline
+:Argo CD syncs changes;
+:Application deployed;
+
+@enduml
+----
+
+*This workflow enables:*
+
+1. **Continuous Integration (CI):** Every push triggers automated builds and tests
+2. **GitOps:** Git commits drive infrastructure and application state
+3. **Collaboration:** Branches and merge requests enable team workflows
+4. **Traceability:** Every change is tracked with commits and merge history
+
+== Next Steps
+
+Now that you understand Git fundamentals, you're ready to:
+
+* Work with xref:day2-lab1-ci-pipeline.adoc[CI Pipelines in Tekton]
+* Implement xref:day2-lab1-app-deployment.adoc[GitOps with Argo CD]
+* Follow xref:day1-branching-strategies.adoc[Branching Strategies] for team workflows
+
+== Additional Resources
+
+* https://learngitbranching.js.org/[Learn Git Branching] - Interactive visual Git tutorial
+* https://github.com/skills/introduction-to-github[GitHub Skills - Introduction to GitHub]
+* https://git-scm.com/book/en/v2[Pro Git Book] - Comprehensive Git reference
