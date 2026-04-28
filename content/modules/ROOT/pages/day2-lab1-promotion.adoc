@@ -27,37 +27,48 @@ You should have:
 
 == Understanding the Promotion Flow
 
-[plantuml]
-----
-@startuml
-skinparam backgroundColor #FEFEFE
+The promotion workflow follows these steps:
 
-participant "Developer" as dev
-participant "GitLab" as gitlab
-participant "Promotion\nPipeline" as promo
-participant "Internal\nRegistry" as internal
-participant "Quay\nRegistry" as quay
-participant "GitOps\nRepo" as gitops
-participant "Argo CD" as argocd
-participant "Staging\nCluster" as staging
+.Promotion Sequence
+[cols="1,3,4",options="header"]
+|===
+|Step |Component |Action
 
-dev -> gitlab: Approves promotion\n(manual trigger)
-gitlab -> promo: Triggers pipeline
-promo -> internal: Pull image by SHA
-promo -> quay: Push image with 'stable' tag
-promo -> gitops: Update stage/deployment.yaml
-gitops --> argocd: Detects change
-argocd -> staging: Syncs new image
+|1
+|Developer
+|Approves promotion (manual trigger)
 
-@enduml
-----
+|2
+|GitLab
+|Triggers promotion pipeline
+
+|3
+|Promotion Pipeline
+|Pulls image from internal registry by SHA
+
+|4
+|Promotion Pipeline
+|Pushes image to Quay with 'stable' tag
+
+|5
+|Promotion Pipeline
+|Updates `environments/stage/deployment.yaml` in GitOps repo
+
+|6
+|Argo CD
+|Detects change in GitOps repository
+
+|7
+|Argo CD
+|Syncs new image to staging cluster
+|===
 
 **Key points:**
 
-* Dev environment uses images from internal registry (fast, local)
-* Staging environment uses images from Quay (cross-cluster accessible)
-* Promotion is explicit - you decide when code is ready for staging
-* GitOps ensures staging deployments are version-controlled
+* **Dev environment** uses images from internal registry (fast, local)
+* **Staging environment** uses images from Quay (cross-cluster accessible)
+* **Promotion is explicit** - you decide when code is ready for staging
+* **GitOps ensures** staging deployments are version-controlled
 
 == Create Promotion Pipeline Resources
 
