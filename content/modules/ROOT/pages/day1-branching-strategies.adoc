@@ -18,16 +18,60 @@ This session includes:
 
 Before diving into branching strategies, let's verify your Git environment is working correctly.
 
-=== Step 1: Clone the Workshop Repository
+=== Step 1: Access GitLab
 
-Clone the Parasol Insurance application repository:
+First, verify you can access GitLab through your browser.
 
-[source,bash,role=execute]
+Open GitLab:
+
+[source,text,subs="attributes+"]
+----
+{gitlab_url}
+----
+
+.Login Process
+1. Click the **"Keycloak"** button (SSO login)
+2. You'll be redirected to Keycloak authentication
+3. Login with workshop credentials:
+   * Username: `{user}`
+   * Password: `{password}`
+
+[NOTE]
+====
+**Workshop Users Available:**
+
+* `platform-admin` - Administrative access
+* `platform-user` - Standard user access
+* `platform-developer` - Developer access
+
+All users use password: `openshift`
+====
+
+After login, you should see the GitLab interface with the **software-factory** group.
+
+=== Step 2: Clone the Workshop Repository
+
+Now clone the Parasol Insurance application repository using Git CLI:
+
+[source,bash,role=execute,subs="attributes+"]
 ----
 cd ~
 git clone {gitlab_url}/software-factory/parasol-insurance-lab.git
 cd parasol-insurance-lab
 ----
+
+[TIP]
+====
+**Authentication for Git CLI:**
+
+When prompted for credentials during `git clone`:
+
+* Username: `{user}`
+* Password: `{password}`
+
+Or use a personal access token from GitLab:
+Settings → Access Tokens → Create token with `read_repository` scope
+====
 
 .Expected Output
 [source,text]
@@ -38,7 +82,7 @@ remote: Counting objects: 100% (150/150), done.
 Receiving objects: 100% (150/150), done.
 ----
 
-=== Step 2: Verify Basic Git Commands
+=== Step 3: Verify Basic Git Commands
 
 [source,bash,role=execute]
 ----
@@ -66,14 +110,14 @@ If any of these commands fail, verify:
 * You have network access to GitLab
 ====
 
-=== Step 3: Configure Git (If Needed)
+=== Step 4: Configure Git (If Needed)
 
 If this is your first time using Git on this system:
 
-[source,bash,role=execute]
+[source,bash,role=execute,subs="attributes+"]
 ----
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
+git config --global user.name "{user}"
+git config --global user.email "{user}@redhat.com"
 ----
 
 ✅ **Validation Complete** - You're ready to work with branches.
@@ -321,10 +365,19 @@ To {gitlab_url}/software-factory/parasol-insurance-lab.git
 
 === Exercise 4: Verify in GitLab UI
 
-1. Open GitLab in your browser: `{gitlab_url}`
-2. Navigate to: **software-factory** → **parasol-insurance-lab**
-3. Click on **Repository** → **Branches**
-4. You should see your `feature/update-readme` branch
+1. Open GitLab in your browser:
++
+[source,text,subs="attributes+"]
+----
+{gitlab_url}
+----
+
+2. Login with Keycloak (if not already logged in)
+3. Navigate to: **software-factory** → **parasol-insurance-lab**
+4. Click on **Repository** → **Branches**
+5. You should see your `feature/update-readme` branch
+
+image::gitlab-branches-view.png[GitLab Branches,600,align="center"]
 
 === Exercise 5: Merge Your Changes
 

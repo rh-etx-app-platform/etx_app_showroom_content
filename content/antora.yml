@@ -9,13 +9,18 @@ asciidoc:
     experimental: true
     page-pagination: true
     showroom-collection-version: v1.5.6
-    guid: abc123
-    bastion_public_hostname: bastion.abc123.ocpv00.rhdp.net
+    guid: wgphm
+    bastion_public_hostname: bastion.wgphm.dynamic.redhatworkshops.io
     bastion_ssh_user_name: lab-user
     bastion_ssh_password: password
     ssh_user: lab-user
-    openshift_console_url: https://console-openshift-console.apps.cluster-abc123.ocpv00.rhdp.net
-    openshift_cluster_ingress_domain: apps.cluster-abc123.ocpv00.rhdp.net
-    ocp_version: "4.18"
-    user: kubeadmin
-    password: changeme
+    openshift_console_url: https://console-openshift-console.apps.cluster-wgphm.dynamic.redhatworkshops.io
+    openshift_cluster_ingress_domain: apps.cluster-wgphm.dynamic.redhatworkshops.io
+    ocp_version: "4.20"
+    user: platform-admin
+    password: openshift
+    gitlab_url: http://gitlab.apps.cluster-wgphm.dynamic.redhatworkshops.io
+    keycloak_url: https://etx-sso.apps.cluster-wgphm.dynamic.redhatworkshops.io
+    quay_url: https://quay.apps.cluster-wgphm.dynamic.redhatworkshops.io
+    vault_url: https://vault.apps.cluster-wgphm.dynamic.redhatworkshops.io
+    etx_gitops_url: https://etx-gitops-server-etx-gitops.apps.cluster-wgphm.dynamic.redhatworkshops.io
