@@ -655,6 +655,38 @@ This GitOps approach ensures:
 * **Rollback capability** - Revert to previous commit to rollback
 * **Multi-cluster consistency** - Same manifests can deploy to multiple clusters
 
+== Quick Verification
+
+Verify the complete deployment:
+
+[source,bash]
+----
+# Check Argo CD application status
+oc get application parasol-dev -n parasol-dev -o jsonpath='{.status.sync.status}: {.status.health.status}'
+
+# Check application pods
+oc get pods -n parasol-dev -l app.kubernetes.io/name=parasol-app
+
+# Check application health endpoint
+curl http://$(oc get route parasol-app -n parasol-dev -o jsonpath='{.spec.host}')/q/health
+
+# Check OpenTelemetry injection
+oc get pod -n parasol-dev -l app.kubernetes.io/name=parasol-app \
+  -o jsonpath='{.items[0].spec.initContainers[*].name}'
+----
+
+Expected output should show: `Synced: Healthy` for Argo CD, `Running` pods, and `opentelemetry-auto-instrumentation` init container.
+
+[TIP]
+====
+**Common Issues:**
+
+* **ImagePullBackOff:** Image not in registry - run CI pipeline first
+* **CrashLoopBackOff:** Check pod logs - often missing Kafka or DB connection
+* **Argo CD Out of Sync:** Click "Sync" in Argo CD UI or check GitOps repo for errors
+* **Health check failing:** Verify all dependencies (DB, Kafka) are running
+====
+
 == Summary
 
 You have completed the Application Deployment exercise. Your application now has:
@@ -675,3 +707,5 @@ Proceed to xref:day2-lab1-promotion.adoc[Promotion Pipeline] to learn how to:
 * Copy images from internal registry to Quay
 * Update GitOps repository for staging environment
 * Trigger automatic deployment to the secondary cluster via Argo CD
+
+TIP: If you encounter issues, see xref:day2-lab1-troubleshooting.adoc[Troubleshooting Guide].

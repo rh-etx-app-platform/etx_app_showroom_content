@@ -6,6 +6,16 @@
 Create a Tekton CI pipeline that clones your application source, builds and tests it, retrieves registry credentials from Vault, and pushes the container image.
 Then wire up Tekton Triggers to fire the pipeline automatically when code is pushed to GitLab.
 
+[NOTE]
+====
+**Git Authentication:** If using a private Git repository or GitHub, ensure you have:
+
+* GitLab: Use the workshop credentials provided
+* GitHub: Create a Personal Access Token with `repo` scope at https://github.com/settings/tokens
+
+For public repositories, authentication may not be required for clone operations.
+====
+
 == Pipeline Workspace and ServiceAccount
 
 Create a workspace PVC and a ServiceAccount for the pipeline:
@@ -369,6 +379,35 @@ oc get imagestream parasol-insurance -n parasol-dev
 
 You should see the image tagged with the commit SHA.
 
+== Quick Verification
+
+Verify all components are working:
+
+[source,bash]
+----
+# Check pipeline exists
+oc get pipeline parasol-ci -n parasol-dev
+
+# Check EventListener is running
+oc get pods -n parasol-dev | grep el-gitlab-listener
+
+# Check webhook URL is exposed
+oc get route el-gitlab-listener -n parasol-dev
+
+# Check recent pipeline runs
+oc get pipelinerun -n parasol-dev --sort-by=.metadata.creationTimestamp | tail -5
+----
+
+[TIP]
+====
+**Common Issues:**
+
+* **Pipeline fails at clone:** Check Git credentials/authentication
+* **Build fails:** Verify Maven build works locally first
+* **Push fails:** Confirm ServiceAccount has `edit` role
+* **Webhook not triggering:** Verify EventListener pod is Running and route is accessible
+====
+
 == Summary
 
 You now have:
@@ -381,3 +420,5 @@ You now have:
 == Next Steps
 
 Proceed to xref:day2-lab1-app-deployment.adoc[Application Deployment with Argo CD].
+
+TIP: If you encounter issues, see xref:day2-lab1-troubleshooting.adoc[Troubleshooting Guide].

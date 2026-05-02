@@ -158,6 +158,33 @@ tkn version
 
 NOTE: The `tkn` CLI is included in the Universal Developer Image (UDI).
 
+== Install AMQ Streams (Apache Kafka)
+
+AMQ Streams provides Apache Kafka on OpenShift. The Parasol application uses Kafka for messaging between services.
+
+=== Install via OperatorHub
+
+. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Search for *Red Hat Integration - AMQ Streams*
+. Click btn:[Install]
+. Accept the defaults:
+  * **Update channel:** stable
+  * **Installation mode:** All namespaces
+  * **Installed Namespace:** openshift-operators
+. Click btn:[Install]
+. Wait for the operator to reach the `Succeeded` phase
+
+Verify from the CLI:
+
+[source,bash]
+----
+oc get csv -n openshift-operators | grep amq-streams
+----
+
+You should see the AMQ Streams operator listed with phase `Succeeded`.
+
+NOTE: The Kafka cluster will be deployed later as part of the application stack. The operator installation provides the CRDs (Kafka, KafkaTopic, etc.) needed to manage Kafka resources.
+
 == Install the OpenTelemetry Operator
 
 The OpenTelemetry Operator manages the deployment of OpenTelemetry Collectors for distributed tracing and metrics collection.
@@ -281,6 +308,7 @@ You now have the following services deployed:
 
 * ✅ **Vault** -- secrets management with Kubernetes authentication for pipeline access
 * ✅ **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
+* ✅ **AMQ Streams** -- Kafka operator ready to deploy messaging infrastructure
 * ✅ **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing
 
 == Next Steps
