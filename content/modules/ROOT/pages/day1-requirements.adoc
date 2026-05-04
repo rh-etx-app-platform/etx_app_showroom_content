@@ -27,7 +27,7 @@ Order a https://catalog.demo.redhat.com/catalog/babylon-catalog-prod/order/publi
 | cnv
 
 | OpenShift Version
-| 4.20
+| 4.21
 
 | Cluster Size
 | multinode
