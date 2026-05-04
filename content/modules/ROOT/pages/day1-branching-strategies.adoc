@@ -30,7 +30,7 @@ Open GitLab:
 ----
 
 .Login Process
-1. Click the **"Keycloak"** button (SSO login)
+1. Click the **"ETX Lab SSO"** button (SSO login)
 2. You'll be redirected to Keycloak authentication
 3. Login with workshop credentials:
    * Username: `{user}`
@@ -56,8 +56,8 @@ Now clone the Parasol Insurance application repository using Git CLI:
 [source,bash,role=execute,subs="attributes+"]
 ----
 cd ~
-git clone {gitlab_url}/software-factory/parasol-insurance-lab.git
-cd parasol-insurance-lab
+git clone {gitlab_url}/software-factory/etx_app_base_app.git
+cd etx_app_base_app
 ----
 
 [TIP]
@@ -76,7 +76,7 @@ Settings → Access Tokens → Create token with `read_repository` scope
 .Expected Output
 [source,text]
 ----
-Cloning into 'parasol-insurance-lab'...
+Cloning into 'etx_app_base_app'...
 remote: Enumerating objects: 150, done.
 remote: Counting objects: 100% (150/150), done.
 Receiving objects: 100% (150/150), done.
@@ -190,7 +190,7 @@ image::https://nvie.com/img/git-model@2x.png[GitFlow,400]
 
 === GitHub Flow
 
-image::https://guides.github.com/activities/hello-world/branching.png[GitHub Flow,400]
+image::https://miro.medium.com/v2/resize:fit:720/format:webp/1*S4VJPf8Mrg3Gn5cR7JK62w.png[GitHub Flow,400]
 
 **Characteristics:**
 
@@ -359,7 +359,7 @@ Enumerating objects: 5, done.
 Counting objects: 100% (5/5), done.
 Writing objects: 100% (3/3), 312 bytes | 312.00 KiB/s, done.
 Total 3 (delta 0), reused 0 (delta 0)
-To {gitlab_url}/software-factory/parasol-insurance-lab.git
+To {gitlab_url}/software-factory/etx_app_base_app
  * [new branch]      feature/update-readme -> feature/update-readme
 ----
 
@@ -373,8 +373,8 @@ To {gitlab_url}/software-factory/parasol-insurance-lab.git
 ----
 
 2. Login with Keycloak (if not already logged in)
-3. Navigate to: **software-factory** → **parasol-insurance-lab**
-4. Click on **Repository** → **Branches**
+3. Navigate to: **software-factory** → **etx_app_base_app**
+4. Click on **Code** → **Branches**
 5. You should see your `feature/update-readme` branch
 
 image::gitlab-branches-view.png[GitLab Branches,600,align="center"]
@@ -428,12 +428,12 @@ git push origin --delete feature/update-readme
 
 In this session you:
 
-✅ Validated your Git environment
-✅ Learned three branching models:
+* Validated your Git environment
+* Learned three branching models:
   * Trunk-Based Development (continuous delivery)
   * GitFlow (scheduled releases)
   * GitHub Flow (continuous deployment)
-✅ Practiced core Git operations:
+* Practiced core Git operations:
   * Creating branches
   * Making commits
   * Pushing to remote
@@ -442,17 +442,20 @@ In this session you:
 == Key Takeaways
 
 **Branching enables parallel development:**
+
 * Multiple developers work on different features simultaneously
 * Isolated changes until ready for integration
 * Code review through merge requests
 * CI/CD automation on every push
 
 **Different models suit different needs:**
+
 * Choose based on release cadence, team size, and deployment frequency
 * This workshop uses Trunk-Based Development principles
 * Day 2 labs will integrate branches with CI/CD pipelines
 
 **Best practices:**
+
 * Keep branches short-lived (hours to days)
 * Use descriptive branch names and commit messages
 * Push frequently to back up your work
