@@ -430,14 +430,14 @@ In this session you:
 
 * Validated your Git environment
 * Learned three branching models:
-  * Trunk-Based Development (continuous delivery)
-  * GitFlow (scheduled releases)
-  * GitHub Flow (continuous deployment)
+** Trunk-Based Development (continuous delivery)
+** GitFlow (scheduled releases)
+** GitHub Flow (continuous deployment)
 * Practiced core Git operations:
-  * Creating branches
-  * Making commits
-  * Pushing to remote
-  * Merging changes
+** Creating branches
+** Making commits
+** Pushing to remote
+** Merging changes
 
 == Key Takeaways
 
