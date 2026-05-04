@@ -209,7 +209,7 @@ image::https://miro.medium.com/v2/resize:fit:720/format:webp/1*S4VJPf8Mrg3Gn5cR7
 
 **Example workflow:**
 
-[source,bash]
+[source,bash,subs="attributes"]
 ----
 # Create feature branch
 git checkout -b feature/user-profile
