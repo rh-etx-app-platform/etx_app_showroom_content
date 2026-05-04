@@ -13,7 +13,7 @@ IMPORTANT: You will deploy your **own** Argo CD instance in the `parasol-dev` na
 The OpenShift GitOps operator is already installed cluster-wide from the infrastructure setup.
 Verify it's available:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get csv -n openshift-operators | grep gitops
 ----
@@ -122,14 +122,14 @@ spec:
 
 Apply the ArgoCD CR:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f argocd.yaml
 ----
 
 Wait for Argo CD to be ready (this may take 3-5 minutes):
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n parasol-dev -w
 ----
@@ -140,14 +140,14 @@ Press Ctrl+C when you see all `argocd-*` pods showing `1/1 Ready`.
 
 Get the Argo CD route:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get route argocd-server -n parasol-dev -o jsonpath='{.spec.host}'
 ----
 
 Get the default admin password:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get secret argocd-cluster -n parasol-dev \
   -o jsonpath='{.data.admin\.password}' | base64 -d
@@ -164,13 +164,19 @@ Alternatively, use OpenShift OAuth by clicking *LOG IN VIA OPENSHIFT*.
 Create a GitOps repository in GitLab with the following structure.
 This repository holds the Kubernetes manifests that Argo CD will sync:
 
-. Log into GitLab: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+. Log into GitLab:
++
+[source,text,subs="attributes+"]
+----
+{gitlab_url}
+----
++
 . Create a new project: *parasol-gitops*
 . Clone it locally:
-
-[source,bash]
++
+[source,bash,role=execute,subs="attributes+"]
 ----
-git clone http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-gitops.git
+git clone {gitlab_url}/software-factory/parasol-gitops.git
 cd parasol-gitops
 ----
 
@@ -283,7 +289,7 @@ spec:
 
 Commit and push the dev environment:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 git add environments/dev/
 git commit -m "Add dev environment manifests"
@@ -294,16 +300,18 @@ git push origin main
 
 Grant Argo CD permission to manage resources in the `parasol-dev` namespace:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc adm policy add-role-to-user admin \
   system:serviceaccount:parasol-dev:argocd-application-controller \
   -n parasol-dev
 ----
 
-Create an Argo CD Application that watches the `dev` environment:
+Create an Argo CD Application that watches the `dev` environment.
 
-[source,yaml]
+NOTE: Replace `{gitlab_url}` in the YAML below with the actual GitLab URL from your environment before applying.
+
+[source,yaml,subs="attributes+"]
 ----
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -313,7 +321,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-gitops.git
+    repoURL: {gitlab_url}/software-factory/parasol-gitops.git
     targetRevision: main
     path: environments/dev
   destination:
@@ -330,7 +338,7 @@ spec:
 
 Apply it:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f parasol-dev-app.yaml
 ----
@@ -339,7 +347,7 @@ oc apply -f parasol-dev-app.yaml
 
 Check that Argo CD has synced the application:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Argo CD application status
 oc get application parasol-dev -n parasol-dev \
@@ -350,7 +358,7 @@ The output should be `Synced`.
 
 Verify the application is running:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n parasol-dev -l app=parasol-insurance
 oc get route parasol-insurance -n parasol-dev -o jsonpath='{.spec.host}'
@@ -362,7 +370,7 @@ Open the route URL in your browser to confirm the application is accessible.
 
 Check that the Java agent was injected into the application pod:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pod -n parasol-dev -l app=parasol-insurance \
   -o jsonpath='{.items[0].spec.initContainers[*].name}'
@@ -372,7 +380,7 @@ You should see an `opentelemetry-auto-instrumentation` init container.
 
 Verify traces are being collected by checking the OTEL collector logs:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc logs -n parasol-dev -l app.kubernetes.io/name=otel-collector-collector --tail=50
 ----
@@ -404,10 +412,14 @@ spec:
     - name: source
   steps:
     - name: update-image
-      image: quay.io/devfile/universal-developer-image:ubi9-latest
+      image: registry.access.redhat.com/ubi9/ubi:latest
       script: |
         #!/bin/bash
         set -e
+
+        # Install git
+        dnf install -y git && dnf clean all
+
         git clone $(params.gitops-repo-url) /tmp/gitops
         cd /tmp/gitops/environments/$(params.environment)
 
@@ -423,14 +435,16 @@ spec:
 
 Apply the task:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f update-gitops-task.yaml
 ----
 
-Update the pipeline to include this task at the end:
+Update the pipeline to include this task at the end.
 
-[source,yaml]
+NOTE: Replace `{gitlab_url}` with your actual GitLab URL.
+
+[source,yaml,subs="attributes+"]
 ----
     - name: update-gitops
       runAfter: [build-image]
@@ -438,7 +452,7 @@ Update the pipeline to include this task at the end:
         name: update-gitops-repo
       params:
         - name: gitops-repo-url
-          value: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-gitops.git
+          value: {gitlab_url}/software-factory/parasol-gitops.git
         - name: image-tag
           value: $(params.git-revision)
         - name: environment
@@ -452,75 +466,33 @@ When the pipeline pushes the updated manifest, Argo CD detects the change and au
 
 == Multi-Cluster Promotion to Stage
 
-Now configure promotion to the staging environment on the secondary cluster.
+IMPORTANT: The secondary cluster for staging has been pre-configured as part of the bootstrap process. Argo CD already has the necessary credentials to deploy to the staging cluster.
 
-=== Add Secondary Cluster to Argo CD
+=== Verify Secondary Cluster Configuration
 
-Get the secondary cluster API endpoint and token:
+Check that Argo CD can see the secondary cluster:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-# Get secondary cluster API URL
-SECONDARY_API="https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443"
+# Login to Argo CD (if not already)
+argocd login $(oc get route argocd-server -n parasol-dev -o jsonpath='{.spec.host}') \
+  --insecure --username admin --password $(oc get secret argocd-cluster -n parasol-dev -o jsonpath='{.data.admin\.password}' | base64 -d)
 
-# Login to secondary cluster
-oc login $SECONDARY_API -u admin -p G6VpeK3U6n8LpyhC
-
-# Create service account for Argo CD
-oc create serviceaccount argocd-manager -n kube-system
-
-# Grant cluster-admin (for lab purposes only)
-oc create clusterrolebinding argocd-manager-binding \
-  --clusterrole=cluster-admin \
-  --serviceaccount=kube-system:argocd-manager
-
-# Get the service account token
-SA_TOKEN=$(oc create token argocd-manager -n kube-system --duration=8760h)
-
-# Switch back to primary cluster
-oc login https://api.cluster-cgd7r.dynamic.redhatworkshops.io:6443 -u admin -p r0rDrvTWeTAbVk7L
+# List clusters
+argocd cluster list
 ----
 
-Add the secondary cluster to Argo CD:
+You should see two clusters:
+- `https://kubernetes.default.svc` (local/primary cluster)
+- Secondary staging cluster (pre-configured by bootstrap)
 
-[source,bash]
-----
-# Create secret with cluster credentials
-cat <<EOF | oc apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: cluster-d4f7p
-  namespace: parasol-dev
-  labels:
-    argocd.argoproj.io/secret-type: cluster
-type: Opaque
-stringData:
-  name: cluster-d4f7p
-  server: https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443
-  config: |
-    {
-      "bearerToken": "${SA_TOKEN}",
-      "tlsClientConfig": {
-        "insecure": true
-      }
-    }
-EOF
-----
-
-Verify the cluster was added:
-
-[source,bash]
-----
-# In the Argo CD UI, go to Settings → Clusters
-# You should see cluster-d4f7p listed
-----
+NOTE: The bootstrap automation created the necessary ServiceAccount on the staging cluster and added it to Argo CD. For details on this configuration, see https://github.com/rh-etx-app-platform/etx_app_platform_bootstrap/issues/8
 
 === Create Stage Environment Manifests
 
 Create stage environment manifests in your GitOps repository:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 cd parasol-gitops
 mkdir -p environments/stage
@@ -528,7 +500,7 @@ mkdir -p environments/stage
 
 Copy the dev manifests as a template:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 cp environments/dev/*.yaml environments/stage/
 ----
@@ -570,7 +542,7 @@ spec:
     spec:
       containers:
         - name: parasol-insurance
-          image: quay-registry-quay.apps.cluster-cgd7r.dynamic.redhatworkshops.io/parasol/parasol-insurance:stable # <3>
+          image: {quay_url}/parasol/parasol-insurance:stable # <3>
           ports:
             - containerPort: 8080
           resources:
@@ -583,13 +555,13 @@ spec:
 ----
 <1> Update namespace to parasol-staging
 <2> Increase replicas for higher availability
-<3> Use Quay registry for cross-cluster image distribution
+<3> Use Quay registry for cross-cluster image distribution. Replace `{quay_url}` with your actual Quay URL.
 
 Update `environments/stage/service.yaml` and `environments/stage/route.yaml` to use `parasol-staging` namespace.
 
 Commit and push:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 git add environments/stage/
 git commit -m "Add stage environment manifests"
@@ -598,9 +570,22 @@ git push origin main
 
 === Create Stage Application
 
-Create an Argo CD Application for the staging environment on the secondary cluster:
+Create an Argo CD Application for the staging environment on the secondary cluster.
 
-[source,yaml]
+First, get the secondary cluster server URL from Argo CD:
+
+[source,bash,role=execute]
+----
+# Get the staging cluster server URL
+STAGING_CLUSTER=$(argocd cluster list -o json | jq -r '.[] | select(.name | contains("staging")) | .server')
+echo "Staging cluster: ${STAGING_CLUSTER}"
+----
+
+Create the Application manifest:
+
+NOTE: Replace `<STAGING_CLUSTER_URL>` with the URL from the command above, and `{gitlab_url}` with your GitLab URL.
+
+[source,yaml,subs="attributes+"]
 ----
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -610,11 +595,11 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-gitops.git
+    repoURL: {gitlab_url}/software-factory/parasol-gitops.git
     targetRevision: main
     path: environments/stage
   destination:
-    server: https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443 # <1>
+    server: <STAGING_CLUSTER_URL> # <1>
     namespace: parasol-staging
   syncPolicy:
     automated:
@@ -623,11 +608,11 @@ spec:
     syncOptions:
       - CreateNamespace=true
 ----
-<1> Points to the secondary cluster
+<1> Points to the secondary cluster (pre-configured by bootstrap)
 
 Apply it:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f parasol-stage-app.yaml
 ----
@@ -636,59 +621,57 @@ oc apply -f parasol-stage-app.yaml
 
 Check the stage application status:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get application parasol-stage -n parasol-dev \
   -o jsonpath='{.status.sync.status}'
 ----
 
-Verify the deployment on the secondary cluster:
+The output should be `Synced`.
 
-[source,bash]
-----
-# Login to secondary cluster
-oc login https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443 -u admin -p G6VpeK3U6n8LpyhC
+View the application in Argo CD UI:
 
-# Check pods
-oc get pods -n parasol-staging
+. Open the Argo CD dashboard
+. You should see two applications:
+  * `parasol-dev` - Running on primary cluster
+  * `parasol-stage` - Running on secondary (staging) cluster
+. Click on `parasol-stage` to view its deployment status
 
-# Get route
-oc get route parasol-insurance -n parasol-staging -o jsonpath='{.spec.host}'
-----
+NOTE: Since Argo CD is managing the staging cluster remotely, you can view the application status through the Argo CD UI without needing to login to the secondary cluster directly.
 
-Open the staging route URL in your browser to confirm the application is accessible on the secondary cluster.
+== Promotion Workflow Overview
 
-== Promotion Workflow
-
-To promote an image from dev to stage:
+The promotion workflow from dev to staging follows these steps:
 
 . CI pipeline builds and pushes image to internal registry with commit SHA tag
-. CI pipeline tags the same image in Quay with a `stable` tag:
-+
-[source,bash]
-----
-# Example: retag and push to Quay
-skopeo copy \
-  docker://image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance:abc123 \
-  docker://quay-registry-quay.apps.cluster-cgd7r.dynamic.redhatworkshops.io/parasol/parasol-insurance:stable
-----
-+
-. Update `environments/stage/deployment.yaml` image tag to `stable`
-. Push to GitOps repository
-. Argo CD automatically syncs to secondary cluster
+. Image is promoted to Quay registry with a `stable` tag (covered in xref:day2-lab1-promotion.adoc[Promotion Pipeline])
+. GitOps repository `environments/stage/deployment.yaml` is updated with new image tag
+. Argo CD detects the change and automatically syncs to the secondary cluster
+
+This GitOps approach ensures:
+
+* **Version control** - All deployment changes are tracked in Git
+* **Auditability** - Full history of what was deployed when
+* **Rollback capability** - Revert to previous commit to rollback
+* **Multi-cluster consistency** - Same manifests can deploy to multiple clusters
 
 == Summary
 
-You have completed Lab 1. Your application now has:
+You have completed the Application Deployment exercise. Your application now has:
 
-* ✅ A fully automated CI pipeline triggered by GitLab webhooks
-* ✅ Registry credentials managed securely by Vault
-* ✅ Container images stored in the OpenShift internal registry
 * ✅ Your own Argo CD instance for GitOps deployments
+* ✅ GitOps repository structure (dev and stage environments)
 * ✅ Automated sync with self-healing enabled
 * ✅ OpenTelemetry auto-instrumentation for distributed tracing
-* ✅ Multi-cluster promotion workflow (dev → stage)
+* ✅ Integration between CI pipeline and GitOps repository
+* ✅ Multi-cluster deployment capability (dev → stage)
 
-== Next Steps
+== What's Next
 
-Proceed to xref:day2-lab2-mta.adoc[Lab 2: Application Modernization (MTA)].
+The current setup deploys to dev automatically when the CI pipeline completes. To promote images from dev to staging, you need a promotion pipeline.
+
+Proceed to xref:day2-lab1-promotion.adoc[Promotion Pipeline] to learn how to:
+
+* Copy images from internal registry to Quay
+* Update GitOps repository for staging environment
+* Trigger automatic deployment to the secondary cluster via Argo CD

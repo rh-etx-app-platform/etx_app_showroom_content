@@ -19,6 +19,7 @@
 * xref:day2-lab1-supporting-services.adoc[Supporting Services]
 * xref:day2-lab1-ci-pipeline.adoc[CI Pipeline]
 * xref:day2-lab1-app-deployment.adoc[Application Deployment]
+* xref:day2-lab1-promotion.adoc[Promotion Pipeline]
 ** Lab 2: Application Modernization
 * xref:day2-lab2-mta.adoc[Application Modernization (MTA)]
 * xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub]
