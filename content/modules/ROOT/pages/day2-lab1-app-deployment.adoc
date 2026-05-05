@@ -707,5 +707,3 @@ Proceed to xref:day2-lab1-promotion.adoc[Promotion Pipeline] to learn how to:
 * Copy images from internal registry to Quay
 * Update GitOps repository for staging environment
 * Trigger automatic deployment to the secondary cluster via Argo CD
-
-TIP: If you encounter issues, see xref:day2-lab1-troubleshooting.adoc[Troubleshooting Guide].

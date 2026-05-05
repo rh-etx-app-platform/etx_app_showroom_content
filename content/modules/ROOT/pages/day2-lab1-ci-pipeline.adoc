@@ -6,16 +6,6 @@
 Create a Tekton CI pipeline that clones your application source, builds and tests it, retrieves registry credentials from Vault, and pushes the container image.
 Then wire up Tekton Triggers to fire the pipeline automatically when code is pushed to GitLab.
 
-[NOTE]
-====
-**Git Authentication:** If using a private Git repository or GitHub, ensure you have:
-
-* GitLab: Use the workshop credentials provided
-* GitHub: Create a Personal Access Token with `repo` scope at https://github.com/settings/tokens
-
-For public repositories, authentication may not be required for clone operations.
-====
-
 == Pipeline Workspace and ServiceAccount
 
 Create a workspace PVC and a ServiceAccount for the pipeline:
@@ -420,5 +410,3 @@ You now have:
 == Next Steps
 
 Proceed to xref:day2-lab1-app-deployment.adoc[Application Deployment with Argo CD].
-
-TIP: If you encounter issues, see xref:day2-lab1-troubleshooting.adoc[Troubleshooting Guide].
