@@ -3,115 +3,31 @@
 
 == Overview
 
-Deploy and configure the platform services required by the CI/CD pipeline and application observability: HashiCorp Vault for secrets management, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
+Deploy and configure the platform services required by the CI/CD pipeline and application observability: AMQ Streams (Kafka) for messaging, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
 
-== Deploy HashiCorp Vault
+NOTE: HashiCorp Vault is already deployed as part of the infrastructure bootstrap and does not require student installation.
 
-Vault provides centralized secrets management.
-The pipeline will retrieve container registry credentials from Vault at runtime instead of storing them in Kubernetes Secrets.
+== HashiCorp Vault (Pre-Deployed)
 
-=== Install Vault via Helm
+HashiCorp Vault provides centralized secrets management for the platform.
+It has been pre-deployed by the infrastructure bootstrap process and is ready to use.
 
-Add the HashiCorp Helm repository and install Vault in standalone mode:
+* **URL:** {vault_url}
+* **Authentication:** Keycloak OIDC
+  - `platform-admin` / `openshift` (administrator access)
+  - `platform-developer` / `openshift` (developer access)
+* **Purpose:** CI/CD pipeline credentials and application secrets
 
-[source,bash]
-----
-helm repo add hashicorp https://helm.releases.hashicorp.com
-helm repo update
-----
+The Vault instance is already configured with:
 
-Create a namespace and install:
+* ✅ KV v2 secrets engine enabled at `secret/`
+* ✅ Kubernetes authentication method for pipeline ServiceAccounts
+* ✅ Registry credentials stored at `secret/registry`
+* ✅ RBAC policies for pipeline access
 
-[source,bash]
-----
-oc new-project vault
+Your Tekton pipelines can authenticate to Vault using their ServiceAccount tokens to retrieve registry credentials at runtime.
 
-helm install vault hashicorp/vault \
-  --namespace vault \
-  --set "global.openshift=true" \
-  --set "server.dev.enabled=true" \  # <1>
-  --set "injector.enabled=false"
-----
-<1> Dev mode runs Vault unsealed with an in-memory backend. This is suitable for labs only -- never use dev mode in production.
-
-Wait for the pod to be ready:
-
-[source,bash]
-----
-oc get pods -n vault -w
-----
-
-Press Ctrl+C when the `vault-0` pod shows `1/1 Ready`.
-
-=== Configure Vault
-
-Exec into the Vault pod to configure secrets and authentication:
-
-[source,bash]
-----
-oc exec -it vault-0 -n vault -- /bin/sh
-----
-
-Enable the KV v2 secrets engine and store registry credentials:
-
-[source,bash]
-----
-vault secrets enable -path=secret kv-v2
-
-# Store internal registry credentials (for dev environment)
-vault kv put secret/registry \
-  username=unused \
-  password=unused \
-  server=image-registry.openshift-image-registry.svc:5000
-
-# Optionally, store Quay credentials (for stage/prod)
-# vault kv put secret/quay \
-#   username=<your_quay_username> \
-#   password=<your_quay_password> \
-#   server={quay_registry_url}
-----
-
-NOTE: The OpenShift internal registry uses ServiceAccount tokens for authentication, so username/password are not used. The Tekton pipeline will authenticate using its ServiceAccount automatically.
-
-=== Configure Kubernetes Authentication
-
-Enable the Kubernetes auth method so that pipeline ServiceAccounts can authenticate to Vault:
-
-[source,bash]
-----
-vault auth enable kubernetes
-
-vault write auth/kubernetes/config \
-  kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443"
-
-vault policy write pipeline-read - <<EOF
-path "secret/data/registry" {
-  capabilities = ["read"]
-}
-path "secret/data/quay" {
-  capabilities = ["read"]
-}
-EOF
-
-vault write auth/kubernetes/role/pipeline \
-  bound_service_account_names=pipeline \
-  bound_service_account_namespaces=parasol-dev \
-  policies=pipeline-read \
-  ttl=1h
-----
-
-Type `exit` to leave the Vault pod.
-
-=== Verify Vault
-
-Confirm you can read the secret from outside the pod:
-
-[source,bash]
-----
-oc exec vault-0 -n vault -- vault kv get secret/registry
-----
-
-You should see the stored credentials.
+TIP: Access the Vault UI at {vault_url} and log in with Keycloak OIDC to explore the pre-configured secrets.
 
 == Install OpenShift Pipelines (Tekton)
 
@@ -304,9 +220,9 @@ This will be used when deploying the application in xref:day2-lab1-app-deploymen
 
 == Summary
 
-You now have the following services deployed:
+You now have the following services available:
 
-* ✅ **Vault** -- secrets management with Kubernetes authentication for pipeline access
+* ✅ **Vault** (pre-deployed) -- secrets management with Kubernetes authentication for pipeline access
 * ✅ **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
 * ✅ **AMQ Streams** -- Kafka operator ready to deploy messaging infrastructure
 * ✅ **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing

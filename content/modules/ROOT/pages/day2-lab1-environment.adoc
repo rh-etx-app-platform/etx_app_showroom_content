@@ -44,13 +44,18 @@ NOTE: For this lab, you'll primarily use the OpenShift internal registry. Quay i
 
 === OpenShift GitOps (Argo CD)
 
-A pre-deployed GitOps operator manages infrastructure automation.
+Two GitOps control planes are available:
 
-* **Instance:** `openshift-gitops` namespace
-* **Purpose:** Infrastructure automation (GitLab, Keycloak, Quay deployments)
-* **GitOps Repository:** `etx-gitops` - Contains infrastructure manifests managed by the bootstrap process
+* **OpenShift GitOps bootstrap plane** (`openshift-gitops` namespace)
+  - Manages platform infrastructure (GitLab, Keycloak, Quay, Vault)
+  - Read-only for students
 
-IMPORTANT: You will deploy your **own** Argo CD instance in Lab 1 Step 5 for application deployments. The `openshift-gitops` instance is reserved for infrastructure only.
+* **Dedicated ETX GitOps admin plane** (`etx-gitops` namespace)
+  - Pre-deployed Argo CD instance for application team use
+  - Repository: `etx-gitops` - Contains infrastructure and application manifests
+  - You can deploy applications here or create your own Argo CD instance
+
+IMPORTANT: In Lab 1 Step 5, you have the option to deploy your **own** Argo CD instance in your namespace or use the pre-deployed `etx-gitops` instance for application deployments.
 
 == Multi-Cluster Setup
 
@@ -93,7 +98,7 @@ Lab 1 Step 1: Environment Overview (this page)
       ↓
 Lab 1 Step 2: Deploy and configure Dev Spaces
       ↓
-Lab 1 Step 3: Deploy Vault, Tekton, OpenTelemetry
+Lab 1 Step 3: Deploy supporting services (AMQ Streams, Tekton, OpenTelemetry)
       ↓
 Lab 1 Step 4: Create CI pipeline with Tekton
       ↓
