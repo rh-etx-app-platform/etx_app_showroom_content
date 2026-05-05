@@ -31,9 +31,6 @@ Source control and Git repository hosting.
 * **Authentication:** Keycloak OIDC (click "Sign in with OpenID Connect")
 * **Seeded Repositories:**
   - `software-factory/etx_app_base_app` - Your application workspace (read/write)
-  - `platform/etx_app_base_app` - CI/CD templates (read-only)
-  - `platform/etx_app_platform_bootstrap` - Platform bootstrap (read-only)
-  - `platform/etx_app_platform_services` - Platform services (read-only)
 
 === Quay Container Registry
 
@@ -47,12 +44,13 @@ NOTE: For this lab, you'll primarily use the OpenShift internal registry. Quay i
 
 === OpenShift GitOps (Argo CD)
 
-A pre-deployed GitOps operator manages infrastructure (GitLab deployment).
+A pre-deployed GitOps operator manages infrastructure automation.
 
 * **Instance:** `openshift-gitops` namespace
-* **Purpose:** Infrastructure automation (NOT for student use)
+* **Purpose:** Infrastructure automation (GitLab, Keycloak, Quay deployments)
+* **GitOps Repository:** `etx-gitops` - Contains infrastructure manifests managed by the bootstrap process
 
-IMPORTANT: You will deploy your **own** Argo CD instance in Lab 1 Step 5 for application deployments.
+IMPORTANT: You will deploy your **own** Argo CD instance in Lab 1 Step 5 for application deployments. The `openshift-gitops` instance is reserved for infrastructure only.
 
 == Multi-Cluster Setup
 
@@ -81,10 +79,11 @@ You will configure multi-cluster promotion in the final section of this lab.
 As part of this hands-on lab, you will install and configure:
 
 * ✅ **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser
-* ✅ **HashiCorp Vault** - Secrets management for CI/CD credentials
 * ✅ **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
 * ✅ **OpenTelemetry Operator** - Distributed tracing and observability
 * ✅ **Argo CD (student instance)** - GitOps continuous deployment
+
+NOTE: HashiCorp Vault and AMQ Streams are pre-deployed as part of the infrastructure bootstrap and do not require student installation.
 
 == Lab Workflow
 
@@ -122,7 +121,7 @@ git clone {gitlab_url}/software-factory/etx_app_base_app.git
 cd etx_app_base_app
 ----
 
-NOTE: The repository name is `etx_app_base_app`, but Kubernetes resources will be named `parasol-insurance` for simplicity.
+NOTE: The repository name is `etx_app_base_app` and Kubernetes resources will be named `etx-app-base-app-*` for consistency.
 
 == Verify Cluster Access
 
