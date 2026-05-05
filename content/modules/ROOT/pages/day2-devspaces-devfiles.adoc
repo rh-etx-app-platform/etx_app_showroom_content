@@ -157,7 +157,7 @@ This is useful when your organization has a standard base environment:
 ----
 schemaVersion: 2.2.0
 metadata:
-  name: parasol-insurance
+  name: etx-app-base-app
 parent:
   uri: https://gitlab.example.com/devfiles/-/raw/main/devfile.yaml
 ----

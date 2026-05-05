@@ -3,7 +3,7 @@
 
 == Overview
 
-In this lab you will create a Dev Spaces workspace for the Parasol Insurance application, verify Git and AI assistant integration, and run Quarkus Dev Services with nested containers.
+In this lab you will create a Dev Spaces workspace for the ETX App Base application, verify Git and AI assistant integration, and run Quarkus Dev Services with nested containers.
 
 == Get the Dashboard URL
 
@@ -24,7 +24,7 @@ Construct the URL as:
 https://<devspaces_dashboard_url>/#<git_repo_url>
 ----
 
-For example, to create a workspace from the Parasol Insurance application:
+For example, to create a workspace from the ETX App Base application:
 
 ----
 https://<devspaces_dashboard_url>/#https://<gitlab_host>/parasol-insurance
@@ -39,7 +39,7 @@ https://<devspaces_dashboard_url>/#https://<gitlab_host>/parasol-insurance/tree/
 Alternatively, from the Dev Spaces dashboard:
 
 . Click btn:[Create Workspace]
-. Paste the Git repository URL for the Parasol Insurance application
+. Paste the Git repository URL for the ETX App Base application
 . Click btn:[Create & Open]
 
 Dev Spaces will clone the repository, read the `devfile.yaml`, pull the container image, and open the VS Code IDE in your browser.
@@ -96,7 +96,7 @@ This devfile configures the workspace with UDI, Maven caching, Quarkus endpoints
 ----
 schemaVersion: 2.2.0
 metadata:
-  name: parasol-insurance
+  name: etx-app-base-app
 components:
   - name: development-tooling
     container:

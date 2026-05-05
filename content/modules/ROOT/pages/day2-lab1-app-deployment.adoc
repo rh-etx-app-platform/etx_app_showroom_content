@@ -6,7 +6,7 @@
 Deploy your own Argo CD instance to manage application deployments using a GitOps workflow.
 The CI pipeline from the previous section pushes container images; Argo CD watches a GitOps repository and syncs Kubernetes manifests to the cluster.
 
-IMPORTANT: You will deploy your **own** Argo CD instance in the `parasol-dev` namespace. The pre-deployed OpenShift GitOps operator in `openshift-gitops` is used for infrastructure automation only and is separate from your application deployment workflows.
+IMPORTANT: You will deploy your **own** Argo CD instance in the `etx-app-dev` namespace. The pre-deployed OpenShift GitOps operator in `openshift-gitops` is used for infrastructure automation only and is separate from your application deployment workflows.
 
 == Install OpenShift GitOps Operator
 
@@ -30,7 +30,7 @@ apiVersion: argoproj.io/v1beta1
 kind: ArgoCD
 metadata:
   name: argocd
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   server:
     autoscale:
@@ -131,7 +131,7 @@ Wait for Argo CD to be ready (this may take 3-5 minutes):
 
 [source,bash,role=execute]
 ----
-oc get pods -n parasol-dev -w
+oc get pods -n etx-app-dev -w
 ----
 
 Press Ctrl+C when you see all `argocd-*` pods showing `1/1 Ready`.
@@ -142,14 +142,14 @@ Get the Argo CD route:
 
 [source,bash,role=execute]
 ----
-oc get route argocd-server -n parasol-dev -o jsonpath='{.spec.host}'
+oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}'
 ----
 
 Get the default admin password:
 
 [source,bash,role=execute]
 ----
-oc get secret argocd-cluster -n parasol-dev \
+oc get secret argocd-cluster -n etx-app-dev \
   -o jsonpath='{.data.admin\.password}' | base64 -d
 ----
 
@@ -171,19 +171,19 @@ This repository holds the Kubernetes manifests that Argo CD will sync:
 {gitlab_url}
 ----
 +
-. Create a new project: *parasol-gitops*
+. Create a new project: *etx-app-gitops*
 . Clone it locally:
 +
 [source,bash,role=execute,subs="attributes+"]
 ----
-git clone {gitlab_url}/software-factory/parasol-gitops.git
-cd parasol-gitops
+git clone {gitlab_url}/software-factory/etx-app-gitops.git
+cd etx-app-gitops
 ----
 
 Create the following directory structure:
 
 ----
-parasol-gitops/
+etx-app-gitops/
 ├── environments/
 │   ├── dev/
 │   │   ├── namespace.yaml
@@ -217,27 +217,27 @@ Create `environments/dev/deployment.yaml`:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: parasol-insurance
-  namespace: parasol-dev
+  name: etx-app-base-app
+  namespace: etx-app-dev
   labels:
-    app: parasol-insurance
+    app: etx-app-base-app
   annotations:
     instrumentation.opentelemetry.io/inject-java: "true" # <1>
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: parasol-insurance
+      app: etx-app-base-app
   template:
     metadata:
       labels:
-        app: parasol-insurance
+        app: etx-app-base-app
       annotations:
         instrumentation.opentelemetry.io/inject-java: "true" # <1>
     spec:
       containers:
-        - name: parasol-insurance
-          image: image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance:latest # <2>
+        - name: etx-app-base-app
+          image: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:latest # <2>
           ports:
             - containerPort: 8080
           resources:
@@ -258,11 +258,11 @@ Create `environments/dev/service.yaml`:
 apiVersion: v1
 kind: Service
 metadata:
-  name: parasol-insurance
-  namespace: parasol-dev
+  name: etx-app-base-app
+  namespace: etx-app-dev
 spec:
   selector:
-    app: parasol-insurance
+    app: etx-app-base-app
   ports:
     - port: 8080
       targetPort: 8080
@@ -275,12 +275,12 @@ Create `environments/dev/route.yaml`:
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: parasol-insurance
-  namespace: parasol-dev
+  name: etx-app-base-app
+  namespace: etx-app-dev
 spec:
   to:
     kind: Service
-    name: parasol-insurance
+    name: etx-app-base-app
   port:
     targetPort: 8080
   tls:
@@ -298,13 +298,13 @@ git push origin main
 
 == Create the Argo CD Application
 
-Grant Argo CD permission to manage resources in the `parasol-dev` namespace:
+Grant Argo CD permission to manage resources in the `etx-app-dev` namespace:
 
 [source,bash,role=execute]
 ----
 oc adm policy add-role-to-user admin \
   system:serviceaccount:parasol-dev:argocd-application-controller \
-  -n parasol-dev
+  -n etx-app-dev
 ----
 
 Create an Argo CD Application that watches the `dev` environment.
@@ -317,16 +317,16 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: parasol-dev
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   project: default
   source:
-    repoURL: {gitlab_url}/software-factory/parasol-gitops.git
+    repoURL: {gitlab_url}/software-factory/etx-app-gitops.git
     targetRevision: main
     path: environments/dev
   destination:
     server: https://kubernetes.default.svc
-    namespace: parasol-dev
+    namespace: etx-app-dev
   syncPolicy:
     automated:
       prune: true
@@ -350,7 +350,7 @@ Check that Argo CD has synced the application:
 [source,bash,role=execute]
 ----
 # Argo CD application status
-oc get application parasol-dev -n parasol-dev \
+oc get application parasol-dev -n etx-app-dev \
   -o jsonpath='{.status.sync.status}'
 ----
 
@@ -360,8 +360,8 @@ Verify the application is running:
 
 [source,bash,role=execute]
 ----
-oc get pods -n parasol-dev -l app=parasol-insurance
-oc get route parasol-insurance -n parasol-dev -o jsonpath='{.spec.host}'
+oc get pods -n etx-app-dev -l app=parasol-insurance
+oc get route parasol-insurance -n etx-app-dev -o jsonpath='{.spec.host}'
 ----
 
 Open the route URL in your browser to confirm the application is accessible.
@@ -372,7 +372,7 @@ Check that the Java agent was injected into the application pod:
 
 [source,bash,role=execute]
 ----
-oc get pod -n parasol-dev -l app=parasol-insurance \
+oc get pod -n etx-app-dev -l app=parasol-insurance \
   -o jsonpath='{.items[0].spec.initContainers[*].name}'
 ----
 
@@ -382,7 +382,7 @@ Verify traces are being collected by checking the OTEL collector logs:
 
 [source,bash,role=execute]
 ----
-oc logs -n parasol-dev -l app.kubernetes.io/name=otel-collector-collector --tail=50
+oc logs -n etx-app-dev -l app.kubernetes.io/name=otel-collector-collector --tail=50
 ----
 
 You should see trace data in the logs.
@@ -398,7 +398,7 @@ apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: update-gitops-repo
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   params:
     - name: gitops-repo-url
@@ -424,7 +424,7 @@ spec:
         cd /tmp/gitops/environments/$(params.environment)
 
         # Update the image tag in the deployment manifest
-        sed -i "s|image:.*parasol-insurance:.*|image: image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance:$(params.image-tag)|" deployment.yaml
+        sed -i "s|image:.*parasol-insurance:.*|image: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:$(params.image-tag)|" deployment.yaml
 
         git config user.email "pipeline@openshift.local"
         git config user.name "Tekton Pipeline"
@@ -452,7 +452,7 @@ NOTE: Replace `{gitlab_url}` with your actual GitLab URL.
         name: update-gitops-repo
       params:
         - name: gitops-repo-url
-          value: {gitlab_url}/software-factory/parasol-gitops.git
+          value: {gitlab_url}/software-factory/etx-app-gitops.git
         - name: image-tag
           value: $(params.git-revision)
         - name: environment
@@ -475,8 +475,8 @@ Check that Argo CD can see the secondary cluster:
 [source,bash,role=execute]
 ----
 # Login to Argo CD (if not already)
-argocd login $(oc get route argocd-server -n parasol-dev -o jsonpath='{.spec.host}') \
-  --insecure --username admin --password $(oc get secret argocd-cluster -n parasol-dev -o jsonpath='{.data.admin\.password}' | base64 -d)
+argocd login $(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}') \
+  --insecure --username admin --password $(oc get secret argocd-cluster -n etx-app-dev -o jsonpath='{.data.admin\.password}' | base64 -d)
 
 # List clusters
 argocd cluster list
@@ -494,7 +494,7 @@ Create stage environment manifests in your GitOps repository:
 
 [source,bash,role=execute]
 ----
-cd parasol-gitops
+cd etx-app-gitops
 mkdir -p environments/stage
 ----
 
@@ -512,36 +512,36 @@ Update `environments/stage/namespace.yaml`:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: parasol-staging
+  name: etx-app-staging
 ----
 
-Update `environments/stage/deployment.yaml` to use the `parasol-staging` namespace:
+Update `environments/stage/deployment.yaml` to use the `etx-app-staging` namespace:
 
 [source,yaml]
 ----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: parasol-insurance
-  namespace: parasol-staging # <1>
+  name: etx-app-base-app
+  namespace: etx-app-staging # <1>
   labels:
-    app: parasol-insurance
+    app: etx-app-base-app
   annotations:
     instrumentation.opentelemetry.io/inject-java: "true"
 spec:
   replicas: 2 # <2>
   selector:
     matchLabels:
-      app: parasol-insurance
+      app: etx-app-base-app
   template:
     metadata:
       labels:
-        app: parasol-insurance
+        app: etx-app-base-app
       annotations:
         instrumentation.opentelemetry.io/inject-java: "true"
     spec:
       containers:
-        - name: parasol-insurance
+        - name: etx-app-base-app
           image: {quay_url}/parasol/parasol-insurance:stable # <3>
           ports:
             - containerPort: 8080
@@ -553,11 +553,11 @@ spec:
               cpu: "2"
               memory: 2Gi
 ----
-<1> Update namespace to parasol-staging
+<1> Update namespace to etx-app-staging
 <2> Increase replicas for higher availability
 <3> Use Quay registry for cross-cluster image distribution. Replace `{quay_url}` with your actual Quay URL.
 
-Update `environments/stage/service.yaml` and `environments/stage/route.yaml` to use `parasol-staging` namespace.
+Update `environments/stage/service.yaml` and `environments/stage/route.yaml` to use `etx-app-staging` namespace.
 
 Commit and push:
 
@@ -591,16 +591,16 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: parasol-stage
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   project: default
   source:
-    repoURL: {gitlab_url}/software-factory/parasol-gitops.git
+    repoURL: {gitlab_url}/software-factory/etx-app-gitops.git
     targetRevision: main
     path: environments/stage
   destination:
     server: <STAGING_CLUSTER_URL> # <1>
-    namespace: parasol-staging
+    namespace: etx-app-staging
   syncPolicy:
     automated:
       prune: true
@@ -623,7 +623,7 @@ Check the stage application status:
 
 [source,bash,role=execute]
 ----
-oc get application parasol-stage -n parasol-dev \
+oc get application parasol-stage -n etx-app-dev \
   -o jsonpath='{.status.sync.status}'
 ----
 
@@ -633,7 +633,7 @@ View the application in Argo CD UI:
 
 . Open the Argo CD dashboard
 . You should see two applications:
-  * `parasol-dev` - Running on primary cluster
+  * `etx-app-dev` - Running on primary cluster
   * `parasol-stage` - Running on secondary (staging) cluster
 . Click on `parasol-stage` to view its deployment status
 
@@ -654,6 +654,38 @@ This GitOps approach ensures:
 * **Auditability** - Full history of what was deployed when
 * **Rollback capability** - Revert to previous commit to rollback
 * **Multi-cluster consistency** - Same manifests can deploy to multiple clusters
+
+== Quick Verification
+
+Verify the complete deployment:
+
+[source,bash]
+----
+# Check Argo CD application status
+oc get application parasol-dev -n etx-app-dev -o jsonpath='{.status.sync.status}: {.status.health.status}'
+
+# Check application pods
+oc get pods -n etx-app-dev -l app.kubernetes.io/name=parasol-app
+
+# Check application health endpoint
+curl http://$(oc get route parasol-app -n etx-app-dev -o jsonpath='{.spec.host}')/q/health
+
+# Check OpenTelemetry injection
+oc get pod -n etx-app-dev -l app.kubernetes.io/name=parasol-app \
+  -o jsonpath='{.items[0].spec.initContainers[*].name}'
+----
+
+Expected output should show: `Synced: Healthy` for Argo CD, `Running` pods, and `opentelemetry-auto-instrumentation` init container.
+
+[TIP]
+====
+**Common Issues:**
+
+* **ImagePullBackOff:** Image not in registry - run CI pipeline first
+* **CrashLoopBackOff:** Check pod logs - often missing Kafka or DB connection
+* **Argo CD Out of Sync:** Click "Sync" in Argo CD UI or check GitOps repo for errors
+* **Health check failing:** Verify all dependencies (DB, Kafka) are running
+====
 
 == Summary
 
