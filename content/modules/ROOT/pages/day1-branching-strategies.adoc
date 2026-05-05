@@ -130,6 +130,10 @@ Different teams use different branching strategies based on their release cadenc
 
 image::https://trunkbaseddevelopment.com/trunk1b.png[Trunk-Based Development,400]
 
+https://trunkbaseddevelopment.com/[Trunk-Based Development^] is a lightweight strategy
+where developers integrate small, frequent changes into `main` to keep the codebase
+continuously releasable and deployable.
+
 **Characteristics:**
 
 * All developers commit to a single `main` branch
@@ -165,9 +169,13 @@ git push origin main
 
 image::https://nvie.com/img/git-model@2x.png[GitFlow,400]
 
+https://about.gitlab.com/blog/what-is-gitflow/[GitFlow^] is a structured branching model
+that separates development and release work through dedicated branch types,
+making it suitable for teams with planned release cycles.
+
 **Characteristics:**
 
-* Multiple long-lived branches: `main`, `develop`, `release/*`, `hotfix/*`
+* Multiple long-lived branches: `main`, `develop`, `release/\*`, `hotfix/*`
 * Feature branches created from `develop`
 * Release branches for production preparation
 * Hotfix branches for urgent production fixes
@@ -191,6 +199,9 @@ image::https://nvie.com/img/git-model@2x.png[GitFlow,400]
 === GitHub Flow
 
 image::https://miro.medium.com/v2/resize:fit:720/format:webp/1*S4VJPf8Mrg3Gn5cR7JK62w.png[GitHub Flow,400]
+
+https://docs.github.com/en/get-started/using-github/github-flow[GitHub Flow^] is a lightweight
+branch-and-pull-request workflow focused on short-lived branches and frequent merges into `main`.
 
 **Characteristics:**
 
@@ -331,13 +342,15 @@ git log --oneline -1
 .Commit Message Format
 [TIP]
 ====
-Use conventional commit format:
+Using https://www.conventionalcommits.org/en/v1.0.0/[conventional commit^] format creates
+a commit message that is easy to understand and follow:
 
 * `feat:` - New feature
 * `fix:` - Bug fix
 * `docs:` - Documentation
 * `refactor:` - Code restructuring
 * `test:` - Adding tests
+* `chore:` - Miscellaneous changes
 
 Example: `feat: add user authentication`
 ====
@@ -373,7 +386,7 @@ To {gitlab_url}/software-factory/etx_app_base_app
 ----
 
 2. Login with Keycloak (if not already logged in)
-3. Navigate to: **software-factory** → **etx_app_base_app**
+3. Navigate to: **Projects** → **software-factory** → **etx_app_base_app**
 4. Click on **Code** → **Branches**
 5. You should see your `feature/update-readme` branch
 
@@ -463,11 +476,12 @@ In this session you:
 
 == Next Steps
 
-You're now ready for Day 2:
+You're now ready for Day 2 Software Factory labs:
 
-* **xref:day2-lab1-environment.adoc[Lab 1: Software Factory]** - Build CI/CD pipelines with Tekton
-* **xref:day2-lab1-app-deployment.adoc[Application Deployment]** - Deploy with Argo CD using GitOps
+* **xref:day2-devspaces-overview.adoc[Dev Spaces]** - Cloud IDE with VS Code in the browser
+* **xref:day2-lab1-environment.adoc[Software Factory]** - Build CI/CD pipelines with Tekton
 * **xref:day2-lab1-ci-pipeline.adoc[CI Pipeline]** - Automate builds on every Git push
+* **xref:day2-lab1-app-deployment.adoc[Application Deployment]** - Deploy with Argo CD using GitOps
 
 The branching concepts you learned today form the foundation for GitOps workflows where Git commits drive infrastructure and application state.
 

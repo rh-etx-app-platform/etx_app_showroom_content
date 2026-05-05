@@ -11,7 +11,7 @@ Ensure all requirements are met before proceeding.
 === OpenShift Cluster
 
 You will need an OpenShift Container Platform cluster for the labs.
-Order a https://catalog.demo.redhat.com/catalog/babylon-catalog-prod/order/published.ocp4-cluster.prod[Red Hat OpenShift Container Platform Cluster (Multi-Cloud)] from the Red Hat Demo Platform with the following options:
+Order a https://catalog.demo.redhat.com/catalog/babylon-catalog-prod/order/published.ocp4-cluster.prod[Red Hat OpenShift Container Platform Cluster (Multi-Cloud),window="_blank"] from the Red Hat Demo Platform with the following options:
 
 [cols="1,2",options="header"]
 |===
@@ -38,6 +38,9 @@ Order a https://catalog.demo.redhat.com/catalog/babylon-catalog-prod/order/publi
 | Create Users on Cluster
 | 5
 
+| Create users on cluster?
+| Disabled
+
 | Enable OpenShift Lightspeed
 | Disabled
 |===
@@ -62,7 +65,7 @@ Verify your OpenShift cluster is accessible:
 
 [source,bash,subs="attributes"]
 ----
-oc login --server=<your-api-url>
+oc login -u admin --server={openshift_api_url}
 oc whoami
 oc get nodes
 ----
@@ -78,7 +81,7 @@ Confirm you can authenticate to the Git server:
 
 [source,bash,subs="attributes"]
 ----
-git clone <your-repo-url>
+git clone {gitlab_url}/software-factory/etx_app_base_app.git
 ----
 
 == Next Steps

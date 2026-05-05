@@ -11,13 +11,14 @@ asciidoc:
     showroom-collection-version: v1.5.6
     guid: cluster-id
     guid2: cluster-id2
-    bastion_public_hostname: bastion.{guid}.dynamic.redhatworkshops.io
+    bastion_public_hostname: bastion.{guid}.dynamic2.redhatworkshops.io
     bastion_ssh_user_name: lab-user
     bastion_ssh_password: password
     ssh_user: lab-user
-    openshift_console_url: https://console-openshift-console.apps.cluster-{guid}.dynamic.redhatworkshops.io
-    openshift_cluster_ingress_domain: apps.cluster-{guid}.dynamic.redhatworkshops.io
-    ocp_version: "4.20"
+    openshift_console_url: https://console-openshift-console.apps.cluster-{guid}.dynamic2.redhatworkshops.io
+    openshift_api_url: https://api.cluster-{guid}.dynamic2.redhatworkshops.io:6443
+    openshift_cluster_ingress_domain: apps.cluster-{guid}.dynamic2.redhatworkshops.io
+    ocp_version: "4.21"
     user: platform-admin
     password: openshift
     gitlab_url: http://gitlab.apps.cluster-{guid}.dynamic.redhatworkshops.io
