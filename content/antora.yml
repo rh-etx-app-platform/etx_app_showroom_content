@@ -9,7 +9,7 @@ asciidoc:
     experimental: true
     page-pagination: true
     showroom-collection-version: v1.5.6
-    guid: jw2x5
+    guid: cluster-id
     bastion_public_hostname: bastion.{guid}.dynamic2.redhatworkshops.io
     bastion_ssh_user_name: lab-user
     bastion_ssh_password: password
