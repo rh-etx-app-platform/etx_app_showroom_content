@@ -20,8 +20,9 @@ asciidoc:
     ocp_version: "4.20"
     user: platform-admin
     password: openshift
-    gitlab_url: http://gitlab.apps.cluster-{guid}.dynamic2.redhatworkshops.io
-    keycloak_url: https://etx-sso.apps.cluster-{guid}.dynamic2.redhatworkshops.io
-    quay_url: https://quay.apps.cluster-{guid}.dynamic2.redhatworkshops.io
-    vault_url: https://vault.apps.cluster-{guid}.dynamic2.redhatworkshops.io
-    etx_gitops_url: https://etx-gitops-server-etx-gitops.apps.cluster-{guid}.dynamic2.redhatworkshops.io
+    gitlab_url: http://gitlab.apps.cluster-{guid}.dynamic.redhatworkshops.io
+    keycloak_url: https://etx-sso.apps.cluster-{guid}.dynamic.redhatworkshops.io
+    quay_url: https://quay.apps.cluster-{guid}.dynamic.redhatworkshops.io
+    quay_registry_url: quay-registry-quay.apps.cluster-{guid}.dynamic.redhatworkshops.io
+    vault_url: https://vault.apps.cluster-{guid}.dynamic.redhatworkshops.io
+    etx_gitops_url: https://etx-gitops-server-etx-gitops.apps.cluster-{guid}.dynamic.redhatworkshops.io
