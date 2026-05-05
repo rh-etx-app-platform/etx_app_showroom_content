@@ -14,7 +14,7 @@ The following services are already installed and configured:
 
 Centralized SSO/OIDC provider for GitLab, Quay, and other services.
 
-* **URL:** https://sso.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+* **URL:** {keycloak_url}
 * **Realm:** `etx-lab`
 * **Available Users:**
   - `platform-admin` / `openshift` (administrator access)
@@ -27,19 +27,16 @@ TIP: Use these credentials to log into GitLab and Quay via the OIDC/OAuth button
 
 Source control and Git repository hosting.
 
-* **URL:** http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+* **URL:** {gitlab_url}
 * **Authentication:** Keycloak OIDC (click "Sign in with OpenID Connect")
 * **Seeded Repositories:**
-  - `student/parasol-insurance-lab` - Your application workspace (read/write)
-  - `platform/etx_app_base_app` - CI/CD templates (read-only)
-  - `platform/etx_app_platform_bootstrap` - Platform bootstrap (read-only)
-  - `platform/etx_app_platform_services` - Platform services (read-only)
+  - `software-factory/etx_app_base_app` - Your application workspace (read/write)
 
 === Quay Container Registry
 
 Enterprise container registry for storing and distributing images.
 
-* **URL:** https://quay-registry-quay.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+* **URL:** {quay_url}
 * **Authentication:** Keycloak OIDC or local account
 * **Purpose:** External image registry for production-grade workflows
 
@@ -47,12 +44,18 @@ NOTE: For this lab, you'll primarily use the OpenShift internal registry. Quay i
 
 === OpenShift GitOps (Argo CD)
 
-A pre-deployed GitOps operator manages infrastructure (GitLab deployment).
+Two GitOps control planes are available:
 
-* **Instance:** `openshift-gitops` namespace
-* **Purpose:** Infrastructure automation (NOT for student use)
+* **OpenShift GitOps bootstrap plane** (`openshift-gitops` namespace)
+  - Manages platform infrastructure (GitLab, Keycloak, Quay, Vault)
+  - Read-only for students
 
-IMPORTANT: You will deploy your **own** Argo CD instance in Lab 1 Step 5 for application deployments.
+* **Dedicated ETX GitOps admin plane** (`etx-gitops` namespace)
+  - Pre-deployed Argo CD instance for application team use
+  - Repository: `etx-gitops` - Contains infrastructure and application manifests
+  - You can deploy applications here or create your own Argo CD instance
+
+IMPORTANT: In Lab 1 Step 5, you have the option to deploy your **own** Argo CD instance in your namespace or use the pre-deployed `etx-gitops` instance for application deployments.
 
 == Multi-Cluster Setup
 
@@ -60,19 +63,19 @@ Two OpenShift clusters are available for application promotion:
 
 === Primary Cluster (Development)
 
-* **API:** https://api.cluster-cgd7r.dynamic.redhatworkshops.io:6443
-* **Console:** https://console-openshift-console.apps.cluster-cgd7r.dynamic.redhatworkshops.io
-* **Apps Domain:** `*.apps.cluster-cgd7r.dynamic.redhatworkshops.io`
+* **API:** https://api.cluster-{guid}.dynamic.redhatworkshops.io:6443
+* **Console:** {openshift_console_url}
+* **Apps Domain:** `*.{openshift_cluster_ingress_domain}`
 * **Admin Credentials:** `admin` / `r0rDrvTWeTAbVk7L`
-* **Your Namespace:** `parasol-dev` (pre-created)
+* **Your Namespace:** `etx-app-dev` (pre-created)
 
 === Secondary Cluster (Staging/Production)
 
-* **API:** https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443
-* **Console:** https://console-openshift-console.apps.cluster-d4f7p.dynamic.redhatworkshops.io
-* **Apps Domain:** `*.apps.cluster-d4f7p.dynamic.redhatworkshops.io`
+* **API:** https://api.cluster-{guid2}.dynamic.redhatworkshops.io:6443
+* **Console:** https://console-openshift-console.apps.cluster-{guid2}.dynamic.redhatworkshops.io
+* **Apps Domain:** `*.apps.cluster-{guid2}.dynamic.redhatworkshops.io`
 * **Admin Credentials:** `admin` / `G6VpeK3U6n8LpyhC`
-* **Namespaces:** `parasol-staging`, `parasol-prod` (pre-created)
+* **Namespaces:** `etx-app-staging`, `etx-app-prod` (pre-created)
 
 You will configure multi-cluster promotion in the final section of this lab.
 
@@ -81,10 +84,12 @@ You will configure multi-cluster promotion in the final section of this lab.
 As part of this hands-on lab, you will install and configure:
 
 * ✅ **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser
-* ✅ **HashiCorp Vault** - Secrets management for CI/CD credentials
 * ✅ **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
+* ✅ **AMQ Streams (Kafka)** - Messaging infrastructure for application services
 * ✅ **OpenTelemetry Operator** - Distributed tracing and observability
 * ✅ **Argo CD (student instance)** - GitOps continuous deployment
+
+NOTE: HashiCorp Vault is pre-deployed as part of the infrastructure bootstrap and does not require student installation.
 
 == Lab Workflow
 
@@ -93,7 +98,7 @@ Lab 1 Step 1: Environment Overview (this page)
       ↓
 Lab 1 Step 2: Deploy and configure Dev Spaces
       ↓
-Lab 1 Step 3: Deploy Vault, Tekton, OpenTelemetry
+Lab 1 Step 3: Deploy supporting services (AMQ Streams, Tekton, OpenTelemetry)
       ↓
 Lab 1 Step 4: Create CI pipeline with Tekton
       ↓
@@ -104,7 +109,7 @@ Lab 1 Step 6: Configure multi-cluster promotion
 
 == Accessing GitLab with Keycloak
 
-. Open http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+. Open {gitlab_url}
 . Click btn:[Sign in with OpenID Connect]
 . You will be redirected to Keycloak
 . Log in with one of the provided users (e.g., `platform-developer` / `openshift`)
@@ -114,15 +119,15 @@ The first time you log in, GitLab will create a user profile linked to your Keyc
 
 == Clone Your Repository
 
-Once logged into GitLab, clone the Parasol Insurance application:
+Once logged into GitLab, clone the ETX App Base application:
 
 [source,bash]
 ----
-git clone http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-insurance-lab.git
-cd parasol-insurance-lab
+git clone {gitlab_url}/software-factory/etx_app_base_app.git
+cd etx_app_base_app
 ----
 
-NOTE: The repository name is `parasol-insurance-lab`, but Kubernetes resources will be named `parasol-insurance` for simplicity.
+NOTE: The repository name is `etx_app_base_app` and Kubernetes resources will be named `etx-app-base-app-*` for consistency.
 
 == Verify Cluster Access
 
@@ -131,10 +136,10 @@ Confirm you're logged into the primary cluster:
 [source,bash]
 ----
 oc whoami --show-server
-# Should show: https://api.cluster-cgd7r.dynamic.redhatworkshops.io:6443
+# Should show: https://api.cluster-{guid}.dynamic.redhatworkshops.io:6443
 
-oc project parasol-dev
-# Should switch to: parasol-dev namespace
+oc project etx-app-dev
+# Should switch to: etx-app-dev namespace
 ----
 
 == Next Steps

@@ -82,7 +82,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: promotion-workspace-pvc
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   accessModes:
     - ReadWriteOnce
@@ -108,7 +108,7 @@ apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: vault-fetch-quay-creds
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   results:
     - name: quay-server
@@ -162,7 +162,7 @@ apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: copy-image-to-quay
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   params:
     - name: source-image
@@ -214,7 +214,7 @@ apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: update-gitops-staging
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   params:
     - name: gitops-repo-url
@@ -275,7 +275,7 @@ apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: parasol-promotion
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   params:
     - name: source-image-tag
@@ -287,7 +287,7 @@ spec:
       description: Tag to use in Quay (e.g., stable, v1.0.0)
     - name: gitops-repo-url
       type: string
-      default: {gitlab_url}/software-factory/parasol-gitops.git
+      default: {gitlab_url}/software-factory/etx-app-gitops.git
   workspaces:
     - name: shared-workspace
   tasks:
@@ -301,7 +301,7 @@ spec:
         name: copy-image-to-quay
       params:
         - name: source-image
-          value: image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance:$(params.source-image-tag)
+          value: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:$(params.source-image-tag)
         - name: dest-image
           value: $(tasks.fetch-quay-creds.results.quay-server)/parasol/parasol-insurance:$(params.dest-image-tag)
         - name: dest-username
@@ -341,7 +341,7 @@ First, find a recent image tag from your dev environment:
 [source,bash,role=execute]
 ----
 # List recent images from dev CI pipeline
-oc get imagestream parasol-insurance -n parasol-dev -o json | \
+oc get imagestream parasol-insurance -n etx-app-dev -o json | \
   jq -r '.status.tags[].tag' | head -5
 ----
 
@@ -357,7 +357,7 @@ Trigger the promotion pipeline manually:
 tkn pipeline start parasol-promotion \
   --param source-image-tag=<COMMIT_SHA> \
   --param dest-image-tag=stable \
-  --param gitops-repo-url={gitlab_url}/software-factory/parasol-gitops.git \
+  --param gitops-repo-url={gitlab_url}/software-factory/etx-app-gitops.git \
   --workspace name=shared-workspace,claimName=promotion-workspace-pvc \
   --serviceaccount pipeline \
   --showlog
@@ -375,7 +375,7 @@ Check that the GitOps repository was updated:
 
 [source,bash,role=execute]
 ----
-cd parasol-gitops
+cd etx-app-gitops
 git pull origin main
 cat environments/stage/deployment.yaml | grep image:
 ----
@@ -386,7 +386,7 @@ Check the Argo CD application status:
 
 [source,bash,role=execute]
 ----
-oc get application parasol-stage -n parasol-dev -o jsonpath='{.status.sync.status}'
+oc get application parasol-stage -n etx-app-dev -o jsonpath='{.status.sync.status}'
 ----
 
 The output should be `Synced`.
@@ -421,7 +421,7 @@ apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: manual-approval
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   description: |
     Pauses pipeline execution until manual approval.
@@ -461,7 +461,7 @@ If you need to rollback a staging deployment:
 
 [source,bash,role=execute]
 ----
-cd parasol-gitops
+cd etx-app-gitops
 git log environments/stage/deployment.yaml
 git revert <commit-hash>
 git push origin main

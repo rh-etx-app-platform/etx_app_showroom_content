@@ -51,7 +51,7 @@ After login, you should see the GitLab interface with the **software-factory** g
 
 === Step 2: Clone the Workshop Repository
 
-Now clone the Parasol Insurance application repository using Git CLI:
+Now clone the ETX App Base application repository using Git CLI:
 
 [source,bash,role=execute,subs="attributes+"]
 ----
@@ -209,7 +209,7 @@ image::https://miro.medium.com/v2/resize:fit:720/format:webp/1*S4VJPf8Mrg3Gn5cR7
 
 **Example workflow:**
 
-[source,bash]
+[source,bash,subs="attributes"]
 ----
 # Create feature branch
 git checkout -b feature/user-profile

@@ -232,8 +232,8 @@ oc get application parasol-dev -n openshift-gitops \
 +
 [source,bash]
 ----
-oc get pods -n parasol-dev
-oc get route parasol-insurance -n parasol-dev -o jsonpath='{.spec.host}'
+oc get pods -n etx-app-dev
+oc get route parasol-insurance -n etx-app-dev -o jsonpath='{.spec.host}'
 ----
 
 Open the route URL to confirm the modernized application is accessible and functional.
