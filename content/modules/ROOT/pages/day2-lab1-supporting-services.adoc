@@ -68,7 +68,7 @@ vault kv put secret/registry \
 # vault kv put secret/quay \
 #   username=<your_quay_username> \
 #   password=<your_quay_password> \
-#   server=quay-registry-quay.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+#   server={quay_registry_url}
 ----
 
 NOTE: The OpenShift internal registry uses ServiceAccount tokens for authentication, so username/password are not used. The Tekton pipeline will authenticate using its ServiceAccount automatically.
@@ -221,7 +221,7 @@ apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: otel-collector
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   mode: deployment
   config:
@@ -260,7 +260,7 @@ Verify the collector pod is running:
 
 [source,bash]
 ----
-oc get pods -l app.kubernetes.io/name=otel-collector-collector -n parasol-dev
+oc get pods -l app.kubernetes.io/name=otel-collector-collector -n etx-app-dev
 ----
 
 === Enable Auto-Instrumentation
@@ -273,7 +273,7 @@ apiVersion: opentelemetry.io/v1alpha1
 kind: Instrumentation
 metadata:
   name: java-instrumentation
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   exporter:
     endpoint: http://otel-collector-collector:4317

@@ -14,7 +14,7 @@ The following services are already installed and configured:
 
 Centralized SSO/OIDC provider for GitLab, Quay, and other services.
 
-* **URL:** https://sso.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+* **URL:** {keycloak_url}
 * **Realm:** `etx-lab`
 * **Available Users:**
   - `platform-admin` / `openshift` (administrator access)
@@ -27,10 +27,10 @@ TIP: Use these credentials to log into GitLab and Quay via the OIDC/OAuth button
 
 Source control and Git repository hosting.
 
-* **URL:** http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+* **URL:** {gitlab_url}
 * **Authentication:** Keycloak OIDC (click "Sign in with OpenID Connect")
 * **Seeded Repositories:**
-  - `student/parasol-insurance-lab` - Your application workspace (read/write)
+  - `software-factory/etx_app_base_app` - Your application workspace (read/write)
   - `platform/etx_app_base_app` - CI/CD templates (read-only)
   - `platform/etx_app_platform_bootstrap` - Platform bootstrap (read-only)
   - `platform/etx_app_platform_services` - Platform services (read-only)
@@ -39,7 +39,7 @@ Source control and Git repository hosting.
 
 Enterprise container registry for storing and distributing images.
 
-* **URL:** https://quay-registry-quay.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+* **URL:** {quay_url}
 * **Authentication:** Keycloak OIDC or local account
 * **Purpose:** External image registry for production-grade workflows
 
@@ -60,19 +60,19 @@ Two OpenShift clusters are available for application promotion:
 
 === Primary Cluster (Development)
 
-* **API:** https://api.cluster-cgd7r.dynamic.redhatworkshops.io:6443
-* **Console:** https://console-openshift-console.apps.cluster-cgd7r.dynamic.redhatworkshops.io
-* **Apps Domain:** `*.apps.cluster-cgd7r.dynamic.redhatworkshops.io`
+* **API:** https://api.cluster-{guid}.dynamic.redhatworkshops.io:6443
+* **Console:** {openshift_console_url}
+* **Apps Domain:** `*.{openshift_cluster_ingress_domain}`
 * **Admin Credentials:** `admin` / `r0rDrvTWeTAbVk7L`
-* **Your Namespace:** `parasol-dev` (pre-created)
+* **Your Namespace:** `etx-app-dev` (pre-created)
 
 === Secondary Cluster (Staging/Production)
 
-* **API:** https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443
-* **Console:** https://console-openshift-console.apps.cluster-d4f7p.dynamic.redhatworkshops.io
-* **Apps Domain:** `*.apps.cluster-d4f7p.dynamic.redhatworkshops.io`
+* **API:** https://api.cluster-{guid2}.dynamic.redhatworkshops.io:6443
+* **Console:** https://console-openshift-console.apps.cluster-{guid2}.dynamic.redhatworkshops.io
+* **Apps Domain:** `*.apps.cluster-{guid2}.dynamic.redhatworkshops.io`
 * **Admin Credentials:** `admin` / `G6VpeK3U6n8LpyhC`
-* **Namespaces:** `parasol-staging`, `parasol-prod` (pre-created)
+* **Namespaces:** `etx-app-staging`, `etx-app-prod` (pre-created)
 
 You will configure multi-cluster promotion in the final section of this lab.
 
@@ -104,7 +104,7 @@ Lab 1 Step 6: Configure multi-cluster promotion
 
 == Accessing GitLab with Keycloak
 
-. Open http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io
+. Open {gitlab_url}
 . Click btn:[Sign in with OpenID Connect]
 . You will be redirected to Keycloak
 . Log in with one of the provided users (e.g., `platform-developer` / `openshift`)
@@ -114,15 +114,15 @@ The first time you log in, GitLab will create a user profile linked to your Keyc
 
 == Clone Your Repository
 
-Once logged into GitLab, clone the Parasol Insurance application:
+Once logged into GitLab, clone the ETX App Base application:
 
 [source,bash]
 ----
-git clone http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-insurance-lab.git
-cd parasol-insurance-lab
+git clone {gitlab_url}/software-factory/etx_app_base_app.git
+cd etx_app_base_app
 ----
 
-NOTE: The repository name is `parasol-insurance-lab`, but Kubernetes resources will be named `parasol-insurance` for simplicity.
+NOTE: The repository name is `etx_app_base_app`, but Kubernetes resources will be named `parasol-insurance` for simplicity.
 
 == Verify Cluster Access
 
@@ -131,10 +131,10 @@ Confirm you're logged into the primary cluster:
 [source,bash]
 ----
 oc whoami --show-server
-# Should show: https://api.cluster-cgd7r.dynamic.redhatworkshops.io:6443
+# Should show: https://api.cluster-{guid}.dynamic.redhatworkshops.io:6443
 
-oc project parasol-dev
-# Should switch to: parasol-dev namespace
+oc project etx-app-dev
+# Should switch to: etx-app-dev namespace
 ----
 
 == Next Steps

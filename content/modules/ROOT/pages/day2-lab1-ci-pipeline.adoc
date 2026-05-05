@@ -16,7 +16,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pipeline-workspace-pvc
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   accessModes:
     - ReadWriteOnce
@@ -28,7 +28,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: pipeline
-  namespace: parasol-dev
+  namespace: etx-app-dev
 ----
 
 Apply them:
@@ -46,7 +46,7 @@ The pipeline ServiceAccount needs permission to push images and manage resources
 ----
 oc adm policy add-role-to-user edit \
   system:serviceaccount:parasol-dev:pipeline \
-  -n parasol-dev
+  -n etx-app-dev
 ----
 
 This grants the `edit` role, allowing the pipeline to create ImageStreams, Deployments, and other resources.
@@ -61,7 +61,7 @@ apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: vault-fetch-registry-creds
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   workspaces:
     - name: source
@@ -117,7 +117,7 @@ apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
   name: parasol-ci
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   params:
     - name: git-url
@@ -194,9 +194,9 @@ Run the pipeline once to verify it works before adding webhooks:
 [source,bash,role=execute,subs="attributes+"]
 ----
 tkn pipeline start parasol-ci \
-  --param git-url={gitlab_url}/software-factory/parasol-insurance-lab \
+  --param git-url={gitlab_url}/software-factory/etx_app_base_app \
   --param git-revision=main \
-  --param image-name=image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance \
+  --param image-name=image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app \
   --workspace name=shared-workspace,claimName=pipeline-workspace-pvc \
   --serviceaccount pipeline \
   --showlog
@@ -218,7 +218,7 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerBinding
 metadata:
   name: gitlab-push-binding
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   params:
     - name: git-url
@@ -237,7 +237,7 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
 metadata:
   name: gitlab-push-template
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   params:
     - name: git-url
@@ -256,7 +256,7 @@ spec:
           - name: git-revision
             value: $(tt.params.git-revision)
           - name: image-name
-            value: image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance
+            value: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app
         workspaces:
           - name: shared-workspace
             persistentVolumeClaim:
@@ -275,7 +275,7 @@ apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
   name: gitlab-listener
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   serviceAccountName: pipeline
   triggers:
@@ -301,14 +301,14 @@ Create a route so GitLab can reach the EventListener:
 
 [source,bash,role=execute]
 ----
-oc expose svc el-gitlab-listener -n parasol-dev
+oc expose svc el-gitlab-listener -n etx-app-dev
 ----
 
 Get the webhook URL:
 
 [source,bash,role=execute]
 ----
-echo "http://$(oc get route el-gitlab-listener -n parasol-dev -o jsonpath='{.spec.host}')"
+echo "http://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
 
 Copy this URL for the next step.
@@ -322,7 +322,7 @@ Copy this URL for the next step.
 {gitlab_url}
 ----
 +
-. Navigate to your repository: *software-factory/parasol-insurance-lab*
+. Navigate to your repository: *software-factory/etx_app_base_app*
 . Go to menu:Settings[Webhooks]
 . Add a new webhook:
   * *URL*: Paste the EventListener route URL from above
@@ -348,7 +348,7 @@ Check for new pipeline runs:
 
 [source,bash,role=execute]
 ----
-tkn pipelinerun list -n parasol-dev
+tkn pipelinerun list -n etx-app-dev
 ----
 
 You should see a new `parasol-ci-*` PipelineRun.
@@ -357,14 +357,14 @@ Follow the latest run logs:
 
 [source,bash,role=execute]
 ----
-tkn pipelinerun logs -f -n parasol-dev
+tkn pipelinerun logs -f -n etx-app-dev
 ----
 
 Verify the image was pushed:
 
 [source,bash,role=execute]
 ----
-oc get imagestream parasol-insurance -n parasol-dev
+oc get imagestream parasol-insurance -n etx-app-dev
 ----
 
 You should see the image tagged with the commit SHA.
@@ -376,16 +376,16 @@ Verify all components are working:
 [source,bash]
 ----
 # Check pipeline exists
-oc get pipeline parasol-ci -n parasol-dev
+oc get pipeline parasol-ci -n etx-app-dev
 
 # Check EventListener is running
-oc get pods -n parasol-dev | grep el-gitlab-listener
+oc get pods -n etx-app-dev | grep el-gitlab-listener
 
 # Check webhook URL is exposed
-oc get route el-gitlab-listener -n parasol-dev
+oc get route el-gitlab-listener -n etx-app-dev
 
 # Check recent pipeline runs
-oc get pipelinerun -n parasol-dev --sort-by=.metadata.creationTimestamp | tail -5
+oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp | tail -5
 ----
 
 [TIP]
