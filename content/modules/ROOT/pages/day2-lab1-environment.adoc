@@ -80,10 +80,11 @@ As part of this hands-on lab, you will install and configure:
 
 * ✅ **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser
 * ✅ **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
+* ✅ **AMQ Streams (Kafka)** - Messaging infrastructure for application services
 * ✅ **OpenTelemetry Operator** - Distributed tracing and observability
 * ✅ **Argo CD (student instance)** - GitOps continuous deployment
 
-NOTE: HashiCorp Vault and AMQ Streams are pre-deployed as part of the infrastructure bootstrap and do not require student installation.
+NOTE: HashiCorp Vault is pre-deployed as part of the infrastructure bootstrap and does not require student installation.
 
 == Lab Workflow
 
