@@ -9,8 +9,8 @@ asciidoc:
     experimental: true
     page-pagination: true
     showroom-collection-version: v1.5.6
-    guid: wgphm
-    guid2: secondary
+    guid: cluster-id
+    guid2: cluster-id2
     bastion_public_hostname: bastion.{guid}.dynamic.redhatworkshops.io
     bastion_ssh_user_name: lab-user
     bastion_ssh_password: password
