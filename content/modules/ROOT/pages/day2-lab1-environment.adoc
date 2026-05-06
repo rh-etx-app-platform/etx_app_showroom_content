@@ -121,8 +121,9 @@ The first time you log in, GitLab will create a user profile linked to your Keyc
 
 Once logged into GitLab, clone the ETX App Base application:
 
-[source,bash]
+[source,bash,subs="attributes"]
 ----
+cd ~
 git clone {gitlab_url}/software-factory/etx_app_base_app.git
 cd etx_app_base_app
 ----
