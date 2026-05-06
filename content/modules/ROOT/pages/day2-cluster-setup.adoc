@@ -3,20 +3,15 @@
 
 == Install the Dev Spaces Operator
 
-=== Create the Namespace
-
-[source,bash]
-----
-oc create namespace openshift-devspaces
-----
-
 === Install via OperatorHub
 
-. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
-. Search for *Red Hat OpenShift Dev Spaces*
-. Click btn:[Install]
+. Open {openshift_console_url}[^] with an admin user.
+. In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
+. Search for *Red Hat OpenShift Dev Spaces* and click btn:[Install]
 . Accept the defaults (All namespaces, Automatic approval) and click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
+
+image::devspaces-operator-installed.png[Dev Spaces Operator installed]
 
 Verify from the CLI:
 
@@ -25,7 +20,16 @@ Verify from the CLI:
 oc get csv -n openshift-operators | grep devspaces
 ----
 
+A similar output should be displayed:
+
+[bash]
+----
+devspacesoperator.v3.27.1           Red Hat OpenShift Dev Spaces   3.27.1    devspacesoperator.v3.27.0           Succeeded
+----
+
 The DevWorkspace Operator is installed automatically as a dependency.
+
+image::devspaces-operator-list.png[Dev Spaces Operators Installed]
 
 == Next Steps
 
