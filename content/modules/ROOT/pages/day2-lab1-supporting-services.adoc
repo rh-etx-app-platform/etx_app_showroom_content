@@ -35,13 +35,14 @@ OpenShift Pipelines provides the Tekton-based CI engine used to build, test, and
 
 === Install via OperatorHub
 
-. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Open {openshift_console_url}[^] with an admin user.
+. In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Red Hat OpenShift Pipelines*
 . Click btn:[Install]
 . Accept the defaults:
   * **Update channel:** latest
   * **Installation mode:** All namespaces
-  * **Installed Namespace:** openshift-operators
+  * **Installed Namespace:** `openshift-operators`
 . Click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
@@ -80,13 +81,14 @@ AMQ Streams provides Apache Kafka on OpenShift. The Parasol application uses Kaf
 
 === Install via OperatorHub
 
-. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
-. Search for *Red Hat Integration - AMQ Streams*
+. Open {openshift_console_url}[^] with an admin user.
+. In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
+. Search for *Streams for Apache Kafka*
 . Click btn:[Install]
 . Accept the defaults:
   * **Update channel:** stable
   * **Installation mode:** All namespaces
-  * **Installed Namespace:** openshift-operators
+  * **Installed Namespace:** `openshift-operators`
 . Click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
@@ -94,7 +96,7 @@ Verify from the CLI:
 
 [source,bash]
 ----
-oc get csv -n openshift-operators | grep amq-streams
+oc get csv -n openshift-operators | grep amqstreams
 ----
 
 You should see the AMQ Streams operator listed with phase `Succeeded`.
@@ -107,13 +109,14 @@ The OpenTelemetry Operator manages the deployment of OpenTelemetry Collectors fo
 
 === Install via OperatorHub
 
-. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Open {openshift_console_url}[^] with an admin user.
+. In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Red Hat build of OpenTelemetry*
 . Click btn:[Install]
 . Accept the defaults:
   * **Update channel:** stable
   * **Installation mode:** All namespaces
-  * **Installed Namespace:** openshift-operators
+  * **Installed Namespace:** `openshift-opentelemetry-operator`
 . Click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
@@ -131,8 +134,9 @@ You should see the OpenTelemetry operator listed with phase `Succeeded`.
 Create a collector instance in your application namespace.
 This collector will receive traces from instrumented applications and export them to the console for demonstration purposes:
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
@@ -152,25 +156,19 @@ spec:
       batch: {}
     exporters:
       logging:
-        loglevel: debug # <1>
+        loglevel: debug
     service:
       pipelines:
         traces:
           receivers: [otlp]
           processors: [batch]
-          exporters: [logging] # <2>
+          exporters: [logging]
+EOF
 ----
-<1> Set log level to debug to see trace details
-<2> Export traces to stdout (visible in collector pod logs)
+
+NOTE: Log level is set to debug to see trace details, and the logging exporter is used to export traces to stdout (visible in collector pod logs).
 
 TIP: For production, replace the `logging` exporter with a real tracing backend like Tempo, Jaeger, or a cloud provider's tracing service.
-
-Apply it:
-
-[source,bash]
-----
-oc apply -f otel-collector.yaml
-----
 
 Verify the collector pod is running:
 
@@ -183,8 +181,9 @@ oc get pods -l app.kubernetes.io/name=otel-collector-collector -n etx-app-dev
 
 Create an `Instrumentation` resource to enable automatic trace injection for Java applications:
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: opentelemetry.io/v1alpha1
 kind: Instrumentation
 metadata:
@@ -198,13 +197,7 @@ spec:
     - baggage
   java:
     image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:latest
-----
-
-Apply it:
-
-[source,bash]
-----
-oc apply -f java-instrumentation.yaml
+EOF
 ----
 
 To instrument a deployment, add the following annotation to its pod template:
