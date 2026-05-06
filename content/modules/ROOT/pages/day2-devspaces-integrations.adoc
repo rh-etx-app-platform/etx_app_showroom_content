@@ -7,9 +7,8 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 
 === Create a GitLab OAuth Application
 
-. In GitLab {gitlab_url}
-. Login with `{user}` and `{password}`
-. Go to menu:User[Edit Profile] and menu:Access[Applications] (or your group settings for group-level OAuth)
+. In GitLab, go to the *User settings:* menu:Access[Applications] (or your group settings for group-level OAuth)
+.. {gitlab_url}/-/user_settings/applications
 . Create a new application with the following settings:
 +
 [cols="1,2"]

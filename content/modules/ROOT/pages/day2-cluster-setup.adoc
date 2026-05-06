@@ -5,10 +5,11 @@
 
 === Install via OperatorHub
 
-. Open {openshift_console_url}[^] with an admin user.
 . In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
-. Search for *Red Hat OpenShift Dev Spaces* and click btn:[Install]
-. Accept the defaults (All namespaces, Automatic approval) and click btn:[Install]
+. Search for *Red Hat OpenShift Dev Spaces*
+. Click btn:[Install]
+. Change the namespace to `openshift-devspaces`
+. Accept the defaults for the rest (All namespaces, Automatic approval) and click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
 image::devspaces-operator-installed.png[Dev Spaces Operator installed]
@@ -17,7 +18,7 @@ Verify from the CLI:
 
 [source,bash]
 ----
-oc get csv -n openshift-operators | grep devspaces
+oc get csv -n openshift-devspaces | grep devspaces
 ----
 
 A similar output should be displayed:

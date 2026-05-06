@@ -1,9 +1,36 @@
 = Developer Hub Overview
 :navtitle: Developer Hub
 
+Technology companies developing cutting-edge software solutions are increasingly focusing on the
+**Developer Experience (DevEx)** to improve productivity and reduce time to market. Focusing on
+improving the developer experience has numerous advantages:
+
+* Reduced cognitive load for developers
+* Reduced software development costs
+* Increased software delivery speed
+* Increased software quality
+* Reduced burnout -> happier developers -> reduced attrition and higher retention rate
+
+[quote]
+____
+Developer Experience is the *user experience* that developers are subject to when developing applications using a platform, along with a host of supporting tools, utilities, and workflows.
+____
+
+The developer experience is a major component of, and usually related to the following terms:
+
+Internal Developer Platform (IDP)::
+The set of tools and processes that software developers use to create business capabilities, and deploy them in production.
+
+Platform Engineering::
+A diverse group of technology professionals - developers, system administrators, and site reliability engineers (SRE) that build, run, and maintain an internal developer platform.
+
+Internal Developer Portal (IDP)::
+A centralized, self-service interface where developers discover services, documentation, standards,
+ownership, and workflows needed to build and operate software efficiently.
+
 == What is Red Hat Developer Hub?
 
-Red Hat Developer Hub is an enterprise-grade internal developer portal built on the Backstage open source project.
+https://developers.redhat.com/products/rhdh[Red Hat Developer Hub^] is an enterprise-grade internal developer portal built on the Backstage open source project.
 It provides a single pane of glass where developers can discover services, create new projects from templates, and access documentation -- all without needing to understand the underlying infrastructure.
 
 == Why an Internal Developer Portal?
@@ -26,7 +53,7 @@ Each component has an owner, lifecycle stage, and links to its repository, CI pi
 
 *Golden Path Templates*::
 Parameterized project scaffolds that generate complete, ready-to-deploy projects.
-A template typically creates a Git repository, CI pipeline, GitOps manifests, devfile, and catalog registration -- all in one click.
+A template typically creates a Git repository, CI pipeline, GitOps manifests, `devfile`, and catalog registration -- all in one click. They are also called *Software Templates*.
 
 *Plugins*::
 Extend Developer Hub with integrations for external tools.
@@ -83,4 +110,4 @@ A developer's workflow becomes:
 
 == Next Steps
 
-When you are ready for the hands-on lab, proceed to xref:day2-cluster-setup.adoc[Cluster Setup] to begin Lab 1.
+When you are ready for the hands-on lab, proceed to xref:day2-lab1-environment.adoc[Environment Overview] to get started.

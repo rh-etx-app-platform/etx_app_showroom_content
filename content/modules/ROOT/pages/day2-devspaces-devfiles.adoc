@@ -3,14 +3,14 @@
 
 == What is a Devfile?
 
-A devfile is a YAML file (`devfile.yaml`) placed at the root of a Git repository that declares the complete workspace environment: which container image to use, what ports to expose, what commands to run, and what volumes to mount.
+A https://devfile.io/[devfile^] is a YAML file (`devfile.yaml`) placed at the root of a Git repository that declares the complete workspace environment: which container image to use, what ports to expose, what commands to run, and what volumes to mount.
 
-When a developer creates a workspace from a Git repository, Dev Spaces reads the devfile and builds the workspace pod accordingly.
-If no devfile is found, Dev Spaces falls back to the Universal Developer Image (UDI) with default settings.
+When a developer creates a workspace from a Git repository, Dev Spaces reads the `devfile` and builds the workspace pod accordingly.
+If no `devfile` is found, Dev Spaces falls back to the Universal Developer Image (UDI) with default settings.
 
 == Devfile Structure
 
-A devfile has the following top-level sections:
+A `devfile` has the following top-level sections:
 
 [source,yaml]
 ----
@@ -62,7 +62,7 @@ components:
 
 === Volume Component
 
-Volumes persist data across workspace restarts (e.g. Maven cache, node_modules):
+Volumes persist data across workspace restarts (e.g. Maven cache: `.m2` folder), Node.js modules: `node_modules` folder):
 
 [source,yaml]
 ----
@@ -130,7 +130,7 @@ attributes:
     }
 ----
 
-Extension IDs come from the Open VSX registry (https://open-vsx.org).
+Extension IDs come from the Open VSX registry (https://open-vsx.org[^]).
 Find the extension page and convert the URL path from `namespace/extension` to `namespace.extension`.
 
 To force extensions to install automatically (rather than just recommend them), add a `.vscode/extensions.json` file directly to your Git repository with the same format.
@@ -150,7 +150,7 @@ Build a custom image only if you need to significantly reduce image size, add pr
 
 == Parent Devfiles
 
-A devfile can inherit from a parent to avoid duplication across multiple repositories.
+A `devfile` can inherit from a parent to avoid duplication across multiple repositories.
 This is useful when your organization has a standard base environment:
 
 [source,yaml]
@@ -162,12 +162,12 @@ parent:
   uri: https://gitlab.example.com/devfiles/-/raw/main/devfile.yaml
 ----
 
-The child devfile inherits all components, commands, and events from the parent and can override or extend them.
-This keeps individual project devfiles minimal while centralizing your standard configuration.
+The child `devfile` inherits all components, commands, and events from the parent and can override or extend them.
+This keeps individual project `devfiles` minimal while centralizing your standard configuration.
 
 == Complete Example
 
-Here is a full Quarkus devfile with UDI, Maven caching, endpoint definitions, and Continue AI assistant integration:
+Here is a full Quarkus `devfile` with UDI, Maven caching, endpoint definitions, and Continue AI assistant integration:
 
 [source,yaml]
 ----
@@ -245,7 +245,8 @@ events:
     - init-continue
 ----
 
-The `init-continue` command reads `LLM_API_KEY` and `LLM_BASE_URL` from the environment variables injected by the shared secret created in the xref:day2-devspaces-integrations.adoc[previous section].
+This example includes a `init-continue` command that reads `LLM_API_KEY` and `LLM_BASE_URL`
+from the environment variables injected by the shared secret created in the developer user namespace.
 
 == Next Steps
 
