@@ -7,17 +7,18 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 
 === Create a GitLab OAuth Application
 
-. In GitLab, go to menu:Admin Area[Applications] (or your group settings for group-level OAuth)
+. In GitLab {gitlab_url}
+. Login with `{user}` and `{password}`
+. Go to menu:User[Edit Profile] and menu:Access[Applications] (or your group settings for group-level OAuth)
 . Create a new application with the following settings:
 +
 [cols="1,2"]
 |===
 | Name | `devspaces`
-| Redirect URI | `pass:a[https://devspaces.apps.<cluster_domain>/api/oauth/callback]`
+| Redirect URI | `pass:a[https://devspaces.{openshift_cluster_ingress_domain}/api/oauth/callback]`
 | Confidential | Checked
 | Scopes | `api`, `write_repository`, `openid`
 |===
-
 . Note the *Application ID* and *Secret*
 
 === Create the OAuth Secret
@@ -25,8 +26,9 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 Create a Kubernetes secret that Dev Spaces will use to authenticate against GitLab.
 The labels and annotations are required -- Dev Spaces discovers the secret automatically based on them.
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: v1
 kind: Secret
 metadata:
@@ -37,30 +39,25 @@ metadata:
     app.kubernetes.io/component: oauth-scm-configuration
   annotations:
     che.eclipse.org/oauth-scm-server: gitlab
-    che.eclipse.org/scm-server-endpoint: https://<gitlab_host> # <1>
+    che.eclipse.org/scm-server-endpoint: {gitlab_url}
 type: Opaque
 stringData:
-  id: <application_id>
-  secret: <application_secret>
+  id: REPLACE_APPLICATION_ID
+  secret: REPLACE_APPLICATION_SECRET
+EOF
 ----
-<1> Replace with your GitLab instance URL (e.g. `https://gitlab.apps.cluster.example.com`).
 
-Apply it:
-
-[source,bash]
-----
-oc apply -f gitlab-oauth-config.yaml
-----
+WARNING: Replace `id` and `secret` with your GitLab application id and secret.
 
 === Register GitLab in the CheCluster
 
 Add the `gitServices` section to your CheCluster CR:
 
-[source,bash]
+[source,bash,subs="attributes"]
 ----
 oc patch checluster/devspaces -n openshift-devspaces \
   --type='merge' \
-  -p '{"spec":{"gitServices":{"gitlab":[{"secretName":"gitlab-oauth-config","endpoint":"https://<gitlab_host>"}]}}}'
+  -p '{"spec":{"gitServices":{"gitlab":[{"secretName":"gitlab-oauth-config","endpoint":"{gitlab_url}"}]}}}'
 ----
 
 When a user opens a workspace that references a GitLab repository, they will be prompted to authenticate with GitLab via OAuth.
@@ -87,16 +84,25 @@ This example creates a secret that injects LLM API credentials as environment va
 
 First, obtain an API key from the https://litellm-prod-frontend.apps.maas.redhatworkshops.io/home[Red Hat Demo Platform MaaS]:
 
-. Navigate to *Models* and find *qwen3*
+If you don't have an API key, you can create one by following these steps:
+
+. Navigate to *Models* and find *qwen3-14b*
 . Click *Subscribe* to subscribe to the model
 . Go to *API Keys* and click *Create API Key*
-. Provide a name for the key and select the qwen3 subscription
+. Provide a name for the key and select the *qwen3-14b* subscription
 . Save the generated key somewhere safe
+
+If you already have an API key, you can use it by following these steps:
+
+. Go to *API Keys* and select the API Key subscribed to the *qwen3-14b* model
+. Click the *show key* button to view the API key
+. Copy the generated key
 
 Then create the secret:
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: v1
 kind: Secret
 metadata:
@@ -109,16 +115,12 @@ metadata:
     controller.devfile.io/mount-as: env
 type: Opaque
 stringData:
-  LLM_API_KEY: <your_api_key>
+  LLM_API_KEY: REPLACE_API_KEY
   LLM_BASE_URL: https://litellm-prod.apps.maas.redhatworkshops.io
+EOF
 ----
 
-Apply it:
-
-[source,bash]
-----
-oc apply -f continue-llm-credentials.yaml
-----
+WARNING: Replace `REPLACE_API_KEY` with your API key.
 
 Every new workspace will now have `LLM_API_KEY` and `LLM_BASE_URL` available as environment variables.
 The devfile's `postStart` command can use these to configure the Continue extension automatically (see xref:day2-devspaces-devfiles.adoc[Devfiles]).
