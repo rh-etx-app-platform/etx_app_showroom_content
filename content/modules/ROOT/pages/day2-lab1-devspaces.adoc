@@ -7,8 +7,7 @@ In this lab you will create a Dev Spaces workspace for the ETX App Base applicat
 
 == Create a Devfile
 
-We will push new content into the default `devfile.yaml` file that is already present in the repository. This `devfile` configures the workspace with UBI, Maven caching, Quarkus endpoints,
-and the Continue AI assistant:
+We will create a new `devfile.yaml` file in the repository. This `devfile` configures the workspace with UBI, Maven caching, Quarkus endpoints, and the Continue AI assistant:
 
 Copy the following content into the `devfile.yaml` file:
 
@@ -90,7 +89,7 @@ Commit and push the devfile, then restart your workspace so Dev Spaces picks up 
 [source,bash]
 ----
 git add devfile.yaml
-git commit -m "feat: update devfile to use Continue AI assistant"
+git commit -m "feat: add devfile with Continue AI assistant"
 git push
 ----
 
@@ -136,7 +135,7 @@ Alternatively, from the Dev Spaces dashboard:
 . Go to Import from Git and paste the Git repository URL for the ETX App Base application
 . Click btn:[Create & Open]
 
-Dev Spaces will clone the repository, read the `devfile.yaml`, pull the container image, and open the VS Code IDE in your browser.
+Dev Spaces will clone the repository, read the `devfile.yaml` you just created, pull the container image, and open the VS Code IDE in your browser.
 
 NOTE: The first workspace creation may take a few minutes while the container image is pulled to the node.
 
