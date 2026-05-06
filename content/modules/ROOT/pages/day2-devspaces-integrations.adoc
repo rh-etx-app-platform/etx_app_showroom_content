@@ -7,13 +7,14 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 
 === Create a GitLab OAuth Application
 
-. In GitLab, go to menu:Admin Area[Applications] (or your group settings for group-level OAuth)
+. In GitLab, go to the *User settings:* menu:Access[Applications] (or your group settings for group-level OAuth)
+.. {gitlab_url}/-/user_settings/applications
 . Create a new application with the following settings:
 +
 [cols="1,2"]
 |===
 | Name | `devspaces`
-| Redirect URI | `pass:a[https://devspaces.apps.<cluster_domain>/api/oauth/callback]`
+| Redirect URI | `pass:a[https://devspaces.{openshift_cluster_ingress_domain}/api/oauth/callback]`
 | Confidential | Checked
 | Scopes | `api`, `write_repository`, `openid`
 |===
@@ -25,7 +26,7 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 Create a Kubernetes secret that Dev Spaces will use to authenticate against GitLab.
 The labels and annotations are required -- Dev Spaces discovers the secret automatically based on them.
 
-[source,yaml]
+[source,yaml,subs="+attributes"]
 ----
 apiVersion: v1
 kind: Secret
@@ -37,13 +38,12 @@ metadata:
     app.kubernetes.io/component: oauth-scm-configuration
   annotations:
     che.eclipse.org/oauth-scm-server: gitlab
-    che.eclipse.org/scm-server-endpoint: https://<gitlab_host> # <1>
+    che.eclipse.org/scm-server-endpoint: {gitlab_url}
 type: Opaque
 stringData:
   id: <application_id>
   secret: <application_secret>
 ----
-<1> Replace with your GitLab instance URL (e.g. `https://gitlab.apps.cluster.example.com`).
 
 Apply it:
 
@@ -56,11 +56,11 @@ oc apply -f gitlab-oauth-config.yaml
 
 Add the `gitServices` section to your CheCluster CR:
 
-[source,bash]
+[source,bash,subs="+attributes"]
 ----
 oc patch checluster/devspaces -n openshift-devspaces \
   --type='merge' \
-  -p '{"spec":{"gitServices":{"gitlab":[{"secretName":"gitlab-oauth-config","endpoint":"https://<gitlab_host>"}]}}}'
+  -p '{"spec":{"gitServices":{"gitlab":[{"secretName":"gitlab-oauth-config","endpoint":"{gitlab_url}"}]}}}'
 ----
 
 When a user opens a workspace that references a GitLab repository, they will be prompted to authenticate with GitLab via OAuth.

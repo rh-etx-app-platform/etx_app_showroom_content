@@ -25,15 +25,15 @@ https://<devspaces_dashboard_url>/#<git_repo_url>
 ----
 
 For example, to create a workspace from the ETX App Base application:
-
+[subs="+attributes"]
 ----
-https://<devspaces_dashboard_url>/#https://<gitlab_host>/parasol-insurance
+https://devspaces.{openshift_cluster_ingress_domain}/#{gitlab_url}/software-factory/etx_app_base_app
 ----
 
 You can also specify a branch:
-
+[subs="+attributes"]
 ----
-https://<devspaces_dashboard_url>/#https://<gitlab_host>/parasol-insurance/tree/main
+https://devspaces.{openshift_cluster_ingress_domain}/#{gitlab_url}/software-factory/etx_app_base_app/tree/main
 ----
 
 Alternatively, from the Dev Spaces dashboard:
@@ -42,7 +42,7 @@ Alternatively, from the Dev Spaces dashboard:
 . Paste the Git repository URL for the ETX App Base application
 . Click btn:[Create & Open]
 
-Dev Spaces will clone the repository, read the `devfile.yaml`, pull the container image, and open the VS Code IDE in your browser.
+Dev Spaces will clone the repository, load a default devfile workspace, pull the container image, and open the VS Code IDE in your browser.
 
 NOTE: The first workspace creation may take a few minutes while the container image is pulled to the node.
 
@@ -89,7 +89,7 @@ The file should contain the model configuration with your API key and base URL.
 
 == Create a Devfile
 
-If the repository does not already have a `devfile.yaml`, create one at the root of the project.
+Create a `devfile.yaml` at the root of the project.
 This devfile configures the workspace with UDI, Maven caching, Quarkus endpoints, and the Continue AI assistant:
 
 [source,yaml]
