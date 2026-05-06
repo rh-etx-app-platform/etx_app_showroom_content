@@ -10,8 +10,9 @@ Then wire up Tekton Triggers to fire the pipeline automatically when code is pus
 
 Create a workspace PVC and a ServiceAccount for the pipeline:
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -29,13 +30,7 @@ kind: ServiceAccount
 metadata:
   name: pipeline
   namespace: etx-app-dev
-----
-
-Apply them:
-
-[source,bash,role=execute]
-----
-oc apply -f pipeline-workspace.yaml
+EOF
 ----
 
 === Grant ServiceAccount Permissions
@@ -45,7 +40,7 @@ The pipeline ServiceAccount needs permission to push images and manage resources
 [source,bash,role=execute]
 ----
 oc adm policy add-role-to-user edit \
-  system:serviceaccount:parasol-dev:pipeline \
+  system:serviceaccount:etx-app-dev:pipeline \
   -n etx-app-dev
 ----
 
@@ -55,8 +50,9 @@ This grants the `edit` role, allowing the pipeline to create ImageStreams, Deplo
 
 Create a Tekton Task that authenticates to Vault using the Kubernetes auth method configured in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section and writes registry credentials to the workspace:
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -98,25 +94,20 @@ spec:
           | tr -d '\n' > $(results.registry-username.path)
         echo "${CREDS}" | jq -r '.data.data.password' \
           | tr -d '\n' > $(results.registry-password.path)
-----
-
-Apply the task:
-
-[source,bash,role=execute]
-----
-oc apply -f vault-fetch-task.yaml
+EOF
 ----
 
 == Create the Pipeline
 
 Define the CI pipeline with four tasks: clone, build/test, fetch credentials, and build/push the container image:
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: parasol-ci
+  name: etx-app-base-app-ci
   namespace: etx-app-dev
 spec:
   params:
@@ -132,12 +123,18 @@ spec:
   tasks:
     - name: clone
       taskRef:
-        name: git-clone
-        kind: ClusterTask
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: git-clone
+          - name: namespace
+            value: openshift-pipelines
       params:
-        - name: url
+        - name: URL
           value: $(params.git-url)
-        - name: revision
+        - name: REVISION
           value: $(params.git-revision)
       workspaces:
         - name: output
@@ -146,8 +143,14 @@ spec:
     - name: build-and-test
       runAfter: [clone]
       taskRef:
-        name: maven
-        kind: ClusterTask
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: maven
+          - name: namespace
+            value: openshift-pipelines
       params:
         - name: GOALS
           value: ["package", "-DskipTests=false"]
@@ -168,24 +171,24 @@ spec:
     - name: build-image
       runAfter: [build-and-test, fetch-creds]
       taskRef:
-        name: buildah
-        kind: ClusterTask
+        resolver: cluster
+        params:
+          - name: kind
+            value: task
+          - name: name
+            value: buildah
+          - name: namespace
+            value: openshift-pipelines
       params:
         - name: IMAGE
           value: $(params.image-name):$(params.git-revision)
       workspaces:
         - name: source
           workspace: shared-workspace
+EOF
 ----
 
-NOTE: `git-clone`, `maven`, and `buildah` are ClusterTasks provided by OpenShift Pipelines. Run `tkn clustertask list` to verify they are available.
-
-Apply the pipeline:
-
-[source,bash,role=execute]
-----
-oc apply -f parasol-ci-pipeline.yaml
-----
+NOTE: `git-clone`, `maven`, and `buildah` are standard Tasks installed in the `openshift-pipelines` namespace. This pipeline resolves them with the cluster resolver (replacing deprecated `ClusterTask` references). Run `oc get task -n openshift-pipelines` or `tkn task list -n openshift-pipelines` to verify they are available.
 
 == Test the Pipeline Manually
 
@@ -193,7 +196,8 @@ Run the pipeline once to verify it works before adding webhooks:
 
 [source,bash,role=execute,subs="attributes+"]
 ----
-tkn pipeline start parasol-ci \
+tkn pipeline start etx-app-base-app-ci \
+  --namespace etx-app-dev \
   --param git-url={gitlab_url}/software-factory/etx_app_base_app \
   --param git-revision=main \
   --param image-name=image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app \
@@ -212,8 +216,9 @@ Create the trigger resources so the pipeline runs automatically when code is pus
 
 Maps fields from the GitLab webhook payload to pipeline parameters:
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerBinding
 metadata:
@@ -225,14 +230,16 @@ spec:
       value: $(body.repository.git_http_url)
     - name: git-revision
       value: $(body.checkout_sha)
+EOF
 ----
 
 === TriggerTemplate
 
 Creates a PipelineRun when triggered:
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
 metadata:
@@ -246,10 +253,10 @@ spec:
     - apiVersion: tekton.dev/v1
       kind: PipelineRun
       metadata:
-        generateName: parasol-ci-
+        generateName: etx-app-base-app-ci-
       spec:
         pipelineRef:
-          name: parasol-ci
+          name: etx-app-base-app-ci
         params:
           - name: git-url
             value: $(tt.params.git-url)
@@ -263,14 +270,16 @@ spec:
               claimName: pipeline-workspace-pvc
         taskRunTemplate:
           serviceAccountName: pipeline
+EOF
 ----
 
 === EventListener
 
 Exposes an HTTP endpoint that GitLab can send webhooks to:
 
-[source,yaml]
+[source,bash,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: triggers.tekton.dev/v1beta1
 kind: EventListener
 metadata:
@@ -284,15 +293,7 @@ spec:
         - ref: gitlab-push-binding
       template:
         ref: gitlab-push-template
-----
-
-Apply all trigger resources:
-
-[source,bash,role=execute]
-----
-oc apply -f trigger-binding.yaml
-oc apply -f trigger-template.yaml
-oc apply -f event-listener.yaml
+EOF
 ----
 
 === Expose the EventListener
@@ -308,20 +309,14 @@ Get the webhook URL:
 
 [source,bash,role=execute]
 ----
-echo "http://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
+echo "https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
 
 Copy this URL for the next step.
 
 === Configure GitLab Webhook
 
-. Log into GitLab:
-+
-[source,text,subs="attributes+"]
-----
-{gitlab_url}
-----
-+
+. Log into GitLab {gitlab_url}
 . Navigate to your repository: *software-factory/etx_app_base_app*
 . Go to menu:Settings[Webhooks]
 . Add a new webhook:
@@ -364,7 +359,7 @@ Verify the image was pushed:
 
 [source,bash,role=execute]
 ----
-oc get imagestream parasol-insurance -n etx-app-dev
+oc get imagestream etx-app-base-app -n etx-app-dev
 ----
 
 You should see the image tagged with the commit SHA.
@@ -376,7 +371,7 @@ Verify all components are working:
 [source,bash]
 ----
 # Check pipeline exists
-oc get pipeline parasol-ci -n etx-app-dev
+oc get pipeline etx-app-base-app-ci -n etx-app-dev
 
 # Check EventListener is running
 oc get pods -n etx-app-dev | grep el-gitlab-listener

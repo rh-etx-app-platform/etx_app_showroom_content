@@ -3,8 +3,8 @@
 
 == Create the CheCluster
 
-The CheCluster custom resource is the single configuration object for your Dev Spaces deployment.
-Apply the following to create an instance with sensible defaults for a workshop environment:
+The `CheCluster` custom resource is the single configuration object for your Dev Spaces deployment.
+This is the sample configuration to create an instance with sensible defaults for this workshop environment:
 
 [source,yaml,line-comment=]
 ----
@@ -61,12 +61,62 @@ spec:
 <4> Required for nested containers (Podman-in-workspace). Must be `false`.
 <5> `per-workspace` gives each workspace its own PVC. This supports multiple workspaces per user without conflicts and provides clean isolation. Alternative: `per-user` shares a single PVC across all workspaces.
 
-Apply it:
+To apply the configuration, run:
 
 [source,bash]
 ----
-oc apply -f checluster.yaml
+oc create namespace openshift-devspaces
+oc apply -f - <<'EOF'
+apiVersion: org.eclipse.che/v2
+kind: CheCluster
+metadata:
+  name: devspaces
+  namespace: openshift-devspaces
+spec:
+  components:
+    cheServer:
+      debug: false
+      logLevel: INFO
+    dashboard: {}
+    devWorkspace: {}
+    devfileRegistry: {}
+    imagePuller:
+      enable: false
+    metrics:
+      enable: true
+    pluginRegistry:
+      openVSXURL: "https://open-vsx.org"
+  containerRegistry: {}
+  devEnvironments:
+    startTimeoutSeconds: 600
+    secondsOfRunBeforeIdling: -1
+    secondsOfInactivityBeforeIdling: 1800
+    maxNumberOfWorkspacesPerUser: 5
+    maxNumberOfRunningWorkspacesPerUser: 2
+    defaultContainerResources:
+      limits:
+        cpu: "2"
+        memory: 6Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    disableContainerRunCapabilities: false
+    defaultEditor: che-incubator/che-code/latest
+    defaultNamespace:
+      autoProvision: true
+      template: <username>-devspaces
+    storage:
+      pvcStrategy: per-workspace
+  networking:
+    auth:
+      gateway:
+        configLabels:
+          app: che
+          component: che-gateway-config
+EOF
 ----
+
+NOTE: The `openshift-devspaces` is created to deploy the instance of our CheCluster.
 
 Wait for the deployment to complete:
 
