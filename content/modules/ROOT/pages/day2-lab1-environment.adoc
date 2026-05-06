@@ -63,7 +63,7 @@ Two OpenShift clusters are available for application promotion:
 
 === Primary Cluster (Development)
 
-* **API:** https://api.cluster-{guid}.dynamic.redhatworkshops.io:6443
+* **API:** {openshift_api_url}
 * **Console:** {openshift_console_url}
 * **Apps Domain:** `*.{openshift_cluster_ingress_domain}`
 * **Admin Credentials:** `admin` / `r0rDrvTWeTAbVk7L`
@@ -137,7 +137,7 @@ Confirm you're logged into the primary cluster:
 [source,bash,subs="+attributes"]
 ----
 oc whoami --show-server
-# Should show: https://api.cluster-{guid}.dynamic.redhatworkshops.io:6443
+# Should show: {openshift_api_url}
 
 oc project etx-app-dev
 # Should switch to: etx-app-dev namespace

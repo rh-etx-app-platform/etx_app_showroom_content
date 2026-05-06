@@ -113,21 +113,23 @@ Construct the URL as:
 
 [source,bash,subs="attributes"]
 ----
-https://devspaces.{openshift_cluster_ingress_domain}/#GIT_REPO_URL
+{devspaces_url}/#<GIT_REPO_URL>
 ----
 
 For example, to create a workspace from the ETX App Base application:
 
 [source,bash,subs="attributes"]
 ----
-https://devspaces.{openshift_cluster_ingress_domain}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/
+{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/
 ----
+
+IMPORTANT: Replace `{guid}` in the URLs above with your actual cluster identifier. For example, if your cluster domain is `apps.cluster-abc123.dynamic.redhatworkshops.io`, then `{guid}` = `abc123`.
 
 You can also specify a branch:
 
 [source,bash,subs="attributes"]
 ----
-https://devspaces.{openshift_cluster_ingress_domain}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/
+{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/
 ----
 
 Alternatively, from the Dev Spaces dashboard:
