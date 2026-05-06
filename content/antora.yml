@@ -15,15 +15,15 @@ asciidoc:
     bastion_ssh_user_name: lab-user
     bastion_ssh_password: password
     ssh_user: lab-user
-    openshift_console_url: https://console-openshift-console.apps.cluster-{guid}.dynamic2.redhatworkshops.io
-    openshift_api_url: https://api.cluster-{guid}.dynamic2.redhatworkshops.io:6443
     openshift_cluster_ingress_domain: apps.cluster-{guid}.dynamic2.redhatworkshops.io
+    openshift_console_url: https://console-openshift-console.{openshift_cluster_ingress_domain}
+    openshift_api_url: https://api.cluster-{guid}.dynamic2.redhatworkshops.io:6443
     ocp_version: "4.21"
     user: platform-admin
     password: openshift
-    gitlab_url: http://gitlab.apps.cluster-{guid}.dynamic.redhatworkshops.io
-    keycloak_url: https://etx-sso.apps.cluster-{guid}.dynamic.redhatworkshops.io
-    quay_url: https://quay.apps.cluster-{guid}.dynamic.redhatworkshops.io
-    quay_registry_url: quay-registry-quay.apps.cluster-{guid}.dynamic.redhatworkshops.io
-    vault_url: https://vault.apps.cluster-{guid}.dynamic.redhatworkshops.io
-    etx_gitops_url: https://etx-gitops-server-etx-gitops.apps.cluster-{guid}.dynamic.redhatworkshops.io
+    gitlab_url: https://gitlab.{openshift_cluster_ingress_domain}
+    keycloak_url: https://etx-sso.{openshift_cluster_ingress_domain}
+    quay_url: https://quay.{openshift_cluster_ingress_domain}
+    quay_registry_url: quay-registry-quay.{openshift_cluster_ingress_domain}
+    vault_url: https://vault.{openshift_cluster_ingress_domain}
+    etx_gitops_url: https://etx-gitops-server-etx-gitops.{openshift_cluster_ingress_domain}
