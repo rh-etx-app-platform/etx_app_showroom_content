@@ -1,19 +1,58 @@
 = Dev Spaces Overview
 :navtitle: Dev Spaces Overview
 
+== Cloud Development Environments (CDEs): What and Why?
+
+With the increasing capabilities provided by the cloud and modern Javascript front-end user
+interfaces to host applications of all types, it makes sense to explore the concept of a portable,
+cloud-based developer environment that can be accessed by a diverse group of developers spread over
+multiple geographies, with just a modern browser.
+
+Enter the concept of a **Cloud Development Environment**.
+
+According to https://www.gartner.com/reviews/market/cloud-development-environments-cdes[Gartner^]:
+
+"Cloud development environments (CDEs) provide software developers with remote, ready-to-use access
+to a cloud-hosted development environment with minimal effort for setup and configuration. They
+comprise elements of a traditional IDE, such as code editing, debugging, code review, and code
+collaboration. They also provide consistent, secure developer access to preconfigured development
+workspaces. This frees them from setting up their own local environments, eliminating the need to
+install and maintain dependencies, software development kits, security patches, and plug-ins. Their
+seamless integration with Git-based repositories and continuous integration/continuous delivery
+(CI/CD) tools enhances developer productivity and developer experience. CDEs provide a scalable way
+to support a distributed workforce and hybrid work environments."
+-- Gartner, "What are Cloud Development Environments (CDEs)?"
+
+The advantages of a CDE are as follows:
+
+* Near-instant provisioning of developer environments, on-demand for a new developer
+* Ability to reproduce cloud-native production environments in development (to speedy releases, and reduce the cliché of _“but, it works on my machine!...”_)
+* Bring the day-to-day tasks that a developer does on his local machine (writing code, testing, debugging, and more), to a web-based IDE to improve the same developer experience.
+* Seamless switching between different projects with different stacks and different versions of programming language runtimes
+* Centralized security and access to source code backed by enterprise security standards (OAuth/OIDC, TLS)
+* Fine-grained resource control and multi-tenancy.
+
 == What is Red Hat OpenShift Dev Spaces?
 
-Red Hat OpenShift Dev Spaces provides Cloud Development Environments (CDEs) -- fully configured, containerized workspaces that run on OpenShift.
+**Red Hat OpenShift Dev Spaces** provides Cloud Development Environments (CDEs) -- fully configured, containerized workspaces that run on OpenShift.
 Instead of spending time setting up a local development environment, developers get a browser-based VS Code or JetBrains IDE backed by a workspace pod with all the tools, runtimes, and dependencies they need.
 
 Key benefits:
 
-* *Consistency* -- Every developer works in the same environment, eliminating "works on my machine" issues
+* *Consistency* -- Every developer works in the same environment, eliminating "works on my machine" issues based on environment definitions as code
 * *Speed* -- New team members can start coding in minutes, not days
-* *Security* -- Source code stays on the cluster; nothing lives on developer laptops
-* *Kubernetes-native* -- Workspaces are pods, so developers build and test in the same platform where their apps run
+* *Security* -- Development environments run inside the organization network, and the source code stays on the cluster; nothing lives on developer laptops
+* *Kubernetes-native* -- Build and test cloud-native applications on OpenShift with preconfigured developer credentials and access to the cluster
 
 == Architecture
+
+Red Hat OpenShift Dev Spaces runs (as a set of managed containers) on top of the OpenShift,
+and delegates several responsibilities around security, user management, resource allocation,
+and multi-tenancy to the underlying base platform.
+
+The product consists of a set of components interacting with each other to provide the necessary functionality for a web-based IDE. 
+
+image::devspaces-architecture.png[title=Red Hat OpenShift Dev Spaces Architecture (High Level)]
 
 Dev Spaces has a few core components:
 
