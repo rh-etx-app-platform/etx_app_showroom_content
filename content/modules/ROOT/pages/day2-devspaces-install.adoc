@@ -6,7 +6,7 @@
 The CheCluster custom resource is the single configuration object for your Dev Spaces deployment.
 Apply the following to create an instance with sensible defaults for a workshop environment:
 
-[source,yaml]
+[source,yaml,line-comment=]
 ----
 apiVersion: org.eclipse.che/v2
 kind: CheCluster

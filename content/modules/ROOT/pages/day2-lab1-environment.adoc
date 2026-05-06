@@ -121,7 +121,7 @@ The first time you log in, GitLab will create a user profile linked to your Keyc
 
 Once logged into GitLab, clone the ETX App Base application:
 
-[source,bash,subs="attributes"]
+[source,bash,subs="+attributes"]
 ----
 cd ~
 git clone {gitlab_url}/software-factory/etx_app_base_app.git
@@ -134,7 +134,7 @@ NOTE: The repository name is `etx_app_base_app` and Kubernetes resources will be
 
 Confirm you're logged into the primary cluster:
 
-[source,bash]
+[source,bash,subs="+attributes"]
 ----
 oc whoami --show-server
 # Should show: https://api.cluster-{guid}.dynamic.redhatworkshops.io:6443
