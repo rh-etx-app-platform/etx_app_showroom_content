@@ -109,27 +109,28 @@ Open this URL in your browser and log in with your OpenShift credentials.
 == Create the Lab Workspace
 
 The simplest way to create a workspace is by URL.
-Construct the URL as:
+Create the workspace URL from the Dev Spaces route and the ETX App Base repository:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
-{devspaces_url}/#<GIT_REPO_URL>
-----
+DEVSPACES_URL=$(oc get checluster/devspaces -n openshift-devspaces \
+  -o jsonpath='{.status.cheURL}')
+GIT_REPO_URL="{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/"
 
-For example, to create a workspace from the ETX App Base application:
-
-[source,bash,subs="attributes"]
-----
-{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/
+echo "${DEVSPACES_URL}/#${GIT_REPO_URL}"
 ----
 
-IMPORTANT: Replace `{guid}` in the URLs above with your actual cluster identifier. For example, if your cluster domain is `apps.cluster-abc123.dynamic.redhatworkshops.io`, then `{guid}` = `abc123`.
+Open the generated URL in your browser to create the workspace.
 
-You can also specify a branch:
+To create a workspace from a different branch, replace `REPLACE_BRANCH_NAME` and run:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
-{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/
+DEVSPACES_URL=$(oc get checluster/devspaces -n openshift-devspaces \
+  -o jsonpath='{.status.cheURL}')
+GIT_REPO_URL="{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/"
+
+echo "${DEVSPACES_URL}/#${GIT_REPO_URL}"
 ----
 
 Alternatively, from the Dev Spaces dashboard:
