@@ -207,7 +207,7 @@ Create `environments/dev/namespace.yaml`:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: parasol-dev
+  name: etx-app-dev
 ----
 
 Create `environments/dev/deployment.yaml`:
@@ -316,7 +316,7 @@ NOTE: Replace `{gitlab_url}` in the YAML below with the actual GitLab URL from y
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: parasol-dev
+  name: etx-app-dev
   namespace: etx-app-dev
 spec:
   project: default
@@ -340,7 +340,7 @@ Apply it:
 
 [source,bash,role=execute]
 ----
-oc apply -f parasol-dev-app.yaml
+oc apply -f etx-app-dev-app.yaml
 ----
 
 == Verify the Deployment
@@ -360,8 +360,8 @@ Verify the application is running:
 
 [source,bash,role=execute]
 ----
-oc get pods -n etx-app-dev -l app=parasol-insurance
-oc get route parasol-insurance -n etx-app-dev -o jsonpath='{.spec.host}'
+oc get pods -n etx-app-dev -l app=etx-app-base-app
+oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}'
 ----
 
 Open the route URL in your browser to confirm the application is accessible.
@@ -372,7 +372,7 @@ Check that the Java agent was injected into the application pod:
 
 [source,bash,role=execute]
 ----
-oc get pod -n etx-app-dev -l app=parasol-insurance \
+oc get pod -n etx-app-dev -l app=etx-app-base-app \
   -o jsonpath='{.items[0].spec.initContainers[*].name}'
 ----
 
@@ -424,12 +424,12 @@ spec:
         cd /tmp/gitops/environments/$(params.environment)
 
         # Update the image tag in the deployment manifest
-        sed -i "s|image:.*parasol-insurance:.*|image: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:$(params.image-tag)|" deployment.yaml
+        sed -i "s|image:.*etx-app-base-app:.*|image: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:$(params.image-tag)|" deployment.yaml
 
         git config user.email "pipeline@openshift.local"
         git config user.name "Tekton Pipeline"
         git add .
-        git commit -m "Update parasol-insurance image to $(params.image-tag)"
+        git commit -m "Update etx-app-base-app image to $(params.image-tag)"
         git push
 ----
 
@@ -542,7 +542,7 @@ spec:
     spec:
       containers:
         - name: etx-app-base-app
-          image: {quay_url}/parasol/parasol-insurance:stable # <3>
+          image: {quay_url}/etx-app/etx-app-base-app:stable # <3>
           ports:
             - containerPort: 8080
           resources:
@@ -590,7 +590,7 @@ NOTE: Replace `<STAGING_CLUSTER_URL>` with the URL from the command above, and `
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: parasol-stage
+  name: etx-app-stage
   namespace: etx-app-dev
 spec:
   project: default
@@ -614,7 +614,7 @@ Apply it:
 
 [source,bash,role=execute]
 ----
-oc apply -f parasol-stage-app.yaml
+oc apply -f etx-app-stage-app.yaml
 ----
 
 === Verify Stage Deployment
@@ -623,7 +623,7 @@ Check the stage application status:
 
 [source,bash,role=execute]
 ----
-oc get application parasol-stage -n etx-app-dev \
+oc get application etx-app-stage -n etx-app-dev \
   -o jsonpath='{.status.sync.status}'
 ----
 
@@ -634,8 +634,8 @@ View the application in Argo CD UI:
 . Open the Argo CD dashboard
 . You should see two applications:
   * `etx-app-dev` - Running on primary cluster
-  * `parasol-stage` - Running on secondary (staging) cluster
-. Click on `parasol-stage` to view its deployment status
+  * `etx-app-stage` - Running on secondary (staging) cluster
+. Click on `etx-app-stage` to view its deployment status
 
 NOTE: Since Argo CD is managing the staging cluster remotely, you can view the application status through the Argo CD UI without needing to login to the secondary cluster directly.
 
@@ -665,13 +665,13 @@ Verify the complete deployment:
 oc get application parasol-dev -n etx-app-dev -o jsonpath='{.status.sync.status}: {.status.health.status}'
 
 # Check application pods
-oc get pods -n etx-app-dev -l app.kubernetes.io/name=parasol-app
+oc get pods -n etx-app-dev -l app.kubernetes.io/name=etx-app-base-app
 
 # Check application health endpoint
-curl http://$(oc get route parasol-app -n etx-app-dev -o jsonpath='{.spec.host}')/q/health
+curl http://$(oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}')/q/health
 
 # Check OpenTelemetry injection
-oc get pod -n etx-app-dev -l app.kubernetes.io/name=parasol-app \
+oc get pod -n etx-app-dev -l app.kubernetes.io/name=etx-app-base-app \
   -o jsonpath='{.items[0].spec.initContainers[*].name}'
 ----
 

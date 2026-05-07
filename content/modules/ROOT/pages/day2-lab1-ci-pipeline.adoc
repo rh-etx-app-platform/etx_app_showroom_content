@@ -346,7 +346,7 @@ Check for new pipeline runs:
 tkn pipelinerun list -n etx-app-dev
 ----
 
-You should see a new `parasol-ci-*` PipelineRun.
+You should see a new `etx-app-base-app-ci-*` PipelineRun.
 
 Follow the latest run logs:
 

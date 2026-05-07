@@ -108,25 +108,18 @@ Open this URL in your browser and log in with your OpenShift credentials.
 == Create the Lab Workspace
 
 The simplest way to create a workspace is by URL.
-Construct the URL as:
+Open this URL to create a workspace from the ETX App Base application:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
-https://devspaces.{openshift_cluster_ingress_domain}/#GIT_REPO_URL
-----
-
-For example, to create a workspace from the ETX App Base application:
-
-[source,bash,subs="attributes"]
-----
-https://devspaces.{openshift_cluster_ingress_domain}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/
+{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/
 ----
 
-You can also specify a branch:
+To create a workspace from a different branch, replace `REPLACE_BRANCH_NAME` in this URL:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
-https://devspaces.{openshift_cluster_ingress_domain}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/
+{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/
 ----
 
 Alternatively, from the Dev Spaces dashboard:

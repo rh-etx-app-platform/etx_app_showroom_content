@@ -245,7 +245,7 @@ spec:
         cd /workspace/gitops
 
         # Update the image in staging deployment
-        sed -i "s|image:.*parasol-insurance:.*|image: $(params.image-url)|" \
+        sed -i "s|image:.*etx-app-base-app:.*|image: $(params.image-url)|" \
           environments/stage/deployment.yaml
 
         # Commit and push
@@ -274,7 +274,7 @@ Now combine all tasks into a promotion pipeline:
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: parasol-promotion
+  name: etx-app-promotion
   namespace: etx-app-dev
 spec:
   params:
@@ -303,7 +303,7 @@ spec:
         - name: source-image
           value: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:$(params.source-image-tag)
         - name: dest-image
-          value: $(tasks.fetch-quay-creds.results.quay-server)/parasol/parasol-insurance:$(params.dest-image-tag)
+          value: $(tasks.fetch-quay-creds.results.quay-server)/etx-app/etx-app-base-app:$(params.dest-image-tag)
         - name: dest-username
           value: $(tasks.fetch-quay-creds.results.quay-username)
         - name: dest-password
@@ -317,7 +317,7 @@ spec:
         - name: gitops-repo-url
           value: $(params.gitops-repo-url)
         - name: image-url
-          value: $(tasks.fetch-quay-creds.results.quay-server)/parasol/parasol-insurance:$(params.dest-image-tag)
+          value: $(tasks.fetch-quay-creds.results.quay-server)/etx-app/etx-app-base-app:$(params.dest-image-tag)
       workspaces:
         - name: source
           workspace: shared-workspace
@@ -329,7 +329,7 @@ Apply the pipeline:
 
 [source,bash,role=execute]
 ----
-oc apply -f parasol-promotion-pipeline.yaml
+oc apply -f etx-app-promotion-pipeline.yaml
 ----
 
 == Test the Promotion Pipeline
@@ -341,7 +341,7 @@ First, find a recent image tag from your dev environment:
 [source,bash,role=execute]
 ----
 # List recent images from dev CI pipeline
-oc get imagestream parasol-insurance -n etx-app-dev -o json | \
+oc get imagestream etx-app-base-app -n etx-app-dev -o json | \
   jq -r '.status.tags[].tag' | head -5
 ----
 
@@ -354,7 +354,7 @@ Trigger the promotion pipeline manually:
 [source,bash,role=execute,subs="attributes+"]
 ----
 # Replace <COMMIT_SHA> with an actual image tag from above
-tkn pipeline start parasol-promotion \
+tkn pipeline start etx-app-promotion \
   --param source-image-tag=<COMMIT_SHA> \
   --param dest-image-tag=stable \
   --param gitops-repo-url={gitlab_url}/software-factory/etx-app-gitops.git \
@@ -386,7 +386,7 @@ Check the Argo CD application status:
 
 [source,bash,role=execute]
 ----
-oc get application parasol-stage -n etx-app-dev -o jsonpath='{.status.sync.status}'
+oc get application etx-app-stage -n etx-app-dev -o jsonpath='{.status.sync.status}'
 ----
 
 The output should be `Synced`.
@@ -394,7 +394,7 @@ The output should be `Synced`.
 View in Argo CD UI:
 
 . Open the Argo CD dashboard
-. Click on the `parasol-stage` application
+. Click on the `etx-app-stage` application
 . You should see it's synced and healthy
 . The deployment should show the new image from Quay
 
@@ -475,7 +475,7 @@ Run the promotion pipeline with a previous image tag:
 
 [source,bash,role=execute]
 ----
-tkn pipeline start parasol-promotion \
+tkn pipeline start etx-app-promotion \
   --param source-image-tag=<PREVIOUS_SHA> \
   --param dest-image-tag=stable \
   --workspace name=shared-workspace,claimName=promotion-workspace-pvc \
