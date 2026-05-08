@@ -19,11 +19,14 @@ The modernized application will then be integrated into the CI pipeline built in
 Verify from the CLI:
 
 [source,bash]
+//TODO this doesn't work (nothing comes up)
 ----
 oc get csv -n openshift-operators | grep mta
 ----
 
 === Deploy the MTA Web Console
+
+//TODO the OCP console asked me for this in 30 seconds from start, I did it from yaml
 
 Create a Tackle CR to deploy the MTA web console:
 
@@ -48,6 +51,16 @@ oc apply -f mta-tackle.yaml
 Wait for the pods to be ready:
 
 [source,bash]
+//TODO this is vague and when I first did this, every pod show was "Running" but.. more pods appeared later, this is tottally running
+//NAME                                          READY   STATUS    RESTARTS   AGE
+//mta-hub-6f7c97f78d-5j9v6                      1/1     Running   0          2m56s
+//mta-keycloak-postgresql-15-68fbc8f956-pkvl2   1/1     Running   0          5m30s
+//mta-operator-6b9fd4d5df-pm9k9                 1/1     Running   0          8m8s
+//mta-rhbk-0                                    1/1     Running   0          4m36s
+//mta-ui-5dd64d98c7-j4q48                       1/1     Running   0          2m53s
+//rhbk-operator-64b66c5d54-xmc82                1/1     Running   0          8m6s
+
+
 ----
 oc get pods -n openshift-mta -w
 ----
@@ -60,6 +73,13 @@ oc get route -n openshift-mta
 ----
 
 Open the URL in your browser.
+
+//TODO this requires some sort of login, it's not obvious
+//It's the default
+// Username: admin
+// Password: Passw0rd!
+// If you enter it, it asks to change the password
+//TODO fix this?
 
 == Analyze the Application
 
