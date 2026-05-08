@@ -72,8 +72,8 @@ spec:
         #!/bin/sh
         set -e
 
-        # Install curl
-        microdnf install -y curl jq && microdnf clean all
+        # Install jq
+        microdnf install -y jq && microdnf clean all
 
         # Authenticate to Vault using ServiceAccount token
         VAULT_ADDR="{vault_url}"
@@ -157,8 +157,6 @@ spec:
       workspaces:
         - name: source
           workspace: shared-workspace
-        - name: maven-settings
-          workspace: shared-workspace
 
     - name: fetch-creds
       runAfter: [clone]
@@ -182,6 +180,8 @@ spec:
       params:
         - name: IMAGE
           value: $(params.image-name):$(params.git-revision)
+        - name: DOCKERFILE
+          value: Containerfile
       workspaces:
         - name: source
           workspace: shared-workspace
@@ -309,7 +309,7 @@ Get the webhook URL:
 
 [source,bash,role=execute]
 ----
-echo "https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
+echo "http://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
 
 Copy this URL for the next step.
