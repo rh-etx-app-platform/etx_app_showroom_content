@@ -116,7 +116,7 @@ spec:
 EOF
 ----
 
-NOTE: The `openshift-devspaces` is created to deploy the instance of our CheCluster.
+NOTE: The `openshift-devspaces` namespace is created for the `CheCluster` instance and Dev Spaces server components. The Dev Spaces operator itself was installed in `openshift-operators`.
 
 Wait for the deployment to complete:
 
@@ -133,9 +133,28 @@ You can also watch the pods come up:
 oc get pods -n openshift-devspaces -w
 ----
 
-== Useful Configuration Commands
+== Access the Dashboard
 
-Patch any CheCluster setting without re-applying the full YAML:
+Once the CheCluster is `Active`, get the dashboard URL:
+
+[source,bash]
+----
+oc get checluster/devspaces -n openshift-devspaces \
+  -o jsonpath='{.status.cheURL}'
+----
+
+Open this URL in your browser.
+You will authenticate through OpenShift OAuth -- users log in with whatever identity provider is configured on the cluster.
+
+You can also access Dev Spaces from the OpenShift Console:
+
+. Click the application launcher icon in the top right of the OpenShift Console.
+. Select *Red Hat OpenShift Dev Spaces*.
+. Log in with your OpenShift credentials.
+
+== Appendix: Useful Configuration Commands
+
+The following commands are reference commands for administrators. Do not run them during the lab unless an instructor asks you to change the Dev Spaces configuration.
 
 [source,bash]
 ----
@@ -153,21 +172,6 @@ oc patch checluster/devspaces -n openshift-devspaces \
 oc get checluster/devspaces -n openshift-devspaces \
   -o jsonpath='{.spec.devEnvironments.storage.pvcStrategy}'
 ----
-
-WARNING: Do not run these today. Just consider them a reference. 
-
-== Access the Dashboard
-
-Once the CheCluster is `Active`, get the dashboard URL:
-
-[source,bash]
-----
-oc get checluster/devspaces -n openshift-devspaces \
-  -o jsonpath='{.status.cheURL}'
-----
-
-Open this URL in your browser.
-You will authenticate through OpenShift OAuth -- users log in with whatever identity provider is configured on the cluster.
 
 == Next Steps
 
