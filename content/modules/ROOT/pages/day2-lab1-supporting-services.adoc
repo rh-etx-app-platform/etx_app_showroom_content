@@ -3,7 +3,9 @@
 
 == Overview
 
-Deploy and configure the platform services required by the CI/CD pipeline and application observability: AMQ Streams (Kafka) for messaging, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
+Deploy and configure the platform services required by the application and CI/CD pipeline: PostgreSQL database for application data persistence, AMQ Streams (Kafka) for messaging, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
+
+These services will be shared across your development workflow in Dev Spaces and production deployments.
 
 NOTE: HashiCorp Vault is already deployed as part of the infrastructure bootstrap and does not require student installation.
 
@@ -101,7 +103,232 @@ oc get csv -n openshift-operators | grep amqstreams
 
 You should see the AMQ Streams operator listed with phase `Succeeded`.
 
-NOTE: The Kafka cluster will be deployed later as part of the application stack. The operator installation provides the CRDs (Kafka, KafkaTopic, etc.) needed to manage Kafka resources.
+=== Deploy Kafka Cluster
+
+Now that the operator is installed, deploy a Kafka cluster in your application namespace:
+
+[source,bash,subs="attributes"]
+----
+oc apply -f - <<'EOF'
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: parasol-kafka
+  namespace: etx-app-dev
+spec:
+  kafka:
+    version: 3.9.0
+    replicas: 1
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      inter.broker.protocol.version: "3.9"
+    storage:
+      type: ephemeral
+  zookeeper:
+    replicas: 1
+    storage:
+      type: ephemeral
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+EOF
+----
+
+Wait for the Kafka cluster to be ready:
+
+[source,bash]
+----
+oc wait kafka/parasol-kafka --for=condition=Ready --timeout=300s -n etx-app-dev
+----
+
+Verify the Kafka pods are running:
+
+[source,bash]
+----
+oc get pods -l strimzi.io/cluster=parasol-kafka -n etx-app-dev
+----
+
+You should see:
+- `parasol-kafka-kafka-0` -- Kafka broker
+- `parasol-kafka-zookeeper-0` -- ZooKeeper
+- `parasol-kafka-entity-operator-*` -- Topic and User operators
+
+Get the Kafka bootstrap server:
+
+[source,bash]
+----
+oc get service parasol-kafka-kafka-bootstrap -n etx-app-dev -o jsonpath='{.metadata.name}:{.spec.ports[0].port}'
+----
+
+This returns `parasol-kafka-kafka-bootstrap:9092` which will be used to connect to Kafka from your application.
+
+=== Create Kafka Topics
+
+Create the topics required by the ETX App Base application:
+
+[source,bash,subs="attributes"]
+----
+oc apply -f - <<'EOF'
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: intake
+  namespace: etx-app-dev
+  labels:
+    strimzi.io/cluster: parasol-kafka
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: 604800000
+    segment.bytes: 1073741824
+EOF
+----
+
+Verify the topic was created:
+
+[source,bash]
+----
+oc get kafkatopic -n etx-app-dev
+----
+
+== Deploy PostgreSQL Database
+
+Deploy PostgreSQL using the Red Hat certified container image for application data persistence.
+
+=== Create PostgreSQL Deployment
+
+[source,bash,subs="attributes"]
+----
+oc apply -f - <<'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: parasol-db-secret
+  namespace: etx-app-dev
+type: Opaque
+stringData:
+  database-name: parasol
+  database-user: parasol
+  database-password: parasol
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: parasol-db
+  namespace: etx-app-dev
+spec:
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: 5432
+  selector:
+    app: parasol-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: parasol-db
+  namespace: etx-app-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: parasol-db
+  template:
+    metadata:
+      labels:
+        app: parasol-db
+    spec:
+      containers:
+        - name: postgresql
+          image: registry.redhat.io/rhel9/postgresql-17:latest
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-user
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-password
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-name
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/pgsql/data
+          livenessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+                - --live
+            initialDelaySeconds: 120
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: 500m
+            requests:
+              memory: 256Mi
+              cpu: 100m
+      volumes:
+        - name: postgresql-data
+          emptyDir: {}
+EOF
+----
+
+IMPORTANT: This deployment uses `emptyDir` for storage, which means data is lost when the pod restarts. For production, use a `PersistentVolumeClaim` backed by persistent storage.
+
+Wait for PostgreSQL to be ready:
+
+[source,bash]
+----
+oc rollout status deployment/parasol-db -n etx-app-dev
+----
+
+Verify the PostgreSQL pod is running:
+
+[source,bash]
+----
+oc get pods -l app=parasol-db -n etx-app-dev
+----
+
+Test the database connection:
+
+[source,bash]
+----
+oc run postgresql-test --rm -it --restart=Never --image=registry.redhat.io/rhel9/postgresql-17:latest -n etx-app-dev -- psql -h parasol-db -U parasol -d parasol -c '\conninfo'
+----
+
+You should see connection information confirming PostgreSQL is accessible.
+
+NOTE: The database credentials are stored in the `parasol-db-secret` Secret. Your application will use these same credentials to connect.
 
 == Install the OpenTelemetry Operator
 
@@ -213,13 +440,20 @@ This will be used when deploying the application in xref:day2-lab1-app-deploymen
 
 == Summary
 
-You now have the following services available:
+You now have the following services deployed and ready:
 
 * ✅ **Vault** (pre-deployed) -- secrets management with Kubernetes authentication for pipeline access
 * ✅ **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
-* ✅ **AMQ Streams** -- Kafka operator ready to deploy messaging infrastructure
+* ✅ **AMQ Streams Kafka Cluster** -- `parasol-kafka-kafka-bootstrap:9092` with `intake` topic
+* ✅ **PostgreSQL Database** -- `parasol-db:5432` with database `parasol`
 * ✅ **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing
+
+Your application can now connect to these services:
+
+* **Kafka bootstrap server:** `parasol-kafka-kafka-bootstrap:9092`
+* **PostgreSQL host:** `parasol-db:5432`
+* **Database credentials:** Available in `parasol-db-secret` Secret
 
 == Next Steps
 
-Proceed to xref:day2-lab1-ci-pipeline.adoc[CI Pipeline] to build the application pipeline.
+Proceed to xref:day2-lab1-devspaces.adoc[Dev Spaces & IDE Setup] to create your development workspace and connect to these services.

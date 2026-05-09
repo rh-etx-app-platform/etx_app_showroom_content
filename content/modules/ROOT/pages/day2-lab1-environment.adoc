@@ -85,22 +85,23 @@ You will configure multi-cluster promotion in the final section of this lab.
 
 As part of this hands-on lab, you will install and configure:
 
-* ✅ **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser
-* ✅ **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
+* ✅ **PostgreSQL Database** - Application data persistence using Red Hat certified image
 * ✅ **AMQ Streams (Kafka)** - Messaging infrastructure for application services
+* ✅ **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
 * ✅ **OpenTelemetry Operator** - Distributed tracing and observability
+* ✅ **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser
 * ✅ **Argo CD (student instance)** - GitOps continuous deployment
 
-NOTE: HashiCorp Vault is pre-deployed as part of the infrastructure bootstrap and does not require student installation.
+NOTE: HashiCorp Vault is pre-deployed as part of the infrastructure bootstrap and does not require student installation. Supporting services (PostgreSQL and Kafka) are deployed first so Dev Spaces workspaces can connect to them.
 
 == Lab Workflow
 
 ```
 Lab 1 Step 1: Environment Overview (this page)
       ↓
-Lab 1 Step 2: Deploy and configure Dev Spaces
+Lab 1 Step 2: Deploy supporting services (PostgreSQL, Kafka, Tekton, OpenTelemetry)
       ↓
-Lab 1 Step 3: Deploy supporting services (AMQ Streams, Tekton, OpenTelemetry)
+Lab 1 Step 3: Deploy and configure Dev Spaces
       ↓
 Lab 1 Step 4: Create CI pipeline with Tekton
       ↓
@@ -108,6 +109,8 @@ Lab 1 Step 5: Deploy Argo CD for application delivery
       ↓
 Lab 1 Step 6: Configure multi-cluster promotion
 ```
+
+IMPORTANT: Supporting services (PostgreSQL and Kafka) must be deployed BEFORE setting up Dev Spaces, as your application workspace will connect to these external services instead of using local containers.
 
 == Accessing GitLab with Keycloak
 
@@ -149,4 +152,4 @@ oc project etx-app-dev
 
 == Next Steps
 
-Proceed to xref:day2-lab1-devspaces.adoc[Deploy Dev Spaces].
+Proceed to xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services].

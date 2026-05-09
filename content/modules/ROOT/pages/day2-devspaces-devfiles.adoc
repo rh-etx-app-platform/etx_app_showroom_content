@@ -183,15 +183,17 @@ components:
           value: "0.0.0.0"
         - name: MAVEN_OPTS
           value: "-Dmaven.repo.local=/home/user/.m2/repository"
-        # Critical: Testcontainers/Quarkus Dev Services configuration for Podman
-        - name: XDG_RUNTIME_DIR # <1>
-          value: "/tmp/podman-run-1000"
-        - name: DOCKER_HOST # <2>
-          value: "unix:///tmp/podman-run-1000/podman/podman.sock"
-        - name: TESTCONTAINERS_RYUK_DISABLED # <3>
-          value: "true"
-        - name: TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE # <4>
-          value: "/tmp/podman-run-1000/podman/podman.sock"
+        # External service connection (from Supporting Services lab)
+        - name: POSTGRESQL_HOST # <1>
+          value: "parasol-db.etx-app-dev.svc.cluster.local"
+        - name: POSTGRESQL_DATABASE # <2>
+          value: "parasol"
+        - name: POSTGRESQL_USER # <3>
+          value: "parasol"
+        - name: POSTGRESQL_PASSWORD # <4>
+          value: "parasol"
+        - name: KAFKA_BOOTSTRAP_SERVERS # <5>
+          value: "parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092"
       memoryLimit: 5Gi
       cpuLimit: 2500m
       volumeMounts:
@@ -228,26 +230,6 @@ commands:
       group:
         kind: run
         isDefault: true
-  - id: init-podman
-    exec:
-      label: "Initialize Podman socket"
-      component: development-tooling
-      commandLine: |
-        #!/bin/bash
-        mkdir -p ${XDG_RUNTIME_DIR}/podman
-        nohup podman system service --time=0 unix://${XDG_RUNTIME_DIR}/podman/podman.sock > /tmp/podman.log 2>&1 &
-        echo "Waiting for Podman socket to be ready..."
-        for i in {1..30}; do
-          if [ -S ${XDG_RUNTIME_DIR}/podman/podman.sock ]; then
-            echo "Podman socket is ready at ${XDG_RUNTIME_DIR}/podman/podman.sock"
-            exit 0
-          fi
-          sleep 1
-        done
-        echo "ERROR: Podman socket failed to start"
-        exit 1
-      group:
-        kind: build
   - id: init-continue
     exec:
       label: "Initialize Continue config"
@@ -271,15 +253,15 @@ commands:
         kind: build
 events:
   postStart:
-    - init-podman
     - init-continue
 ----
-<1> XDG_RUNTIME_DIR is required for Podman to know where to create its runtime socket
-<2> Points Testcontainers to use Podman socket instead of Docker
-<3> Disables the Ryuk cleanup container (not compatible with Podman in Dev Spaces)
-<4> Overrides the socket path for Testcontainers compatibility with Podman
+<1> PostgreSQL hostname - fully qualified service name from Supporting Services lab
+<2> PostgreSQL database name (matches the database created in Supporting Services)
+<3> PostgreSQL username (matches the secret in Supporting Services)
+<4> PostgreSQL password (matches the secret in Supporting Services)
+<5> Kafka bootstrap servers - fully qualified service name from Supporting Services lab
 
-NOTE: These four environment variables plus the `init-podman` postStart command are **required** for Quarkus Dev Services to work in Dev Spaces. Without them, Testcontainers will fail with `IllegalStateException: Previous attempts to find a Docker environment failed`.
+NOTE: These environment variables point to external PostgreSQL and Kafka services deployed in xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services]. Dev Services (Testcontainers) are **disabled** to use shared cluster services instead.
 
 This example also includes a `init-continue` command that reads `LLM_API_KEY` and `LLM_BASE_URL`
 from the environment variables injected by the shared secret created in the developer user namespace.
