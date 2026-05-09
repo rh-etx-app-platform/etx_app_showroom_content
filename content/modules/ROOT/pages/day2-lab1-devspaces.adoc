@@ -328,6 +328,30 @@ Dev Services for default datasource (postgresql) started
 The application will be available on port 8080.
 Click the endpoint notification in the IDE or find the URL in the *Endpoints* panel.
 
+=== Kafka Dev Services Limitation
+
+The ETX App Base application uses Kafka for messaging.
+However, Kafka Dev Services currently has compatibility limitations with Podman rootless mode in Dev Spaces.
+
+For development in Dev Spaces, **disable Kafka Dev Services** and use the Kafka instance deployed via Helm in the xref:day2-lab1-supporting-services.adoc[Supporting Services] lab:
+
+[source,properties]
+----
+# Disable Kafka Dev Services (use external Kafka from supporting services)
+%dev.quarkus.kafka.devservices.enabled=false
+
+# Connect to external Kafka broker
+%dev.kafka.bootstrap.servers=${KAFKA_BOOTSTRAP_SERVERS:parasol-kafka-bootstrap:9092}
+----
+
+This approach:
+
+* Uses the Red Hat AMQ Streams Kafka deployment from the Supporting Services lab
+* Avoids Podman rootless compatibility issues with Kafka container images
+* Provides a consistent Kafka broker across all development workspaces
+
+IMPORTANT: Make sure you've completed xref:day2-lab1-supporting-services.adoc[Lab 1: Deploy Supporting Services] before starting Quarkus dev mode, as the application expects to connect to an external Kafka broker.
+
 == Workspace Lifecycle
 
 Some useful operations:

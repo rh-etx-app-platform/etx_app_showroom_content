@@ -169,6 +169,10 @@ quarkus.http.port=8080
 # Dev Services handles database automatically in development mode
 %dev.quarkus.datasource.devservices.enabled=true
 
+# Disable Kafka Dev Services (use external Kafka from supporting services)
+%dev.quarkus.kafka.devservices.enabled=false
+%dev.kafka.bootstrap.servers=${KAFKA_BOOTSTRAP_SERVERS:parasol-kafka-bootstrap:9092}
+
 # Production configuration
 quarkus.datasource.db-kind=postgresql
 %prod.quarkus.datasource.username=${DB_USER:parasol}
@@ -179,7 +183,7 @@ quarkus.datasource.db-kind=postgresql
 quarkus.hibernate-orm.database.generation=update
 ----
 
-IMPORTANT: Use the `%dev.` prefix for development-only settings and `%prod.` prefix for production-only settings. This allows Quarkus Dev Services to automatically configure PostgreSQL in development mode while using environment variables in production.
+IMPORTANT: Use the `%dev.` prefix for development-only settings and `%prod.` prefix for production-only settings. This allows Quarkus Dev Services to automatically configure PostgreSQL in development mode while using environment variables in production. Kafka Dev Services is disabled in development to use the external Kafka broker deployed via Helm (see xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services]).
 
 === Validate the Build
 
