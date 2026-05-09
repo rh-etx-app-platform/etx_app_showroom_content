@@ -25,6 +25,12 @@ components:
           value: "0.0.0.0"
         - name: MAVEN_OPTS
           value: "-Dmaven.repo.local=/home/user/.m2/repository"
+        - name: DOCKER_HOST
+          value: "unix:///run/user/10001/podman/podman.sock"
+        - name: TESTCONTAINERS_RYUK_DISABLED
+          value: "true"
+        - name: TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE
+          value: "/run/user/10001/podman/podman.sock"
       memoryLimit: 5Gi
       cpuLimit: 2500m
       volumeMounts:
@@ -188,6 +194,32 @@ See the https://docs.redhat.com/en/documentation/red_hat_openshift_dev_spaces/3.
 
 When `disableContainerRunCapabilities: false` is set in the CheCluster CR, workspace pods get the capabilities needed to run Podman in rootless mode.
 Quarkus Dev Services uses Testcontainers under the hood, which calls Podman to start service containers (databases, message brokers, etc.).
+
+=== Configure Podman Socket for Testcontainers
+
+Testcontainers expects to communicate with a Docker daemon, but in DevSpaces we use Podman. The devfile includes environment variables that configure Testcontainers to use Podman:
+
+* `DOCKER_HOST` - Points to the Podman socket instead of Docker
+* `TESTCONTAINERS_RYUK_DISABLED` - Disables the Ryuk cleanup container (not compatible with Podman in DevSpaces)
+* `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE` - Overrides the socket path for compatibility
+
+Verify the Podman socket is running:
+
+[source,bash]
+----
+podman info --format '{{.Host.RemoteSocket.Path}}'
+----
+
+This should return `/run/user/10001/podman/podman.sock` (the UID may vary).
+
+If you encounter errors about Docker not being found when running Quarkus Dev Services, verify these environment variables are set:
+
+[source,bash]
+----
+echo $DOCKER_HOST
+echo $TESTCONTAINERS_RYUK_DISABLED
+echo $TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE
+----
 
 == Run Quarkus Dev Services
 

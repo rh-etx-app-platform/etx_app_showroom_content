@@ -183,6 +183,12 @@ components:
           value: "0.0.0.0"
         - name: MAVEN_OPTS
           value: "-Dmaven.repo.local=/home/user/.m2/repository"
+        - name: DOCKER_HOST
+          value: "unix:///run/user/10001/podman/podman.sock"
+        - name: TESTCONTAINERS_RYUK_DISABLED
+          value: "true"
+        - name: TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE
+          value: "/run/user/10001/podman/podman.sock"
       memoryLimit: 5Gi
       cpuLimit: 2500m
       volumeMounts:
