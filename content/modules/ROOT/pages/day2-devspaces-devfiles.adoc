@@ -183,11 +183,12 @@ components:
           value: "0.0.0.0"
         - name: MAVEN_OPTS
           value: "-Dmaven.repo.local=/home/user/.m2/repository"
-        - name: DOCKER_HOST
+        # Critical: Testcontainers/Quarkus Dev Services configuration for Podman
+        - name: DOCKER_HOST # <1>
           value: "unix:///run/user/10001/podman/podman.sock"
-        - name: TESTCONTAINERS_RYUK_DISABLED
+        - name: TESTCONTAINERS_RYUK_DISABLED # <2>
           value: "true"
-        - name: TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE
+        - name: TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE # <3>
           value: "/run/user/10001/podman/podman.sock"
       memoryLimit: 5Gi
       cpuLimit: 2500m
@@ -250,8 +251,13 @@ events:
   postStart:
     - init-continue
 ----
+<1> Points Testcontainers to use Podman socket instead of Docker
+<2> Disables the Ryuk cleanup container (not compatible with Podman in Dev Spaces)
+<3> Overrides the socket path for Testcontainers compatibility with Podman
 
-This example includes a `init-continue` command that reads `LLM_API_KEY` and `LLM_BASE_URL`
+NOTE: These environment variables are **required** for Quarkus Dev Services to work in Dev Spaces. Without them, Testcontainers will fail with `IllegalStateException: Previous attempts to find a Docker environment failed`.
+
+This example also includes a `init-continue` command that reads `LLM_API_KEY` and `LLM_BASE_URL`
 from the environment variables injected by the shared secret created in the developer user namespace.
 
 == Next Steps

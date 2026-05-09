@@ -7,9 +7,17 @@ In this lab you will create a Dev Spaces workspace for the ETX App Base applicat
 
 == Create a Devfile
 
-We will create a new `devfile.yaml` file in the repository. This `devfile` configures the workspace with UBI, Maven caching, Quarkus endpoints, and the Continue AI assistant:
+Create a new `devfile.yaml` file in the root of your cloned repository. This devfile configures the workspace with:
 
-Copy the following content into the `devfile.yaml` file:
+* Universal Developer Image (UBI) with Java tooling
+* Maven caching for faster builds
+* Quarkus development endpoints
+* Continue AI assistant integration
+* **Podman/Testcontainers configuration** - Required for Quarkus Dev Services to work in Dev Spaces
+
+IMPORTANT: The repository does NOT include a pre-existing devfile. You must create this file manually following these instructions.
+
+In the root directory of your cloned `etx_app_base_app` repository, create a new file named `devfile.yaml` with the following content:
 
 [source,yaml]
 ----
@@ -25,11 +33,12 @@ components:
           value: "0.0.0.0"
         - name: MAVEN_OPTS
           value: "-Dmaven.repo.local=/home/user/.m2/repository"
-        - name: DOCKER_HOST
+        # Critical: Testcontainers/Quarkus Dev Services configuration for Podman
+        - name: DOCKER_HOST # <1>
           value: "unix:///run/user/10001/podman/podman.sock"
-        - name: TESTCONTAINERS_RYUK_DISABLED
+        - name: TESTCONTAINERS_RYUK_DISABLED # <2>
           value: "true"
-        - name: TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE
+        - name: TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE # <3>
           value: "/run/user/10001/podman/podman.sock"
       memoryLimit: 5Gi
       cpuLimit: 2500m
@@ -89,8 +98,13 @@ events:
   postStart:
     - init-continue
 ----
+<1> Points Testcontainers to use Podman socket instead of Docker. Without this, you'll get: `IllegalStateException: Previous attempts to find a Docker environment failed`
+<2> Disables the Ryuk cleanup container which is not compatible with Podman in Dev Spaces
+<3> Overrides the socket path for Testcontainers compatibility with Podman
 
-Commit and push the devfile, then restart your workspace so Dev Spaces picks up the new configuration.
+IMPORTANT: These three environment variables are **critical** for Quarkus Dev Services to work in Dev Spaces. Without them, Maven builds will fail with "Docker not found" errors when trying to start test containers for Kafka and PostgreSQL.
+
+After creating the file, commit and push the devfile so Dev Spaces can read it when creating your workspace:
 
 [source,bash]
 ----
@@ -212,13 +226,33 @@ podman info --format '{{.Host.RemoteSocket.Path}}'
 
 This should return `/run/user/10001/podman/podman.sock` (the UID may vary).
 
-If you encounter errors about Docker not being found when running Quarkus Dev Services, verify these environment variables are set:
+**Troubleshooting:** If you encounter this error when running `./mvnw compile quarkus:dev`:
+
+[source]
+----
+java.lang.IllegalStateException: Previous attempts to find a Docker environment failed.
+Will not retry. Please see logs and check configuration
+----
+
+This means Testcontainers cannot find Podman. Verify these environment variables are set in your terminal:
 
 [source,bash]
 ----
 echo $DOCKER_HOST
 echo $TESTCONTAINERS_RYUK_DISABLED
 echo $TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE
+----
+
+If they are empty, your workspace was created before the devfile was updated. Either:
+
+1. **Recreate the workspace** from the Dev Spaces dashboard using the updated devfile (recommended)
+2. **Set variables manually** in your current terminal session (temporary fix):
++
+[source,bash]
+----
+export DOCKER_HOST=unix:///run/user/10001/podman/podman.sock
+export TESTCONTAINERS_RYUK_DISABLED=true
+export TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/run/user/10001/podman/podman.sock
 ----
 
 == Run Quarkus Dev Services
