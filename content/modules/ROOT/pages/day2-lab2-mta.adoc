@@ -164,15 +164,22 @@ Move configuration from XML files to `application.properties`:
 
 [source,properties]
 ----
-# Database configuration
+quarkus.http.port=8080
+
+# Dev Services handles database automatically in development mode
+%dev.quarkus.datasource.devservices.enabled=true
+
+# Production configuration
 quarkus.datasource.db-kind=postgresql
-quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/parasol
-quarkus.datasource.username=${DB_USER:parasol}
-quarkus.datasource.password=${DB_PASSWORD:parasol}
+%prod.quarkus.datasource.username=${DB_USER:parasol}
+%prod.quarkus.datasource.password=${DB_PASSWORD:parasol}
+%prod.quarkus.datasource.jdbc.url=jdbc:postgresql://${DB_HOST:localhost}:5432/${DB_NAME:parasol}
 
 # Hibernate
 quarkus.hibernate-orm.database.generation=update
 ----
+
+IMPORTANT: Use the `%dev.` prefix for development-only settings and `%prod.` prefix for production-only settings. This allows Quarkus Dev Services to automatically configure PostgreSQL in development mode while using environment variables in production.
 
 === Validate the Build
 
