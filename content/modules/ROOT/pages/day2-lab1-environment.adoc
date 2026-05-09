@@ -4,7 +4,7 @@
 == Overview
 
 This workshop provides a pre-configured OpenShift environment with foundational infrastructure services.
-You will deploy the application platform services (DevSpaces, Vault, Tekton, Argo CD) and build a complete CI/CD pipeline.
+You will deploy application platform services (DevSpaces, Tekton, Argo CD) and build a complete CI/CD pipeline.
 
 == Pre-Deployed Infrastructure
 
@@ -66,15 +66,17 @@ Two OpenShift clusters are available for application promotion:
 * **API:** {openshift_api_url}
 * **Console:** {openshift_console_url}
 * **Apps Domain:** `*.{openshift_cluster_ingress_domain}`
-* **Admin Credentials:** `admin` / `r0rDrvTWeTAbVk7L`
+* **Admin User:** `{user}`
+* **Admin Password:** `{password}`
 * **Your Namespace:** `etx-app-dev` (pre-created)
 
 === Secondary Cluster (Staging/Production)
 
-* **API:** https://api.cluster-{guid2}.dynamic.redhatworkshops.io:6443
-* **Console:** https://console-openshift-console.apps.cluster-{guid2}.dynamic.redhatworkshops.io
-* **Apps Domain:** `*.apps.cluster-{guid2}.dynamic.redhatworkshops.io`
-* **Admin Credentials:** `admin` / `G6VpeK3U6n8LpyhC`
+* **API:** https://api.cluster-{guid2}.{workshop_base_domain}:6443
+* **Console:** https://console-openshift-console.apps.cluster-{guid2}.{workshop_base_domain}
+* **Apps Domain:** `*.apps.cluster-{guid2}.{workshop_base_domain}`
+* **Admin User:** `{user}`
+* **Admin Password:** `{password}`
 * **Namespaces:** `etx-app-staging`, `etx-app-prod` (pre-created)
 
 You will configure multi-cluster promotion in the final section of this lab.

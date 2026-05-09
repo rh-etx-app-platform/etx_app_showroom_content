@@ -303,7 +303,7 @@ Grant Argo CD permission to manage resources in the `etx-app-dev` namespace:
 [source,bash,role=execute]
 ----
 oc adm policy add-role-to-user admin \
-  system:serviceaccount:parasol-dev:argocd-application-controller \
+  system:serviceaccount:etx-app-dev:argocd-application-controller \
   -n etx-app-dev
 ----
 
@@ -350,7 +350,7 @@ Check that Argo CD has synced the application:
 [source,bash,role=execute]
 ----
 # Argo CD application status
-oc get application parasol-dev -n etx-app-dev \
+oc get application etx-app-dev -n etx-app-dev \
   -o jsonpath='{.status.sync.status}'
 ----
 
@@ -662,16 +662,16 @@ Verify the complete deployment:
 [source,bash]
 ----
 # Check Argo CD application status
-oc get application parasol-dev -n etx-app-dev -o jsonpath='{.status.sync.status}: {.status.health.status}'
+oc get application etx-app-dev -n etx-app-dev -o jsonpath='{.status.sync.status}: {.status.health.status}'
 
 # Check application pods
-oc get pods -n etx-app-dev -l app.kubernetes.io/name=etx-app-base-app
+oc get pods -n etx-app-dev -l app=etx-app-base-app
 
 # Check application health endpoint
 curl http://$(oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}')/q/health
 
 # Check OpenTelemetry injection
-oc get pod -n etx-app-dev -l app.kubernetes.io/name=etx-app-base-app \
+oc get pod -n etx-app-dev -l app=etx-app-base-app \
   -o jsonpath='{.items[0].spec.initContainers[*].name}'
 ----
 

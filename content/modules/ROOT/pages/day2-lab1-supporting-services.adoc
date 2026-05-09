@@ -77,7 +77,7 @@ NOTE: The `tkn` CLI is included in the Universal Developer Image (UDI).
 
 == Install AMQ Streams (Apache Kafka)
 
-AMQ Streams provides Apache Kafka on OpenShift. The Parasol application uses Kafka for messaging between services.
+AMQ Streams provides Apache Kafka on OpenShift. The ETX App Base application uses Kafka for messaging between services.
 
 === Install via OperatorHub
 
@@ -162,7 +162,7 @@ spec:
         traces:
           receivers: [otlp]
           processors: [batch]
-          exporters: [debug]
+          exporters: [logging]
 EOF
 ----
 
