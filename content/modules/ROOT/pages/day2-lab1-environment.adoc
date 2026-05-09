@@ -132,6 +132,8 @@ cd etx_app_base_app
 
 NOTE: The repository name is `etx_app_base_app` and Kubernetes resources will be named `etx-app-base-app-*` for consistency.
 
+IMPORTANT: The repository does NOT include a `devfile.yaml`. You will create this file manually in the next lab step (xref:day2-lab1-devspaces.adoc[Dev Spaces Setup]).
+
 == Verify Cluster Access
 
 Confirm you're logged into the primary cluster:
