@@ -9,6 +9,14 @@ In this lab you will create a Dev Spaces workspace for the ETX App Base applicat
 
 We will create a new `devfile.yaml` file in the repository. This `devfile` configures the workspace with UBI, Maven caching, Quarkus endpoints, and the Continue AI assistant:
 
+Make sure you are in the ETX App Base repository before creating the file:
+
+[source,bash,role=execute]
+----
+cd ~/workshop/etx_app_base_app
+pwd
+----
+
 Copy the following content into the `devfile.yaml` file:
 
 [source,yaml]
@@ -90,8 +98,10 @@ Commit and push the devfile, then restart your workspace so Dev Spaces picks up 
 ----
 git add devfile.yaml
 git commit -m "feat: add devfile with Continue AI assistant"
-git push
+git push origin main
 ----
+
+If Git prompts for credentials, use the workshop GitLab user shown in the environment section.
 
 See xref:day2-devspaces-devfiles.adoc[Devfiles & Base Images] for a full explanation of each section.
 
@@ -107,26 +117,33 @@ Open this URL in your browser and log in with your OpenShift credentials.
 
 == Create the Lab Workspace
 
-The simplest way to create a workspace is by URL.
-Open this URL to create a workspace from the ETX App Base application:
+Create the workspace from the Dev Spaces dashboard:
 
-[source,bash,role=execute,subs="attributes"]
+. Click btn:[Create Workspace].
+. Go to *Import from Git*.
+. Paste the Git repository URL for the ETX App Base application:
++
+[source,text,subs="attributes+"]
+----
+{gitlab_url}/software-factory/etx_app_base_app.git
+----
+. Click btn:[Create & Open].
+. If Dev Spaces shows a trusted source prompt, confirm that you trust the repository authors and continue.
+. If prompted to authorize Dev Spaces with GitLab, follow the OAuth flow and approve the requested access.
+
+NOTE: You can also launch the workspace directly with this URL:
+
+[source,text,subs="attributes"]
 ----
 {devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/
 ----
 
 To create a workspace from a different branch, replace `REPLACE_BRANCH_NAME` in this URL:
 
-[source,bash,role=execute,subs="attributes"]
+[source,text,subs="attributes"]
 ----
 {devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/
 ----
-
-Alternatively, from the Dev Spaces dashboard:
-
-. Click btn:[Create Workspace]
-. Go to Import from Git and paste the Git repository URL for the ETX App Base application
-. Click btn:[Create & Open]
 
 Dev Spaces will clone the repository, read the `devfile.yaml` you just created, pull the container image, and open the VS Code IDE in your browser.
 
@@ -140,15 +157,34 @@ Once the workspace opens:
 . Confirm the repository is loaded and shows the correct branch
 . If prompted to authenticate with GitLab, follow the OAuth flow -- this is the integration configured in the xref:day2-devspaces-integrations.adoc[GitLab Integration] section
 
+You can also verify from a workspace terminal:
+
+[source,bash]
+----
+pwd
+git remote -v
+git branch --show-current
+git status
+----
+
 Test that you can push changes:
 
 . Create or edit a file (e.g. add a comment to `README.md`)
 . Stage, commit, and push the change from the Source Control panel
 . Verify the commit appears in GitLab
 
+Or use the terminal:
+
+[source,bash]
+----
+git add README.md
+git commit -m "docs: verify Dev Spaces Git integration"
+git push origin main
+----
+
 == Verify the AI Code Assistant
 
-Open a terminal in the workspace and confirm the LLM environment variables are set:
+Open a terminal in the workspace from menu:Terminal[New Terminal] and confirm the LLM environment variables are set:
 
 [source,bash]
 ----
@@ -164,7 +200,7 @@ Check that the Continue extension is configured:
 . Send a test message such as "Hello, what model are you?"
 . Confirm you receive a response from the **qwen3-14b** model
 
-If Continue does not appear, check that the `postStart` event ran successfully:
+If Continue does not appear, confirm that the extension is installed in the workspace and check that the `postStart` event ran successfully:
 
 [source,bash]
 ----
@@ -182,6 +218,8 @@ Confirm Podman is available inside the workspace:
 podman version
 podman run --rm registry.access.redhat.com/ubi9-minimal:latest echo "Nested containers work"
 ----
+
+If this command fails with Docker or container runtime errors, stop and verify the `CheCluster` configuration includes `disableContainerRunCapabilities: false`. Ask the instructor before continuing, because Quarkus Dev Services depends on nested containers in this lab.
 
 Starting with Dev Spaces 3.25 on OpenShift 4.20+, nested containers work without special pod annotations or SCC configuration.
 See the https://docs.redhat.com/en/documentation/red_hat_openshift_dev_spaces/3.25/html/release_notes_and_known_issues/new-features[Dev Spaces 3.25 Release Notes^] for details.
