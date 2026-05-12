@@ -252,12 +252,14 @@ echo "STEP 3: Test Database Connection"
 echo "================================================"
 echo ""
 
-oc run postgresql-test --rm -it --restart=Never \
+if oc run postgresql-test --rm --restart=Never \
   --image=registry.redhat.io/rhel9/postgresql-17:latest \
   -n etx-app-dev -- \
-  psql -h parasol-db -U parasol -d parasol -c '\conninfo'
-
-check_warning "PostgreSQL connection test"
+  psql -h parasol-db -U parasol -d parasol -c '\conninfo'; then
+    echo -e "${GREEN}✅ PostgreSQL connection test${NC}"
+else
+    echo -e "${YELLOW}⚠️  PostgreSQL connection test (continuing...)${NC}"
+fi
 
 echo ""
 echo "================================================"
