@@ -18,6 +18,9 @@ This session includes:
 
 Before diving into branching strategies, let's verify your Git environment is working correctly.
 
+Run the commands in the OpenShift Web Terminal provided by the workshop environment.
+The Web Terminal includes the required CLI tools and avoids local workstation prerequisites.
+
 === Step 1: Access GitLab
 
 First, verify you can access GitLab through your browser.
@@ -55,7 +58,8 @@ Now clone the ETX App Base application repository using Git CLI:
 
 [source,bash,role=execute,subs="attributes+"]
 ----
-cd ~
+mkdir -p ~/workshop
+cd ~/workshop
 git clone {gitlab_url}/software-factory/etx_app_base_app.git
 cd etx_app_base_app
 ----
@@ -106,7 +110,7 @@ git log --oneline -5
 If any of these commands fail, verify:
 
 * Git client is installed: `git --version`
-* Git is configured: `git config --global --list`
+* Git is configured in the repository: `git config --list --local`
 * You have network access to GitLab
 ====
 
@@ -116,9 +120,11 @@ If this is your first time using Git on this system:
 
 [source,bash,role=execute,subs="attributes+"]
 ----
-git config --global user.name "{user}"
-git config --global user.email "{user}@redhat.com"
+git config user.name "{user}"
+git config user.email "{user}@redhat.com"
 ----
+
+NOTE: These commands configure Git only for the current repository. Use `git config --global` only on a workstation or bastion environment that you own and intend to reuse.
 
 ✅ **Validation Complete** - You're ready to work with branches.
 

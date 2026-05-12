@@ -18,6 +18,15 @@ Create a new `devfile.yaml` file in the root of your cloned repository. This dev
 IMPORTANT: The repository does NOT include a pre-existing devfile. You must create this file manually following these instructions.
 
 In the root directory of your cloned `etx_app_base_app` repository, create a new file named `devfile.yaml` with the following content:
+Make sure you are in the ETX App Base repository before creating the file:
+
+[source,bash,role=execute]
+----
+cd ~/workshop/etx_app_base_app
+pwd
+----
+
+Copy the following content into the `devfile.yaml` file:
 
 [source,yaml]
 ----
@@ -116,8 +125,10 @@ After creating the file, commit and push the devfile so Dev Spaces can read it w
 ----
 git add devfile.yaml
 git commit -m "feat: add devfile with Continue AI assistant"
-git push
+git push origin main
 ----
+
+If Git prompts for credentials, use the workshop GitLab user shown in the environment section.
 
 See xref:day2-devspaces-devfiles.adoc[Devfiles & Base Images] for a full explanation of each section.
 
@@ -133,26 +144,33 @@ Open this URL in your browser and log in with your OpenShift credentials.
 
 == Create the Lab Workspace
 
-The simplest way to create a workspace is by URL.
-Open this URL to create a workspace from the ETX App Base application:
+Create the workspace from the Dev Spaces dashboard:
 
-[source,bash,role=execute,subs="attributes"]
+. Click btn:[Create Workspace].
+. Go to *Import from Git*.
+. Paste the Git repository URL for the ETX App Base application:
++
+[source,text,subs="attributes+"]
+----
+{gitlab_url}/software-factory/etx_app_base_app.git
+----
+. Click btn:[Create & Open].
+. If Dev Spaces shows a trusted source prompt, confirm that you trust the repository authors and continue.
+. If prompted to authorize Dev Spaces with GitLab, follow the OAuth flow and approve the requested access.
+
+NOTE: You can also launch the workspace directly with this URL:
+
+[source,text,subs="attributes"]
 ----
 {devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/
 ----
 
 To create a workspace from a different branch, replace `REPLACE_BRANCH_NAME` in this URL:
 
-[source,bash,role=execute,subs="attributes"]
+[source,text,subs="attributes"]
 ----
 {devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/
 ----
-
-Alternatively, from the Dev Spaces dashboard:
-
-. Click btn:[Create Workspace]
-. Go to Import from Git and paste the Git repository URL for the ETX App Base application
-. Click btn:[Create & Open]
 
 Dev Spaces will clone the repository, read the `devfile.yaml` you just created, pull the container image, and open the VS Code IDE in your browser.
 
@@ -166,15 +184,34 @@ Once the workspace opens:
 . Confirm the repository is loaded and shows the correct branch
 . If prompted to authenticate with GitLab, follow the OAuth flow -- this is the integration configured in the xref:day2-devspaces-integrations.adoc[GitLab Integration] section
 
+You can also verify from a workspace terminal:
+
+[source,bash]
+----
+pwd
+git remote -v
+git branch --show-current
+git status
+----
+
 Test that you can push changes:
 
 . Create or edit a file (e.g. add a comment to `README.md`)
 . Stage, commit, and push the change from the Source Control panel
 . Verify the commit appears in GitLab
 
+Or use the terminal:
+
+[source,bash]
+----
+git add README.md
+git commit -m "docs: verify Dev Spaces Git integration"
+git push origin main
+----
+
 == Verify the AI Code Assistant
 
-Open a terminal in the workspace and confirm the LLM environment variables are set:
+Open a terminal in the workspace from menu:Terminal[New Terminal] and confirm the LLM environment variables are set:
 
 [source,bash]
 ----
@@ -190,7 +227,7 @@ Check that the Continue extension is configured:
 . Send a test message such as "Hello, what model are you?"
 . Confirm you receive a response from the **qwen3-14b** model
 
-If Continue does not appear, check that the `postStart` event ran successfully:
+If Continue does not appear, confirm that the extension is installed in the workspace and check that the `postStart` event ran successfully:
 
 [source,bash]
 ----

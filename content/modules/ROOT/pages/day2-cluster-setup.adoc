@@ -8,7 +8,7 @@
 . In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Red Hat OpenShift Dev Spaces*
 . Click btn:[Install]
-. Change the namespace to `openshift-devspaces`
+. Keep the operator installation namespace as `openshift-operators`
 . Accept the defaults for the rest (All namespaces, Automatic approval) and click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
@@ -18,7 +18,7 @@ Verify from the CLI:
 
 [source,bash]
 ----
-oc get csv -n openshift-devspaces | grep devspaces
+oc get csv -n openshift-operators | grep devspaces
 ----
 
 A similar output should be displayed:
@@ -29,6 +29,8 @@ devspacesoperator.v3.27.1           Red Hat OpenShift Dev Spaces   3.27.1    dev
 ----
 
 The DevWorkspace Operator is installed automatically as a dependency.
+
+NOTE: The operator runs from `openshift-operators`. The `openshift-devspaces` namespace is created later for the `CheCluster` instance and Dev Spaces server components.
 
 image::devspaces-operator-list.png[Dev Spaces Operators Installed]
 
