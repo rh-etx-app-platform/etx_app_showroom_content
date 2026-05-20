@@ -38,11 +38,29 @@ From the Dev Spaces dashboard:
 
 Dev Spaces will create a workspace using the Universal Developer Image (UDI) since there is no devfile in the repository yet.
 
-== Step 2: Create the Devfile
+== Step 2: Configure Git and Create Feature Branch
 
-Once the workspace opens, create a `devfile.yaml` file that will configure your development environment.
+Once the workspace opens, configure Git and create a feature branch for the devfile changes.
 
-Open a terminal from the main menu (hamburger icon in the top-left corner: menu:Terminal[New Terminal]) and create the devfile.
+Open a terminal from the main menu (hamburger icon in the top-left corner: menu:Terminal[New Terminal]).
+
+Configure Git identity and create a feature branch:
+
+[source,bash]
+----
+# Configure Git identity
+git config --global user.email "platform-developer@example.com"
+git config --global user.name "Platform Developer"
+
+# Create feature branch
+git checkout -b feature/add-devfile
+----
+
+NOTE: We use a feature branch because `main` is protected and requires pull requests. This follows GitFlow best practices from xref:day1-branching-strategies.adoc[Branching Strategies].
+
+== Step 3: Create the Devfile
+
+Now create a `devfile.yaml` file that will configure your development environment.
 
 First, get the GitLab URL:
 
@@ -155,19 +173,12 @@ ls -la devfile.yaml
 cat devfile.yaml | head -20
 ----
 
-== Step 3: Commit and Push the Devfile
+== Step 4: Commit and Push the Devfile
 
-Configure Git and commit the devfile to a feature branch:
+Add and commit the devfile to the feature branch:
 
 [source,bash]
 ----
-# Configure Git identity
-git config --global user.email "platform-developer@example.com"
-git config --global user.name "Platform Developer"
-
-# Create feature branch
-git checkout -b feature/add-devfile
-
 # Add and commit the devfile
 git add devfile.yaml
 git commit -m "feat: add devfile for Dev Spaces configuration"
@@ -183,9 +194,7 @@ When you run `git push`, Dev Spaces will prompt you to authorize with GitLab:
 . Grant Dev Spaces access to your repositories
 . Return to the IDE - the push will complete automatically
 
-NOTE: We use a feature branch because `main` is protected and requires pull requests. This follows GitFlow best practices from xref:day1-branching-strategies.adoc[Branching Strategies].
-
-== Step 4: Create Workspace from Devfile
+== Step 5: Create Workspace from Devfile
 
 Now delete the temporary workspace and create a new one from your devfile.
 
