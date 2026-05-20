@@ -141,22 +141,6 @@ oc get checluster devspaces -n openshift-devspaces -o jsonpath='{.status.chePhas
 
 The output should be `Active`.
 
-[NOTE]
-====
-If you see `ErrImagePull` or `ImagePullBackOff` errors on pods, check:
-
-[source,bash]
-----
-oc describe pod -n openshift-devspaces <pod-name>
-----
-
-Common causes:
-- Network connectivity issues to registry
-- Missing image pull secrets
-- Registry unavailable or rate-limited
-- Incorrect image reference in the deployment
-====
-
 == Access the Dashboard
 
 Once the CheCluster is `Active`, get the dashboard URL:
