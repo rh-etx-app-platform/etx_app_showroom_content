@@ -76,8 +76,9 @@ The promotion workflow follows these steps:
 
 The promotion pipeline needs a workspace for cloning the GitOps repository:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+oc apply -f - <<'EOF'
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -89,21 +90,16 @@ spec:
   resources:
     requests:
       storage: 2Gi
-----
-
-Apply it:
-
-[source,bash,role=execute]
-----
-oc apply -f promotion-workspace.yaml
+EOF
 ----
 
 === Fetch Quay Credentials from Vault
 
 Create a task to retrieve Quay credentials from Vault:
 
-[source,yaml,subs="attributes+"]
+[source,bash,role=execute,subs="attributes+"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -143,21 +139,16 @@ spec:
           | tr -d '\n' > $(results.quay-username.path)
         echo "${CREDS}" | jq -r '.data.data.password' \
           | tr -d '\n' > $(results.quay-password.path)
-----
-
-Apply the task:
-
-[source,bash,role=execute]
-----
-oc apply -f vault-fetch-quay-task.yaml
+EOF
 ----
 
 === Copy Image to Quay
 
 Create a task that copies the image from the internal registry to Quay using Skopeo:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -195,21 +186,16 @@ spec:
           "docker://$(params.dest-image)"
 
         echo "Image copied successfully!"
-----
-
-Apply the task:
-
-[source,bash,role=execute]
-----
-oc apply -f copy-image-task.yaml
+EOF
 ----
 
 === Update GitOps Repository
 
 Create a task to update the staging deployment manifest with the new image tag:
 
-[source,yaml,subs="attributes+"]
+[source,bash,role=execute,subs="attributes+"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -256,21 +242,16 @@ spec:
         git push origin main
 
         echo "GitOps repository updated successfully!"
-----
-
-Apply the task:
-
-[source,bash,role=execute]
-----
-oc apply -f update-gitops-staging-task.yaml
+EOF
 ----
 
 == Create the Promotion Pipeline
 
 Now combine all tasks into a promotion pipeline:
 
-[source,yaml,subs="attributes+"]
+[source,bash,role=execute,subs="attributes+"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
@@ -321,16 +302,10 @@ spec:
       workspaces:
         - name: source
           workspace: shared-workspace
+EOF
 ----
 
 NOTE: Replace `{gitlab_url}` with your actual GitLab URL before applying.
-
-Apply the pipeline:
-
-[source,bash,role=execute]
-----
-oc apply -f etx-app-promotion-pipeline.yaml
-----
 
 == Test the Promotion Pipeline
 
@@ -351,9 +326,10 @@ Pick one of the commit SHA tags from the output.
 
 Trigger the promotion pipeline manually:
 
+NOTE: Replace <COMMIT_SHA> with an actual image tag from above
+
 [source,bash,role=execute,subs="attributes+"]
 ----
-# Replace <COMMIT_SHA> with an actual image tag from above
 tkn pipeline start etx-app-promotion \
   --param source-image-tag=<COMMIT_SHA> \
   --param dest-image-tag=stable \
@@ -375,7 +351,7 @@ Check that the GitOps repository was updated:
 
 [source,bash,role=execute]
 ----
-cd etx-app-gitops
+cd ~/workshop/etx-app-gitops
 git pull origin main
 cat environments/stage/deployment.yaml | grep image:
 ----
@@ -415,8 +391,9 @@ This is suitable for:
 
 Add a manual approval task using Tekton:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -434,6 +411,7 @@ spec:
         echo "⏸️  Pipeline paused - waiting for manual approval"
         echo "Run: oc patch taskrun <taskrun-name> -p '{\"spec\":{\"status\":\"Succeeded\"}}'"
         sleep infinity
+EOF
 ----
 
 Add this task as the first step in your promotion pipeline to require approval before promoting to staging.
@@ -461,7 +439,7 @@ If you need to rollback a staging deployment:
 
 [source,bash,role=execute]
 ----
-cd etx-app-gitops
+cd ~/workshop/etx-app-gitops
 git log environments/stage/deployment.yaml
 git revert <commit-hash>
 git push origin main

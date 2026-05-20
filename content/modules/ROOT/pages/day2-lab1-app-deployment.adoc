@@ -24,8 +24,9 @@ You should see `openshift-gitops-operator` with phase `Succeeded`.
 
 Create an Argo CD instance in your namespace for managing application deployments:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+oc apply -f - <<'EOF'
 apiVersion: argoproj.io/v1beta1
 kind: ArgoCD
 metadata:
@@ -118,13 +119,7 @@ spec:
       requests:
         cpu: 250m
         memory: 128Mi
-----
-
-Apply the ArgoCD CR:
-
-[source,bash,role=execute]
-----
-oc apply -f argocd.yaml
+EOF
 ----
 
 Wait for Argo CD to be ready (this may take 3-5 minutes):
@@ -142,7 +137,7 @@ Get the Argo CD route:
 
 [source,bash,role=execute]
 ----
-oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}'
+oc get route argocd-server -n etx-app-dev -o jsonpath='https://{.spec.host}{"\n"}'
 ----
 
 Get the default admin password:
@@ -154,6 +149,7 @@ oc get secret argocd-cluster -n etx-app-dev \
 ----
 
 Open the Argo CD URL in your browser and log in with:
+
 * Username: `admin`
 * Password: (from above command)
 
@@ -171,16 +167,19 @@ This repository holds the Kubernetes manifests that Argo CD will sync:
 {gitlab_url}
 ----
 +
-. Create a new project: *etx-app-gitops*
+. Navigate to the *software-factory* group:
+. Create a new blank and public project: *etx-app-gitops*
+. Uncheck any option from the "Project Configuration" section.
 . Clone it locally:
 +
 [source,bash,role=execute,subs="attributes+"]
 ----
+cd ~/workshop
 git clone {gitlab_url}/software-factory/etx-app-gitops.git
 cd etx-app-gitops
 ----
 
-Create the following directory structure:
+We will create the following directory structure in the GitOps repository:
 
 ----
 etx-app-gitops/
@@ -202,18 +201,22 @@ etx-app-gitops/
 
 Create `environments/dev/namespace.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+mkdir -p environments/dev
+cat > environments/dev/namespace.yaml <<'EOF'
 apiVersion: v1
 kind: Namespace
 metadata:
   name: etx-app-dev
+EOF
 ----
 
 Create `environments/dev/deployment.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/dev/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -247,14 +250,16 @@ spec:
             limits:
               cpu: "1"
               memory: 1Gi
+EOF
 ----
 <1> Enables OpenTelemetry auto-instrumentation. The Instrumentation CR created in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section will inject the Java agent automatically.
 <2> The CI pipeline updates this image tag after a successful build.
 
 Create `environments/dev/service.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/dev/service.yaml <<'EOF'
 apiVersion: v1
 kind: Service
 metadata:
@@ -266,12 +271,14 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
+EOF
 ----
 
 Create `environments/dev/route.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/dev/route.yaml <<'EOF'
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
@@ -285,6 +292,7 @@ spec:
     targetPort: 8080
   tls:
     termination: edge
+EOF
 ----
 
 Commit and push the dev environment:
@@ -292,7 +300,7 @@ Commit and push the dev environment:
 [source,bash,role=execute]
 ----
 git add environments/dev/
-git commit -m "Add dev environment manifests"
+git commit -m "feat: add dev environment manifests"
 git push origin main
 ----
 
@@ -311,8 +319,9 @@ Create an Argo CD Application that watches the `dev` environment.
 
 NOTE: Replace `{gitlab_url}` in the YAML below with the actual GitLab URL from your environment before applying.
 
-[source,yaml,subs="attributes+"]
+[source,bash,role=execute,subs="attributes+"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -332,16 +341,10 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=false # <1>
+      - CreateNamespace=false
+EOF
 ----
-<1> Namespace already exists, so don't create it
-
-Apply it:
-
-[source,bash,role=execute]
-----
-oc apply -f etx-app-dev-app.yaml
-----
+<1> The `etx-app-dev` namespace is created from `environments/dev/namespace.yaml` when Argo CD syncs
 
 == Verify the Deployment
 
@@ -350,7 +353,7 @@ Check that Argo CD has synced the application:
 [source,bash,role=execute]
 ----
 # Argo CD application status
-oc get application parasol-dev -n etx-app-dev \
+oc get application etx-app-dev -n etx-app-dev \
   -o jsonpath='{.status.sync.status}'
 ----
 
@@ -392,8 +395,9 @@ You should see trace data in the logs.
 The CI pipeline needs to update the image tag in the GitOps repository after a successful build.
 Add a final task to the pipeline that commits the new image tag:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -431,20 +435,14 @@ spec:
         git add .
         git commit -m "Update etx-app-base-app image to $(params.image-tag)"
         git push
-----
-
-Apply the task:
-
-[source,bash,role=execute]
-----
-oc apply -f update-gitops-task.yaml
+EOF
 ----
 
 Update the pipeline to include this task at the end.
 
 NOTE: Replace `{gitlab_url}` with your actual GitLab URL.
 
-[source,yaml,subs="attributes+"]
+[source,yaml,role=execute,subs="attributes+"]
 ----
     - name: update-gitops
       runAfter: [build-image]
@@ -494,7 +492,7 @@ Create stage environment manifests in your GitOps repository:
 
 [source,bash,role=execute]
 ----
-cd etx-app-gitops
+cd ~/workshop/etx-app-gitops
 mkdir -p environments/stage
 ----
 
@@ -507,29 +505,32 @@ cp environments/dev/*.yaml environments/stage/
 
 Update `environments/stage/namespace.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/stage/namespace.yaml <<'EOF'
 apiVersion: v1
 kind: Namespace
 metadata:
   name: etx-app-staging
+EOF
 ----
 
-Update `environments/stage/deployment.yaml` to use the `etx-app-staging` namespace:
+Create `environments/stage/deployment.yaml`:
 
-[source,yaml]
+[source,bash,role=execute,subs="attributes+"]
 ----
+cat > environments/stage/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: etx-app-base-app
-  namespace: etx-app-staging # <1>
+  namespace: etx-app-staging # 1
   labels:
     app: etx-app-base-app
   annotations:
     instrumentation.opentelemetry.io/inject-java: "true"
 spec:
-  replicas: 2 # <2>
+  replicas: 2 # 2
   selector:
     matchLabels:
       app: etx-app-base-app
@@ -542,7 +543,7 @@ spec:
     spec:
       containers:
         - name: etx-app-base-app
-          image: {quay_url}/etx-app/etx-app-base-app:stable # <3>
+          image: {quay_url}/etx-app/etx-app-base-app:stable # 3
           ports:
             - containerPort: 8080
           resources:
@@ -552,19 +553,58 @@ spec:
             limits:
               cpu: "2"
               memory: 2Gi
+EOF
 ----
-<1> Update namespace to etx-app-staging
+<1> Staging namespace
 <2> Increase replicas for higher availability
 <3> Use Quay registry for cross-cluster image distribution. Replace `{quay_url}` with your actual Quay URL.
 
-Update `environments/stage/service.yaml` and `environments/stage/route.yaml` to use `etx-app-staging` namespace.
+Create `environments/stage/service.yaml`:
+
+[source,bash,role=execute]
+----
+cat > environments/stage/service.yaml <<'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: etx-app-base-app
+  namespace: etx-app-staging
+spec:
+  selector:
+    app: etx-app-base-app
+  ports:
+    - port: 8080
+      targetPort: 8080
+EOF
+----
+
+Create `environments/stage/route.yaml`:
+
+[source,bash,role=execute]
+----
+cat > environments/stage/route.yaml <<'EOF'
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: etx-app-base-app
+  namespace: etx-app-staging
+spec:
+  to:
+    kind: Service
+    name: etx-app-base-app
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+EOF
+----
 
 Commit and push:
 
 [source,bash,role=execute]
 ----
 git add environments/stage/
-git commit -m "Add stage environment manifests"
+git commit -m "feat: add stage environment manifests"
 git push origin main
 ----
 
@@ -585,8 +625,9 @@ Create the Application manifest:
 
 NOTE: Replace `<STAGING_CLUSTER_URL>` with the URL from the command above, and `{gitlab_url}` with your GitLab URL.
 
-[source,yaml,subs="attributes+"]
+[source,bash,role=execute,subs="attributes+"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -599,7 +640,7 @@ spec:
     targetRevision: main
     path: environments/stage
   destination:
-    server: <STAGING_CLUSTER_URL> # <1>
+    server: <STAGING_CLUSTER_URL> # 1
     namespace: etx-app-staging
   syncPolicy:
     automated:
@@ -607,15 +648,9 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+EOF
 ----
 <1> Points to the secondary cluster (pre-configured by bootstrap)
-
-Apply it:
-
-[source,bash,role=execute]
-----
-oc apply -f etx-app-stage-app.yaml
-----
 
 === Verify Stage Deployment
 
@@ -659,7 +694,7 @@ This GitOps approach ensures:
 
 Verify the complete deployment:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Check Argo CD application status
 oc get application parasol-dev -n etx-app-dev -o jsonpath='{.status.sync.status}: {.status.health.status}'
