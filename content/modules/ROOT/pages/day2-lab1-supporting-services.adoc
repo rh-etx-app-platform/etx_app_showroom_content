@@ -178,7 +178,7 @@ Get the Kafka bootstrap server:
 
 [source,bash]
 ----
-oc get service parasol-kafka-kafka-bootstrap -n etx-app-dev -o jsonpath='{.metadata.name}:{.spec.ports[0].port}'
+oc get service parasol-kafka-kafka-bootstrap -n etx-app-dev -o jsonpath='{.metadata.name}:{.spec.ports[0].port}{"\n"}'
 ----
 
 This returns `parasol-kafka-kafka-bootstrap:9092` which will be used to connect to Kafka from your application.
