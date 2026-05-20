@@ -397,10 +397,10 @@ oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp | tail -
 
 You now have:
 
-* ✅ Tekton CI pipeline with Vault secrets integration
-* ✅ Automated builds triggered by GitLab webhooks
-* ✅ Container images pushed to OpenShift internal registry
-* ✅ Maven-based Java/Quarkus build and test automation
+* Tekton CI pipeline with Vault secrets integration
+* Automated builds triggered by GitLab webhooks
+* Container images pushed to OpenShift internal registry
+* Maven-based Java/Quarkus build and test automation
 
 == Next Steps
 

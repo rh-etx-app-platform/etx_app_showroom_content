@@ -28,7 +28,7 @@ TIP: Use these credentials to log into GitLab and Quay via the OIDC/OAuth button
 Source control and Git repository hosting.
 
 * **URL:** {gitlab_url}
-* **Authentication:** Keycloak OIDC (click "Sign in with OpenID Connect")
+* **Authentication:** Keycloak OIDC (click "ETX Lab SSO")
 * **Seeded Repositories:**
   - `software-factory/etx_app_base_app` - Your application workspace (read/write)
 
@@ -51,11 +51,11 @@ Two GitOps control planes are available:
   - Read-only for students
 
 * **Dedicated ETX GitOps admin plane** (`etx-gitops` namespace)
-  - Pre-deployed Argo CD instance for application team use
+  - Control plane for the ETX workshop installation
   - Repository: `etx-gitops` - Contains infrastructure and application manifests
-  - You can deploy applications here or create your own Argo CD instance
+  - Can be used for user applications eventually
 
-IMPORTANT: In Lab 1 Step 5, you have the option to deploy your **own** Argo CD instance in your namespace or use the pre-deployed `etx-gitops` instance for application deployments.
+IMPORTANT: In Lab 1 Step 5, you will deploy your **own** Red Hat OpenShift GitOps instance to complete the lab.
 
 == Multi-Cluster Setup
 
@@ -85,12 +85,12 @@ You will configure multi-cluster promotion in the final section of this lab.
 
 As part of this hands-on lab, you will install and configure:
 
-* ✅ **PostgreSQL Database** - Application data persistence using Red Hat certified image
-* ✅ **AMQ Streams (Kafka)** - Messaging infrastructure for application services
-* ✅ **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
-* ✅ **OpenTelemetry Operator** - Distributed tracing and observability
-* ✅ **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser
-* ✅ **Argo CD (student instance)** - GitOps continuous deployment
+* **PostgreSQL Database** - Application data persistence using Red Hat certified image
+* **AMQ Streams (Kafka)** - Messaging infrastructure for application services
+* **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
+* **OpenTelemetry Operator** - Distributed tracing and observability
+* **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser
+* **Argo CD (student instance)** - GitOps continuous deployment
 
 NOTE: HashiCorp Vault is pre-deployed as part of the infrastructure bootstrap and does not require student installation. Supporting services (PostgreSQL and Kafka) are deployed first so Dev Spaces workspaces can connect to them.
 
@@ -115,7 +115,7 @@ IMPORTANT: Supporting services (PostgreSQL and Kafka) must be deployed BEFORE se
 == Accessing GitLab with Keycloak
 
 . Open {gitlab_url}
-. Click btn:[Sign in with OpenID Connect]
+. Click btn:[ETX Lab SSO]
 . You will be redirected to Keycloak
 . Log in with one of the provided users (e.g., `platform-developer` / `openshift`)
 . You will be redirected back to GitLab and logged in
@@ -124,7 +124,9 @@ The first time you log in, GitLab will create a user profile linked to your Keyc
 
 == Clone Your Repository
 
-Once logged into GitLab, clone the ETX App Base application:
+Once logged into GitLab, clone the ETX App Base application.
+
+TIP: Use the **OpenShift Web Terminal** for these commands. Access it by clicking the command prompt icon (>_) in the top-right corner of the OpenShift Console.
 
 [source,bash,subs="+attributes"]
 ----

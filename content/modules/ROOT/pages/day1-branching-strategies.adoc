@@ -126,7 +126,7 @@ git config user.email "{user}@redhat.com"
 
 NOTE: These commands configure Git only for the current repository. Use `git config --global` only on a workstation or bastion environment that you own and intend to reuse.
 
-✅ **Validation Complete** - You're ready to work with branches.
+**Validation Complete** - You're ready to work with branches.
 
 == Branching Models
 

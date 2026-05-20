@@ -486,11 +486,11 @@ tkn pipeline start etx-app-promotion \
 
 You have completed the Promotion Pipeline exercise. You now have:
 
-* ✅ Automated image promotion from internal registry to Quay
-* ✅ GitOps-based staging deployments
-* ✅ Secure credential management via Vault
-* ✅ Multi-cluster deployment capability
-* ✅ Rollback capability through Git history
+* Automated image promotion from internal registry to Quay
+* GitOps-based staging deployments
+* Secure credential management via Vault
+* Multi-cluster deployment capability
+* Rollback capability through Git history
 
 == Key Takeaways
 

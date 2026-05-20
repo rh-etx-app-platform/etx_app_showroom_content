@@ -46,7 +46,7 @@ Expected output (namespace line may vary slightly by cluster):
 Now using project "setup-rhdh" on server "https://api.openshift.example.com:6443".
 ----
 
-✓ Project `setup-rhdh` exists and is selected.
+Project `setup-rhdh` exists and is selected.
 
 == Exercise 2: Create the `rhdh-config` ConfigMap
 
@@ -103,7 +103,7 @@ metadata:
 ...
 ----
 
-✓ ConfigMap `rhdh-config` is present in `setup-rhdh`.
+ConfigMap `rhdh-config` is present in `setup-rhdh`.
 
 == Exercise 3: Deploy the `Backstage` custom resource
 
@@ -165,8 +165,8 @@ oc get route -n setup-rhdh
 
 Expected route list includes an entry for the Developer Hub host with port 443.
 
-✓ Pods are `Running` with `READY` equal to `1/1`.
-✓ A route exists for HTTPS access to Red Hat Developer Hub.
+Pods are `Running` with `READY` equal to `1/1`.
+A route exists for HTTPS access to Red Hat Developer Hub.
 
 == Exercise 4: Open Red Hat Developer Hub and sign in
 
@@ -192,8 +192,8 @@ oc get route -n setup-rhdh -o wide
 
 Then confirm you can load the UI and that the browser shows Red Hat Developer Hub with **Guest** context.
 
-✓ The route hostname matches the URLs in the ConfigMap (adjust the ConfigMap if your operator emitted a different host).
-✓ Guest sign-in completes and the catalog UI renders.
+The route hostname matches the URLs in the ConfigMap (adjust the ConfigMap if your operator emitted a different host).
+Guest sign-in completes and the catalog UI renders.
 
 == Troubleshooting
 

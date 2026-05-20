@@ -15,21 +15,21 @@ HashiCorp Vault provides centralized secrets management for the platform.
 It has been pre-deployed by the infrastructure bootstrap process and is ready to use.
 
 * **URL:** {vault_url}
-* **Authentication:** Keycloak OIDC
+* **Authentication Method:** OIDC
   - `platform-admin` / `openshift` (administrator access)
   - `platform-developer` / `openshift` (developer access)
 * **Purpose:** CI/CD pipeline credentials and application secrets
 
 The Vault instance is already configured with:
 
-* ✅ KV v2 secrets engine enabled at `secret/`
-* ✅ Kubernetes authentication method for pipeline ServiceAccounts
-* ✅ Registry credentials stored at `secret/registry`
-* ✅ RBAC policies for pipeline access
+* KV v2 secrets engine enabled at `secret/`
+* Kubernetes authentication method for pipeline ServiceAccounts
+* Registry credentials stored at `secret/registry`
+* RBAC policies for pipeline access
 
 Your Tekton pipelines can authenticate to Vault using their ServiceAccount tokens to retrieve registry credentials at runtime.
 
-TIP: Access the Vault UI at {vault_url} and log in with Keycloak OIDC to explore the pre-configured secrets.
+TIP: Access the Vault UI at {vault_url} and log in with the OIDC method to explore the pre-configured secrets. If prompted for a role, leave it blank or use the default.
 
 == Install OpenShift Pipelines (Tekton)
 
@@ -68,15 +68,6 @@ oc get pods -n openshift-pipelines
 
 You should see pods for `tekton-pipelines-controller`, `tekton-triggers-controller`, and related components.
 
-Verify the `tkn` CLI is available in your Dev Spaces workspace:
-
-[source,bash]
-----
-tkn version
-----
-
-NOTE: The `tkn` CLI is included in the Universal Developer Image (UDI).
-
 == Install AMQ Streams (Apache Kafka)
 
 AMQ Streams provides Apache Kafka on OpenShift. The ETX App Base application uses Kafka for messaging between services.
@@ -86,6 +77,9 @@ AMQ Streams provides Apache Kafka on OpenShift. The ETX App Base application use
 . Open {openshift_console_url}[^] with an admin user.
 . In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Streams for Apache Kafka*
++
+WARNING: Do **NOT** install the "Streams for Apache Kafka Proxy" operator. Only install "Streams for Apache Kafka" (AMQ Streams).
++
 . Click btn:[Install]
 . Accept the defaults:
   * **Update channel:** stable
@@ -105,20 +99,42 @@ You should see the AMQ Streams operator listed with phase `Succeeded`.
 
 === Deploy Kafka Cluster
 
-Now that the operator is installed, deploy a Kafka cluster in your application namespace:
+Now that the operator is installed, deploy a Kafka cluster in your application namespace.
+
+Starting with AMQ Streams 3.x, Kafka clusters use **KafkaNodePools** to manage broker nodes.
+A `KafkaNodePool` defines a group of Kafka nodes with specific roles (controller, broker, or both) and their storage configuration.
+This deployment uses a single node pool with combined controller and broker roles, running in **KRaft mode** (without ZooKeeper).
 
 [source,bash,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: kafka
+  namespace: etx-app-dev
+  labels:
+    strimzi.io/cluster: parasol-kafka
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  storage:
+    type: ephemeral
+---
+apiVersion: kafka.strimzi.io/v1
 kind: Kafka
 metadata:
   name: parasol-kafka
   namespace: etx-app-dev
+  annotations:
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
 spec:
   kafka:
-    version: 3.9.0
-    replicas: 1
+    version: 4.2.0
+    metadataVersion: 4.2-IV0
     listeners:
       - name: plain
         port: 9092
@@ -134,13 +150,6 @@ spec:
       transaction.state.log.min.isr: 1
       default.replication.factor: 1
       min.insync.replicas: 1
-      inter.broker.protocol.version: "3.9"
-    storage:
-      type: ephemeral
-  zookeeper:
-    replicas: 1
-    storage:
-      type: ephemeral
   entityOperator:
     topicOperator: {}
     userOperator: {}
@@ -162,8 +171,7 @@ oc get pods -l strimzi.io/cluster=parasol-kafka -n etx-app-dev
 ----
 
 You should see:
-- `parasol-kafka-kafka-0` -- Kafka broker
-- `parasol-kafka-zookeeper-0` -- ZooKeeper
+- `parasol-kafka-kafka-0` -- Kafka broker (running in KRaft mode with controller + broker roles)
 - `parasol-kafka-entity-operator-*` -- Topic and User operators
 
 Get the Kafka bootstrap server:
@@ -182,7 +190,7 @@ Create the topics required by the ETX App Base application:
 [source,bash,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: intake
@@ -255,7 +263,7 @@ spec:
     spec:
       containers:
         - name: postgresql
-          image: registry.redhat.io/rhel9/postgresql-17:latest
+          image: registry.redhat.io/rhel9/postgresql-16:latest
           ports:
             - containerPort: 5432
           env:
@@ -303,7 +311,7 @@ spec:
 EOF
 ----
 
-IMPORTANT: This deployment uses `emptyDir` for storage, which means data is lost when the pod restarts. For production, use a `PersistentVolumeClaim` backed by persistent storage.
+IMPORTANT: This Deployment uses `emptyDir` for storage, which means data is lost when the pod restarts. For production, use a `PersistentVolumeClaim` backed by persistent storage.
 
 Wait for PostgreSQL to be ready:
 
@@ -323,7 +331,14 @@ Test the database connection:
 
 [source,bash]
 ----
-oc run postgresql-test --rm -it --restart=Never --image=registry.redhat.io/rhel9/postgresql-17:latest -n etx-app-dev -- psql -h parasol-db -U parasol -d parasol -c '\conninfo'
+oc run postgresql-test --rm -it --restart=Never \
+  --image=registry.redhat.io/rhel9/postgresql-16:latest \
+  --env PGPASSWORD=$(oc get secret -n etx-app-dev parasol-db-secret -o jsonpath='{.data.database-password}' | base64 -d) \
+  -n etx-app-dev -- \
+  psql -h parasol-db \
+  -U $(oc get secret -n etx-app-dev parasol-db-secret -o jsonpath='{.data.database-user}' | base64 -d) \
+  -d $(oc get secret -n etx-app-dev parasol-db-secret -o jsonpath='{.data.database-name}' | base64 -d) \
+  -c '\conninfo'
 ----
 
 You should see connection information confirming PostgreSQL is accessible.
@@ -381,6 +396,8 @@ spec:
             endpoint: 0.0.0.0:4318
     processors:
       batch: {}
+      probabilistic_sampler:
+        sampling_percentage: 100.0
     exporters:
       debug:
         verbosity: detailed
@@ -388,7 +405,7 @@ spec:
       pipelines:
         traces:
           receivers: [otlp]
-          processors: [batch]
+          processors: [probabilistic_sampler, batch]
           exporters: [debug]
 EOF
 ----
@@ -422,10 +439,14 @@ spec:
   propagators:
     - tracecontext
     - baggage
+  sampler:
+    type: always_on
   java:
     image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:latest
 EOF
 ----
+
+NOTE: The `sampler.type: always_on` configuration ensures all traces are captured, which is appropriate for development and lab environments. In production, you might use `parentbased_traceidratio` to sample a percentage of traces.
 
 To instrument a deployment, add the following annotation to its pod template:
 
@@ -442,11 +463,11 @@ This will be used when deploying the application in xref:day2-lab1-app-deploymen
 
 You now have the following services deployed and ready:
 
-* ✅ **Vault** (pre-deployed) -- secrets management with Kubernetes authentication for pipeline access
-* ✅ **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
-* ✅ **AMQ Streams Kafka Cluster** -- `parasol-kafka-kafka-bootstrap:9092` with `intake` topic
-* ✅ **PostgreSQL Database** -- `parasol-db:5432` with database `parasol`
-* ✅ **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing
+* **Vault** (pre-deployed) -- secrets management with Kubernetes authentication for pipeline access
+* **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
+* **AMQ Streams Kafka Cluster** -- `parasol-kafka-kafka-bootstrap:9092` with `intake` topic
+* **PostgreSQL Database** -- `parasol-db:5432` with database `parasol`
+* **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing
 
 Your application can now connect to these services:
 

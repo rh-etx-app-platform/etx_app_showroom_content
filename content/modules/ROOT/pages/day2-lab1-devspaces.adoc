@@ -3,33 +3,50 @@
 
 == Overview
 
-In this lab you will create a Dev Spaces workspace for the ETX App Base application, verify Git and AI assistant integration, and run Quarkus Dev Services with nested containers.
+In this lab you will create a Dev Spaces workspace for the ETX App Base application, configure it with a custom devfile, verify Git and AI assistant integration, and run Quarkus in development mode connected to external PostgreSQL and Kafka services deployed in the cluster.
 
-== Create a Devfile
+== Access Dev Spaces Dashboard
 
-Create a new `devfile.yaml` file in the root of your cloned repository. This devfile configures the workspace with:
+Get the Dev Spaces dashboard URL:
 
-* Universal Developer Image (UBI) with Java tooling
-* Maven caching for faster builds
-* Quarkus development endpoints
-* Continue AI assistant integration
-* **Environment variables** - Connection details for external PostgreSQL and Kafka services
-
-IMPORTANT: The repository does NOT include a pre-existing devfile. You must create this file manually following these instructions.
-
-In the root directory of your cloned `etx_app_base_app` repository, create a new file named `devfile.yaml` with the following content:
-Make sure you are in the ETX App Base repository before creating the file:
-
-[source,bash,role=execute]
+[source,bash]
 ----
-cd ~/workshop/etx_app_base_app
-pwd
+oc get checluster devspaces -n openshift-devspaces \
+  -o jsonpath='{.status.cheURL}{"\n"}'
 ----
 
-Copy the following content into the `devfile.yaml` file:
+Open this URL in your browser and log in with your OpenShift credentials.
 
-[source,yaml]
+IMPORTANT: Dev Spaces on OpenShift uses OpenShift OAuth for authentication by design. Unlike other ETX workshop services (GitLab, Quay, Vault) that authenticate against the ETX Keycloak instance, Dev Spaces authenticates users through OpenShift's built-in OAuth system.
+
+== Step 1: Create Initial Workspace
+
+The `etx_app_base_app` repository does not include a devfile yet. You will create a temporary workspace to add the devfile to the repository.
+
+From the Dev Spaces dashboard:
+
+. Click btn:[Create Workspace]
+. Select *Import from Git*
+. Paste the repository URL:
++
+[source,text,subs="attributes+"]
 ----
+{gitlab_url}/software-factory/etx_app_base_app.git
+----
+. Click btn:[Create & Open]
+. If prompted to authorize with GitLab, follow the OAuth flow and approve access
+
+Dev Spaces will create a workspace using the Universal Developer Image (UDI) since there is no devfile in the repository yet.
+
+== Step 2: Create the Devfile
+
+Once the workspace opens, create a `devfile.yaml` file that will configure your development environment.
+
+Open a terminal (menu:Terminal[New Terminal]) and create the devfile:
+
+[source,bash]
+----
+cat > devfile.yaml <<'EOF'
 schemaVersion: 2.2.0
 metadata:
   name: etx-app-base-app
@@ -42,16 +59,16 @@ components:
           value: "0.0.0.0"
         - name: MAVEN_OPTS
           value: "-Dmaven.repo.local=/home/user/.m2/repository"
-        # External service connection (from Supporting Services lab)
-        - name: POSTGRESQL_HOST # <1>
+        # External service connections
+        - name: POSTGRESQL_HOST
           value: "parasol-db.etx-app-dev.svc.cluster.local"
-        - name: POSTGRESQL_DATABASE # <2>
+        - name: POSTGRESQL_DATABASE
           value: "parasol"
-        - name: POSTGRESQL_USER # <3>
+        - name: POSTGRESQL_USER
           value: "parasol"
-        - name: POSTGRESQL_PASSWORD # <4>
+        - name: POSTGRESQL_PASSWORD
           value: "parasol"
-        - name: KAFKA_BOOTSTRAP_SERVERS # <5>
+        - name: KAFKA_BOOTSTRAP_SERVERS
           value: "parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092"
       memoryLimit: 5Gi
       cpuLimit: 2500m
@@ -110,227 +127,254 @@ commands:
 events:
   postStart:
     - init-continue
+EOF
 ----
-<1> PostgreSQL hostname - fully qualified service name from Supporting Services lab
-<2> PostgreSQL database name (matches the database created in Supporting Services)
-<3> PostgreSQL username (matches the secret in Supporting Services)
-<4> PostgreSQL password (matches the secret in Supporting Services)
-<5> Kafka bootstrap servers - fully qualified service name from Supporting Services lab
 
-IMPORTANT: These environment variables point to the external PostgreSQL and Kafka services you deployed in xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services]. Your application will connect to these shared services instead of starting local containers.
-
-After creating the file, commit and push the devfile so Dev Spaces can read it when creating your workspace:
+Verify the devfile was created:
 
 [source,bash]
 ----
+ls -la devfile.yaml
+cat devfile.yaml | head -20
+----
+
+== Step 3: Commit and Push the Devfile
+
+Configure Git and commit the devfile to a feature branch:
+
+[source,bash]
+----
+# Configure Git identity
+git config --global user.email "platform-developer@example.com"
+git config --global user.name "Platform Developer"
+
+# Create feature branch
+git checkout -b feature/add-devfile
+
+# Add and commit the devfile
 git add devfile.yaml
-git commit -m "feat: add devfile with Continue AI assistant"
-git push origin main
+git commit -m "feat: add devfile for Dev Spaces configuration"
+
+# Push to GitLab
+git push origin feature/add-devfile
 ----
 
-If Git prompts for credentials, use the workshop GitLab user shown in the environment section.
+When you run `git push`, Dev Spaces will prompt you to authorize with GitLab:
 
-See xref:day2-devspaces-devfiles.adoc[Devfiles & Base Images] for a full explanation of each section.
+. A notification appears asking you to authenticate
+. Click *Proceed* to open GitLab authorization
+. Grant Dev Spaces access to your repositories
+. Return to the IDE - the push will complete automatically
 
-== Get the Dashboard URL
+NOTE: We use a feature branch because `main` is protected and requires pull requests. This follows GitFlow best practices from xref:day1-branching-strategies.adoc[Branching Strategies].
 
-[source,bash]
-----
-oc get checluster/devspaces -n openshift-devspaces \
-  -o jsonpath='{.status.cheURL}'
-----
+== Step 4: Create Workspace from Devfile
 
-Open this URL in your browser and log in with your OpenShift credentials.
+Now delete the temporary workspace and create a new one from your devfile.
 
-== Create the Lab Workspace
+. Return to the Dev Spaces dashboard browser tab
+. Find your workspace in the list
+. Click the three dots (⋮) menu → *Delete Workspace*
+. Confirm deletion and wait until the workspace disappears
 
-Create the workspace from the Dev Spaces dashboard:
+Create a new workspace with your devfile:
 
-. Click btn:[Create Workspace].
-. Go to *Import from Git*.
-. Paste the Git repository URL for the ETX App Base application:
+. Click btn:[Create Workspace]
+. Select *Import from Git*
+. Paste this URL (includes branch and devfile path):
 +
 [source,text,subs="attributes+"]
 ----
-{gitlab_url}/software-factory/etx_app_base_app.git
+{gitlab_url}/software-factory/etx_app_base_app/-/tree/feature/add-devfile?devfilePath=devfile.yaml
 ----
-. Click btn:[Create & Open].
-. If Dev Spaces shows a trusted source prompt, confirm that you trust the repository authors and continue.
-. If prompted to authorize Dev Spaces with GitLab, follow the OAuth flow and approve the requested access.
+. Click btn:[Create & Open]
 
-NOTE: You can also launch the workspace directly with this URL:
+Dev Spaces will create the workspace using your devfile configuration, which includes:
 
-[source,text,subs="attributes"]
-----
-{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/
-----
+* PostgreSQL and Kafka connection variables
+* Maven cache persistence
+* Quarkus development endpoints
+* Continue AI assistant initialization
 
-To create a workspace from a different branch, replace `REPLACE_BRANCH_NAME` in this URL:
+Wait for the workspace to fully start. This may take 2-3 minutes as the container image is pulled and configured.
 
-[source,text,subs="attributes"]
-----
-{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/
-----
+== Verify Workspace Configuration
 
-Dev Spaces will clone the repository, read the `devfile.yaml` you just created, pull the container image, and open the VS Code IDE in your browser.
+Once the workspace opens, verify it was configured correctly with your devfile.
 
-NOTE: The first workspace creation may take a few minutes while the container image is pulled to the node.
+=== Check Environment Variables
 
-== Verify Git Integration
-
-Once the workspace opens:
-
-. Open the *Source Control* panel (Ctrl+Shift+G)
-. Confirm the repository is loaded and shows the correct branch
-. If prompted to authenticate with GitLab, follow the OAuth flow -- this is the integration configured in the xref:day2-devspaces-integrations.adoc[GitLab Integration] section
-
-You can also verify from a workspace terminal:
+Open a terminal and verify the environment variables from your devfile are present:
 
 [source,bash]
 ----
-pwd
-git remote -v
+echo "POSTGRESQL_HOST: $POSTGRESQL_HOST"
+echo "POSTGRESQL_DATABASE: $POSTGRESQL_DATABASE"
+echo "POSTGRESQL_USER: $POSTGRESQL_USER"
+echo "KAFKA_BOOTSTRAP_SERVERS: $KAFKA_BOOTSTRAP_SERVERS"
+----
+
+You should see:
+
+[source,text]
+----
+POSTGRESQL_HOST: parasol-db.etx-app-dev.svc.cluster.local
+POSTGRESQL_DATABASE: parasol
+POSTGRESQL_USER: parasol
+KAFKA_BOOTSTRAP_SERVERS: parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092
+----
+
+[IMPORTANT]
+====
+If these variables are **empty**, the workspace was not created with your devfile. This can happen if:
+
+* The URL did not include `?devfilePath=devfile.yaml`
+* The branch name was incorrect
+
+Go back to Step 4 and recreate the workspace, ensuring you use the exact URL provided.
+====
+
+=== Verify Git Configuration
+
+Check that you're on the correct branch:
+
+[source,bash]
+----
 git branch --show-current
-git status
+git log --oneline -3
 ----
 
-Test that you can push changes:
+You should see `feature/add-devfile` and your devfile commit.
 
-. Create or edit a file (e.g. add a comment to `README.md`)
-. Stage, commit, and push the change from the Source Control panel
-. Verify the commit appears in GitLab
+=== Test Service Connectivity
 
-Or use the terminal:
+Verify network connectivity to PostgreSQL:
 
 [source,bash]
 ----
-git add README.md
-git commit -m "docs: verify Dev Spaces Git integration"
-git push origin main
+timeout 3 bash -c "echo > /dev/tcp/$POSTGRESQL_HOST/5432" && echo "PostgreSQL connection successful" || echo "PostgreSQL connection failed"
 ----
 
-== Verify the AI Code Assistant
+Expected: `PostgreSQL connection successful`
 
-Open a terminal in the workspace from menu:Terminal[New Terminal] and confirm the LLM environment variables are set:
+If you get connection errors, verify you completed xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services].
+
+== Configure Continue AI Assistant (Optional)
+
+NOTE: Setting up Continue is optional. Skip this section if you encounter issues or prefer to continue without AI assistance.
+
+=== Verify LLM Credentials
+
+Check if LLM credentials are available:
 
 [source,bash]
 ----
-echo $LLM_API_KEY
-echo $LLM_BASE_URL
+echo "LLM_API_KEY: $LLM_API_KEY"
+echo "LLM_BASE_URL: $LLM_BASE_URL"
 ----
 
-Both should return values injected by the shared secret configured in the xref:day2-devspaces-integrations.adoc[Shared Secrets] section.
+If empty, you need to configure the Continue credentials secret. See xref:day2-devspaces-integrations.adoc#_example_ai_code_assistant_continue_credentials[Continue Credentials Setup], then restart your workspace.
 
-Check that the Continue extension is configured:
+=== Initialize Continue Configuration
 
-. Open the Continue panel in the sidebar (the Continue icon)
-. Send a test message such as "Hello, what model are you?"
-. Confirm you receive a response from the **qwen3-14b** model
-
-If Continue does not appear, confirm that the extension is installed in the workspace and check that the `postStart` event ran successfully:
+The devfile's `postStart` event should have created the Continue config file. Verify:
 
 [source,bash]
 ----
 cat ~/.continue/config.yaml
 ----
 
-The file should contain the model configuration with your API key and base URL.
-
-== Verify Service Connection
-
-Verify that the workspace can reach the external services deployed in the previous lab:
-
-Test PostgreSQL connection:
+If the file doesn't exist, create it manually:
 
 [source,bash]
 ----
-echo $POSTGRESQL_HOST
-echo $POSTGRESQL_DATABASE
-# Should show: parasol-db.etx-app-dev.svc.cluster.local and parasol
+mkdir -p /home/user/.continue
+cat > /home/user/.continue/config.yaml << 'EOF'
+name: Continue Config
+version: 0.0.1
+models:
+  - name: qwen3-14b
+    provider: vllm
+    model: qwen3-14b
+    apiKey: ${LLM_API_KEY}
+    apiBase: ${LLM_BASE_URL}
+    roles:
+      - chat
+EOF
+
+cat ~/.continue/config.yaml
 ----
 
-Test Kafka connection:
+=== Install Continue Extension
 
-[source,bash]
-----
-echo $KAFKA_BOOTSTRAP_SERVERS
-# Should show: parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092
-----
+. Open Extensions view (Ctrl+Shift+X)
+. Search for "Continue"
+. Click *Install* on "Continue - Codestral, Claude, and more"
 
-Verify network connectivity to PostgreSQL:
+NOTE: If you see "error while fetching extensions", wait a moment and retry, or skip Continue setup.
 
-[source,bash]
-----
-nc -zv $POSTGRESQL_HOST 5432
-----
+=== Test Continue
 
-You should see `Connection to parasol-db.etx-app-dev.svc.cluster.local 5432 port [tcp/postgresql] succeeded!`
+. Open the Continue panel (sidebar icon)
+. Send a message: `Hello, what model are you?`
+. You should receive a response from **qwen3-14b**
 
-IMPORTANT: If you get connection errors, verify that you completed xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services] and that the PostgreSQL and Kafka pods are running in the `etx-app-dev` namespace.
+TIP: Continue is optional. If you encounter issues, proceed without it.
 
 == Run Quarkus in Development Mode
 
-Open a terminal in the IDE and start Quarkus in dev mode:
+Start Quarkus development mode:
 
 [source,bash]
 ----
 ./mvnw compile quarkus:dev
 ----
 
-Quarkus will connect to the external PostgreSQL and Kafka services deployed in the previous lab.
-You should see log output confirming the connections:
+Quarkus connects to the external PostgreSQL and Kafka services using the environment variables from your devfile.
 
+Expected log output:
+
+[source,text]
 ----
 Hibernate:
     create table if not exists ...
-2026-05-09 20:08:28,533 INFO  [io.qua.sma.dep.processor] Configuring channel 'emails-in' to be managed by connector 'smallrye-kafka'
+INFO  [io.qua.sma.dep.processor] Configuring channel 'emails-in' to be managed by connector 'smallrye-kafka'
 ----
 
-The application will be available on port 8080.
-Click the endpoint notification in the IDE or find the URL in the *Endpoints* panel.
+The application runs on port 8080. Click the endpoint notification or check the *Endpoints* panel for the URL.
 
 === External Services Configuration
 
-The application uses the following external services:
+Your application connects to:
 
-* **PostgreSQL** - `parasol-db.etx-app-dev.svc.cluster.local:5432`
+* **PostgreSQL**: `parasol-db.etx-app-dev.svc.cluster.local:5432`
   - Database: `parasol`
-  - User/Password: `parasol/parasol` (from `parasol-db-secret`)
+  - Credentials: `parasol/parasol`
 
-* **Kafka** - `parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092`
+* **Kafka**: `parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092`
   - Topic: `intake`
 
-These services are shared across all development workspaces, providing a consistent environment.
-
-**Benefits of this approach:**
-
-* ✅ Uses Red Hat certified container images only
-* ✅ Consistent with production deployment patterns
-* ✅ Avoids Podman rootless compatibility issues
-* ✅ Shared services across team workspaces
-* ✅ Easier to debug integration issues
-
-IMPORTANT: Dev Services (Testcontainers) are **disabled** for this workshop. All services run externally in the cluster for consistency and reliability.
+These are shared services across all development workspaces, deployed in xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services].
 
 == Workspace Lifecycle
 
-Some useful operations:
+Useful operations from the Dev Spaces dashboard:
 
-*Stop a workspace* (preserves state on the PVC):
+**Stop workspace** (preserves files on PVC):
 
-* From the dashboard, click the stop icon next to your workspace
-* The workspace pod is deleted, but the PVC retains your files
+* Click three dots (⋮) → *Stop Workspace*
+* Pod is deleted, PVC is retained
 
-*Restart a workspace*:
+**Start workspace**:
 
-* Click the workspace name in the dashboard to restart it
-* Your source code, Maven cache, and other volume-mounted data persist
+* Click three dots (⋮) → *Start in background*
+* Your files, Maven cache, and Git state persist
 
-*Delete a workspace*:
+**Delete workspace**:
 
-* From the dashboard, select the workspace and click btn:[Delete]
-* This removes the workspace pod and its PVC
+* Click three dots (⋮) → *Delete Workspace*
+* Removes pod and PVC
 
 == Next Steps
 
-Proceed to xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services].
+Proceed to xref:day2-lab1-ci-pipeline.adoc[CI Pipeline].

@@ -691,12 +691,12 @@ Expected output should show: `Synced: Healthy` for Argo CD, `Running` pods, and 
 
 You have completed the Application Deployment exercise. Your application now has:
 
-* ✅ Your own Argo CD instance for GitOps deployments
-* ✅ GitOps repository structure (dev and stage environments)
-* ✅ Automated sync with self-healing enabled
-* ✅ OpenTelemetry auto-instrumentation for distributed tracing
-* ✅ Integration between CI pipeline and GitOps repository
-* ✅ Multi-cluster deployment capability (dev → stage)
+* Your own Argo CD instance for GitOps deployments
+* GitOps repository structure (dev and stage environments)
+* Automated sync with self-healing enabled
+* OpenTelemetry auto-instrumentation for distributed tracing
+* Integration between CI pipeline and GitOps repository
+* Multi-cluster deployment capability (dev → stage)
 
 == What's Next
 

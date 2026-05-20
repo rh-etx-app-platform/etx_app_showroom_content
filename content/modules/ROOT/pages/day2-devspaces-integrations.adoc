@@ -9,7 +9,7 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 
 . Open {gitlab_url}[GitLab^] and authenticate with your SSO credentials.
 . Click your avatar in the upper-right corner.
-. Select menu:Edit profile[Applications] to open the User Settings applications page.
+. Select menu:Edit profile[Access > Applications] to open the User Settings applications page.
 +
 [source,text,subs="attributes+"]
 ----
@@ -33,41 +33,50 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 Create a Kubernetes secret that Dev Spaces will use to authenticate against GitLab.
 The labels and annotations are required -- Dev Spaces discovers the secret automatically based on them.
 
-[source,bash,subs="attributes"]
+[source,bash]
 ----
 GITLAB_APPLICATION_ID="REPLACE_APPLICATION_ID"
 GITLAB_APPLICATION_SECRET="REPLACE_APPLICATION_SECRET"
 
-oc apply -f - <<EOF
-apiVersion: v1
-kind: Secret
-metadata:
-  name: gitlab-oauth-config
-  namespace: openshift-devspaces
-  labels:
-    app.kubernetes.io/part-of: che.eclipse.org
-    app.kubernetes.io/component: oauth-scm-configuration
-  annotations:
-    che.eclipse.org/oauth-scm-server: gitlab
-    che.eclipse.org/scm-server-endpoint: {gitlab_url}
-type: Opaque
-stringData:
-  id: "$GITLAB_APPLICATION_ID"
-  secret: "$GITLAB_APPLICATION_SECRET"
-EOF
+# Get the GitLab URL dynamically from the cluster
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+
+echo "Using GitLab URL: $GITLAB_URL"
+
+oc create secret generic gitlab-oauth-config \
+  -n openshift-devspaces \
+  --from-literal=id="$GITLAB_APPLICATION_ID" \
+  --from-literal=secret="$GITLAB_APPLICATION_SECRET"
+
+oc annotate secret gitlab-oauth-config \
+  -n openshift-devspaces \
+  che.eclipse.org/oauth-scm-server=gitlab \
+  che.eclipse.org/scm-server-endpoint="$GITLAB_URL"
+
+oc label secret gitlab-oauth-config \
+  -n openshift-devspaces \
+  app.kubernetes.io/part-of=che.eclipse.org \
+  app.kubernetes.io/component=oauth-scm-configuration
+
+echo "GitLab OAuth secret created successfully"
 ----
 
-WARNING: Replace `GITLAB_APPLICATION_ID` and `GITLAB_APPLICATION_SECRET` before running the command.
+WARNING: Replace `GITLAB_APPLICATION_ID` and `GITLAB_APPLICATION_SECRET` with the values from the GitLab OAuth application before running the command.
 
 === Register GitLab in the CheCluster
 
 Add the `gitServices` section to your CheCluster CR:
 
-[source,bash,subs="attributes"]
+[source,bash]
 ----
-oc patch checluster/devspaces -n openshift-devspaces \
+# Get the GitLab URL dynamically from the cluster
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+
+echo "Registering GitLab URL: $GITLAB_URL"
+
+oc patch checluster devspaces -n openshift-devspaces \
   --type='merge' \
-  -p '{"spec":{"gitServices":{"gitlab":[{"secretName":"gitlab-oauth-config","endpoint":"{gitlab_url}"}]}}}'
+  -p "{\"spec\":{\"gitServices\":{\"gitlab\":[{\"secretName\":\"gitlab-oauth-config\",\"endpoint\":\"$GITLAB_URL\"}]}}}"
 ----
 
 When a user opens a workspace that references a GitLab repository, they will be prompted to authenticate with GitLab via OAuth.
@@ -88,6 +97,7 @@ Mount options:
 * `mount-as: file` -- Mount as files at a specified path
 * `mount-as: subpath` -- Mount individual keys as separate files
 
+[#_example_ai_code_assistant_continue_credentials]
 === Example: AI Code Assistant (Continue) Credentials
 
 This example creates a secret that injects LLM API credentials as environment variables into every workspace. These can be provided to an extension such as Roo, Cline, or Continue to enable LLM-assisted coding.
@@ -112,29 +122,28 @@ If you already have an API key, you can use it by following these steps:
 
 Then create the secret:
 
-[source,bash,subs="attributes"]
+[source,bash]
 ----
 LLM_API_KEY="REPLACE_API_KEY"
 
-oc apply -f - <<EOF
-apiVersion: v1
-kind: Secret
-metadata:
-  name: continue-llm-credentials
-  namespace: openshift-devspaces
-  labels:
-    app.kubernetes.io/part-of: che.eclipse.org
-    app.kubernetes.io/component: workspaces-config
-  annotations:
-    controller.devfile.io/mount-as: env
-type: Opaque
-stringData:
-  LLM_API_KEY: "$LLM_API_KEY"
-  LLM_BASE_URL: https://litellm-prod.apps.maas.redhatworkshops.io
-EOF
+oc create secret generic continue-llm-credentials \
+  -n openshift-devspaces \
+  --from-literal=LLM_API_KEY="$LLM_API_KEY" \
+  --from-literal=LLM_BASE_URL="https://litellm-prod.apps.maas.redhatworkshops.io"
+
+oc annotate secret continue-llm-credentials \
+  -n openshift-devspaces \
+  controller.devfile.io/mount-as=env
+
+oc label secret continue-llm-credentials \
+  -n openshift-devspaces \
+  app.kubernetes.io/part-of=che.eclipse.org \
+  app.kubernetes.io/component=workspaces-config
+
+echo "LLM credentials secret created successfully"
 ----
 
-WARNING: Replace `LLM_API_KEY` before running the command.
+WARNING: Replace `REPLACE_API_KEY` with your actual API key from the MaaS platform before running the command.
 
 Every new workspace will now have `LLM_API_KEY` and `LLM_BASE_URL` available as environment variables.
 The devfile's `postStart` command can use these to configure the Continue extension automatically (see xref:day2-devspaces-devfiles.adoc[Devfiles]).
