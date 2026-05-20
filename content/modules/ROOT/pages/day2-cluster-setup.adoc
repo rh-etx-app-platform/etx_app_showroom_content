@@ -16,7 +16,7 @@ image::devspaces-operator-installed.png[Dev Spaces Operator installed]
 
 Verify from the CLI:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get csv -n openshift-operators | grep devspaces
 ----

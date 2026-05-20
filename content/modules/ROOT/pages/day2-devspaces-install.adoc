@@ -57,7 +57,7 @@ spec:
 
 Create the namespace for Dev Spaces:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc create namespace openshift-devspaces
 ----
@@ -116,7 +116,7 @@ Wait for the deployment to complete.
 
 First, verify the CheCluster resource was created:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get checluster -n openshift-devspaces
 ----
@@ -125,7 +125,7 @@ You should see a resource named `devspaces`.
 
 Watch the pods come up:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n openshift-devspaces -w
 ----
@@ -145,7 +145,7 @@ The output should be `Active`.
 
 Once the CheCluster is `Active`, get the dashboard URL:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get checluster devspaces -n openshift-devspaces \
   -o jsonpath='{.status.cheURL}{"\n"}'

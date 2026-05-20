@@ -145,7 +145,7 @@ EOF
 
 Verify the devfile was created:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 ls -la devfile.yaml
 cat devfile.yaml | head -20
@@ -201,7 +201,7 @@ Use a direct URL to create a workspace from a specific branch.
 
 Get the required URLs:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get Dev Spaces URL
 DEVSPACES_URL="https://$(oc get checluster devspaces -n openshift-devspaces -o jsonpath='{.status.cheURL}' | sed 's|https://||')"
@@ -260,9 +260,12 @@ NOTE: Dev Spaces automatically clones the repository when you create a workspace
 
 Open a terminal and verify the repository was cloned correctly.
 
+Or, you can also verify from a workspace terminal, opening from the burger menu on the top right of the IDE,
+then selecting menu:Terminal[New Terminal]:
+
 NOTE: The terminal opens in `/projects/etx_app_base_app` by default. If you've navigated elsewhere, use `cd /projects/etx_app_base_app` to return.
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Verify current branch and recent commits
 git branch --show-current
@@ -276,7 +279,7 @@ You should see `feature/add-devfile` as the current branch and the `devfile.yaml
 
 Verify the environment variables from your devfile are present:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 echo "POSTGRESQL_HOST: $POSTGRESQL_HOST"
 echo "POSTGRESQL_DATABASE: $POSTGRESQL_DATABASE"
@@ -308,7 +311,7 @@ Go back to Step 5 and recreate the workspace after ensuring the devfile is in th
 
 Verify network connectivity to PostgreSQL:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 timeout 3 bash -c "echo > /dev/tcp/$POSTGRESQL_HOST/5432" && echo "PostgreSQL connection successful" || echo "PostgreSQL connection failed"
 ----
@@ -337,14 +340,14 @@ If empty, you need to configure the Continue credentials secret. See xref:day2-d
 
 The devfile's `postStart` event should have created the Continue config file. Verify:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 cat ~/.continue/config.yaml
 ----
 
 If the file doesn't exist, create it manually:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 mkdir -p /home/user/.continue
 cat > /home/user/.continue/config.yaml << 'EOF'
@@ -395,7 +398,7 @@ When you open a terminal in the workspace, you are automatically positioned in t
 
 Verify your current location and start Quarkus development mode:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Verify you're in the project directory
 pwd
