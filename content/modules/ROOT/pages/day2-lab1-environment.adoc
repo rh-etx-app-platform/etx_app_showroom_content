@@ -119,14 +119,23 @@ The first time you log in, GitLab will create a user profile linked to your Keyc
 
 == Clone Your Repository
 
-Once logged into GitLab, clone the ETX App Base application:
+Once logged into GitLab, move to the existing workshop directory from the previous lab:
 
-[source,bash,subs="+attributes"]
+[source,bash,role=execute,subs="attributes+"]
 ----
-cd ~
+cd ~/workshop/etx_app_base_app
+----
+
+Or clone the ETX App Base application if it doesn't exist:
+
+[source,bash,role=execute,subs="attributes+"]
+----
+mkdir -p ~/workshop
+cd ~/workshop
 git clone {gitlab_url}/software-factory/etx_app_base_app.git
 cd etx_app_base_app
 ----
+
 
 NOTE: The repository name is `etx_app_base_app` and Kubernetes resources will be named `etx-app-base-app-*` for consistency.
 
@@ -134,7 +143,7 @@ NOTE: The repository name is `etx_app_base_app` and Kubernetes resources will be
 
 Confirm you're logged into the primary cluster:
 
-[source,bash,subs="+attributes"]
+[source,bash,role=execute,subs="attributes+"]
 ----
 oc whoami --show-server
 # Should show: {openshift_api_url}
