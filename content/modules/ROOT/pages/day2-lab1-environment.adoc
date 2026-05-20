@@ -137,7 +137,7 @@ TIP: Use the **OpenShift Web Terminal** for these commands. Access it by clickin
 
 First, get the GitLab URL dynamically:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get GitLab URL
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
@@ -146,12 +146,14 @@ echo "GitLab URL: $GITLAB_URL"
 
 Then clone the repository:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-cd ~
+mkdir -p ~/workshop
+cd ~/workshop
 git clone ${GITLAB_URL}/software-factory/etx_app_base_app.git
 cd etx_app_base_app
 ----
+
 
 NOTE: The repository name is `etx_app_base_app` and Kubernetes resources will be named `etx-app-base-app-*` for consistency.
 
@@ -161,7 +163,7 @@ IMPORTANT: The repository does NOT include a `devfile.yaml`. You will create thi
 
 Confirm you're logged into the primary cluster:
 
-[source,bash,subs="+attributes"]
+[source,bash,role=execute,subs="attributes+"]
 ----
 oc whoami --show-server
 # Should show: {openshift_api_url}
