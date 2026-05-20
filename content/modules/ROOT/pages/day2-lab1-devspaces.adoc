@@ -38,53 +38,31 @@ From the Dev Spaces dashboard:
 
 Dev Spaces will create a workspace using the Universal Developer Image (UDI) since there is no devfile in the repository yet.
 
-== Step 2: Configure Git and Create Feature Branch
+== Step 2: Configure Git
 
-Once the workspace opens, configure Git and create a feature branch for the devfile changes.
+Once the workspace opens, configure Git identity.
 
 Open a terminal from the main menu (hamburger icon in the top-left corner: menu:Terminal[New Terminal]).
-
-Configure Git identity and create a feature branch:
 
 [source,bash]
 ----
 # Configure Git identity
 git config --global user.email "platform-developer@example.com"
 git config --global user.name "Platform Developer"
-
-# Create feature branch
-git checkout -b feature/add-devfile
 ----
-
-NOTE: We use a feature branch because `main` is protected and requires pull requests. This follows GitFlow best practices from xref:day1-branching-strategies.adoc[Branching Strategies].
 
 == Step 3: Create the Devfile
 
 Now create a `devfile.yaml` file that will configure your development environment.
 
-First, get the GitLab URL from the cluster:
+Create the devfile:
 
 [source,bash]
 ----
-GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
-echo "Using GitLab URL: $GITLAB_URL"
-----
-
-Now create the devfile:
-
-[source,bash]
-----
-cat > devfile.yaml <<EOF
+cat > devfile.yaml <<'EOF'
 schemaVersion: 2.2.0
 metadata:
   name: etx-app-base-app
-projects:
-  - name: etx-app-base-app
-    git:
-      remotes:
-        origin: "$GITLAB_URL/software-factory/etx_app_base_app.git"
-      checkoutFrom:
-        revision: feature/add-devfile
 components:
   - name: development-tooling
     container:
@@ -175,7 +153,7 @@ cat devfile.yaml | head -20
 
 == Step 4: Commit and Push the Devfile
 
-Add and commit the devfile to the feature branch:
+Add and commit the devfile to main:
 
 [source,bash]
 ----
@@ -183,15 +161,11 @@ Add and commit the devfile to the feature branch:
 git add devfile.yaml
 git commit -m "feat: add devfile for Dev Spaces configuration"
 
-# Push to GitLab
-git push origin feature/add-devfile
-
-# Print the URL to use for workspace creation
-echo ""
-echo "Use this URL to create your workspace in Step 5:"
-echo "$GITLAB_URL/software-factory/etx_app_base_app.git#feature/add-devfile"
-echo ""
+# Push to GitLab main branch
+git push origin main
 ----
+
+NOTE: The etx_app_base_app repository main branch is unprotected for this lab to allow direct pushes. In production environments, you would create a feature branch and merge via pull request following xref:day1-branching-strategies.adoc[GitFlow best practices].
 
 When you run `git push`, Dev Spaces will prompt you to authorize with GitLab:
 
@@ -200,32 +174,28 @@ When you run `git push`, Dev Spaces will prompt you to authorize with GitLab:
 . Grant Dev Spaces access to your repositories
 . Return to the IDE - the push will complete automatically
 
-IMPORTANT: Copy the URL printed at the end of the commands above. You will need it in Step 5.
+== Step 5: Recreate Workspace from Devfile
 
-== Step 5: Create Workspace from Devfile
-
-Now delete the temporary workspace and create a new one from your devfile.
+Now delete the temporary workspace and create a new one that will use your devfile.
 
 . Return to the Dev Spaces dashboard browser tab
 . Find your workspace in the list
 . Click the three dots (⋮) menu → *Delete Workspace*
 . Confirm deletion and wait until the workspace disappears
 
-Create a new workspace with your devfile:
+Create a new workspace:
 
 . Click btn:[Create Workspace]
 . Select *Import from Git*
-. Paste the repository URL that was printed at the end of Step 4
+. Paste the repository URL (use the actual GitLab URL from your cluster):
 +
-It should look like:
-+
-[source,text]
+[source,text,subs="attributes+"]
 ----
-https://gitlab.apps.cluster-xxxxx.dynamic2.redhatworkshops.io/software-factory/etx_app_base_app.git#feature/add-devfile
+{gitlab_url}/software-factory/etx_app_base_app.git
 ----
 . Click btn:[Create & Open]
 
-Dev Spaces will create the workspace using your devfile configuration, which includes:
+Dev Spaces will detect the devfile in the repository and use it to configure your workspace with:
 
 * PostgreSQL and Kafka connection variables
 * Maven cache persistence
@@ -234,13 +204,36 @@ Dev Spaces will create the workspace using your devfile configuration, which inc
 
 Wait for the workspace to fully start. This may take 2-3 minutes as the container image is pulled and configured.
 
+== Step 6: Clone the Repository
+
+Once the workspace opens, clone the repository manually.
+
+Open a terminal and clone the repository:
+
+[source,bash]
+----
+# Get GitLab URL
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+
+# Clone the repository
+cd /projects
+git clone $GITLAB_URL/software-factory/etx_app_base_app.git
+cd etx_app_base_app
+
+# Verify you're on main branch
+git branch --show-current
+ls -la
+----
+
+You should see the application files including `devfile.yaml`.
+
 == Verify Workspace Configuration
 
-Once the workspace opens, verify it was configured correctly with your devfile.
+Verify the workspace was configured correctly with your devfile.
 
 === Check Environment Variables
 
-Open a terminal and verify the environment variables from your devfile are present:
+Verify the environment variables from your devfile are present:
 
 [source,bash]
 ----
@@ -264,23 +257,25 @@ KAFKA_BOOTSTRAP_SERVERS: parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.l
 ====
 If these variables are **empty**, the workspace was not created with your devfile. This can happen if:
 
-* The URL did not include `?devfilePath=devfile.yaml`
-* The branch name was incorrect
+* The devfile was not pushed to the main branch in Step 4
+* The workspace was created before the devfile was pushed
 
-Go back to Step 4 and recreate the workspace, ensuring you use the exact URL provided.
+Go back to Step 5 and recreate the workspace after ensuring the devfile is in the repository.
 ====
 
-=== Verify Git Configuration
+=== Verify Repository Clone
 
-Check that you're on the correct branch:
+Check that the repository was cloned correctly:
 
 [source,bash]
 ----
+cd /projects/etx_app_base_app
 git branch --show-current
 git log --oneline -3
+ls -la devfile.yaml
 ----
 
-You should see `feature/add-devfile` and your devfile commit.
+You should see `main` branch and your devfile commit. The `devfile.yaml` file should exist in the repository root.
 
 === Test Service Connectivity
 
@@ -359,10 +354,11 @@ TIP: Continue is optional. If you encounter issues, proceed without it.
 
 == Run Quarkus in Development Mode
 
-Start Quarkus development mode:
+Navigate to the project directory and start Quarkus development mode:
 
 [source,bash]
 ----
+cd /projects/etx_app_base_app
 ./mvnw compile quarkus:dev
 ----
 
