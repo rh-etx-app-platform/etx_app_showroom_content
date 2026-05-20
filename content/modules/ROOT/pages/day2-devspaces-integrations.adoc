@@ -33,7 +33,9 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 Create a Kubernetes secret that Dev Spaces will use to authenticate against GitLab.
 The labels and annotations are required -- Dev Spaces discovers the secret automatically based on them.
 
-[source,bash]
+WARNING: Replace `GITLAB_APPLICATION_ID` and `GITLAB_APPLICATION_SECRET` with the values from the GitLab OAuth application before running the command.
+
+[source,bash,role=execute]
 ----
 GITLAB_APPLICATION_ID="REPLACE_APPLICATION_ID"
 GITLAB_APPLICATION_SECRET="REPLACE_APPLICATION_SECRET"
