@@ -63,7 +63,7 @@ spec:
 
 To apply the configuration, run:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc create namespace openshift-devspaces
 oc apply -f - <<'EOF'
@@ -120,7 +120,7 @@ NOTE: The `openshift-devspaces` namespace is created for the `CheCluster` instan
 
 Wait for the deployment to complete:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get checluster/devspaces -n openshift-devspaces -o jsonpath='{.status.chePhase}'
 ----
@@ -128,7 +128,7 @@ oc get checluster/devspaces -n openshift-devspaces -o jsonpath='{.status.chePhas
 The output should be `Active`.
 You can also watch the pods come up:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n openshift-devspaces -w
 ----
@@ -137,7 +137,7 @@ oc get pods -n openshift-devspaces -w
 
 Once the CheCluster is `Active`, get the dashboard URL:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get checluster/devspaces -n openshift-devspaces \
   -o jsonpath='{.status.cheURL}'

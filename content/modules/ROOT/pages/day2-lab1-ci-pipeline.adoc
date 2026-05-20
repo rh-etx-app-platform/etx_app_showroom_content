@@ -10,7 +10,7 @@ Then wire up Tekton Triggers to fire the pipeline automatically when code is pus
 
 Create a workspace PVC and a ServiceAccount for the pipeline:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: v1
@@ -50,7 +50,7 @@ This grants the `edit` role, allowing the pipeline to create ImageStreams, Deplo
 
 Create a Tekton Task that authenticates to Vault using the Kubernetes auth method configured in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section and writes registry credentials to the workspace:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
@@ -101,7 +101,7 @@ EOF
 
 Define the CI pipeline with four tasks: clone, build/test, fetch credentials, and build/push the container image:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
@@ -216,7 +216,7 @@ Create the trigger resources so the pipeline runs automatically when code is pus
 
 Maps fields from the GitLab webhook payload to pipeline parameters:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: triggers.tekton.dev/v1beta1
@@ -237,7 +237,7 @@ EOF
 
 Creates a PipelineRun when triggered:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: triggers.tekton.dev/v1beta1
@@ -277,7 +277,7 @@ EOF
 
 Exposes an HTTP endpoint that GitLab can send webhooks to:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: triggers.tekton.dev/v1beta1
@@ -368,7 +368,7 @@ You should see the image tagged with the commit SHA.
 
 Verify all components are working:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Check pipeline exists
 oc get pipeline etx-app-base-app-ci -n etx-app-dev

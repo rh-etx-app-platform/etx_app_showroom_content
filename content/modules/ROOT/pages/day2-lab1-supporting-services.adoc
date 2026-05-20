@@ -48,7 +48,7 @@ OpenShift Pipelines provides the Tekton-based CI engine used to build, test, and
 
 Verify from the CLI:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get csv -n openshift-operators | grep pipelines
 ----
@@ -59,7 +59,7 @@ You should see the Pipelines operator listed with phase `Succeeded`.
 
 Confirm the Tekton controller pods are running:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n openshift-pipelines
 ----
@@ -68,7 +68,7 @@ You should see pods for `tekton-pipelines-controller`, `tekton-triggers-controll
 
 Verify the `tkn` CLI is available in your Dev Spaces workspace:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 tkn version
 ----
@@ -94,7 +94,7 @@ AMQ Streams provides Apache Kafka on OpenShift. The Parasol application uses Kaf
 
 Verify from the CLI:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get csv -n openshift-operators | grep amqstreams
 ----
@@ -122,7 +122,7 @@ The OpenTelemetry Operator manages the deployment of OpenTelemetry Collectors fo
 
 Verify from the CLI:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get csv -n openshift-operators | grep opentelemetry
 ----
@@ -134,7 +134,7 @@ You should see the OpenTelemetry operator listed with phase `Succeeded`.
 Create a collector instance in your application namespace.
 This collector will receive traces from instrumented applications and export them to the console for demonstration purposes:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: opentelemetry.io/v1beta1
@@ -155,8 +155,8 @@ spec:
     processors:
       batch: {}
     exporters:
-      logging:
-        loglevel: debug
+      debug:
+        verbosity: detailed
     service:
       pipelines:
         traces:
@@ -166,13 +166,13 @@ spec:
 EOF
 ----
 
-NOTE: Log level is set to debug to see trace details, and the logging exporter is used to export traces to stdout (visible in collector pod logs).
+NOTE: `verbosity: detailed` prints full trace details to stdout (visible in collector pod logs). The `logging` exporter was removed in Collector v0.111+; use `debug` instead.
 
-TIP: For production, replace the `logging` exporter with a real tracing backend like Tempo, Jaeger, or a cloud provider's tracing service.
+TIP: For production, replace the `debug` exporter with a real tracing backend like Tempo, Jaeger, or a cloud provider's tracing service.
 
 Verify the collector pod is running:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -l app.kubernetes.io/name=otel-collector-collector -n etx-app-dev
 ----
@@ -181,7 +181,7 @@ oc get pods -l app.kubernetes.io/name=otel-collector-collector -n etx-app-dev
 
 Create an `Instrumentation` resource to enable automatic trace injection for Java applications:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: opentelemetry.io/v1alpha1
@@ -202,7 +202,7 @@ EOF
 
 To instrument a deployment, add the following annotation to its pod template:
 
-[source,yaml]
+[source,yaml,role=execute]
 ----
 metadata:
   annotations:

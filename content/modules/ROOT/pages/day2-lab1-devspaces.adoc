@@ -94,7 +94,7 @@ events:
 
 Commit and push the devfile, then restart your workspace so Dev Spaces picks up the new configuration.
 
-[source,bash]
+[source,bash,role=execute]
 ----
 git add devfile.yaml
 git commit -m "feat: add devfile with Continue AI assistant"
@@ -107,7 +107,7 @@ See xref:day2-devspaces-devfiles.adoc[Devfiles & Base Images] for a full explana
 
 == Get the Dashboard URL
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get checluster/devspaces -n openshift-devspaces \
   -o jsonpath='{.status.cheURL}'
@@ -157,9 +157,10 @@ Once the workspace opens:
 . Confirm the repository is loaded and shows the correct branch
 . If prompted to authenticate with GitLab, follow the OAuth flow -- this is the integration configured in the xref:day2-devspaces-integrations.adoc[GitLab Integration] section
 
-You can also verify from a workspace terminal:
+Or, you can also verify from a workspace terminal, opening from the burger menu on the top right of the IDE,
+then selecting menu:Terminal[New Terminal]:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 pwd
 git remote -v
@@ -175,7 +176,7 @@ Test that you can push changes:
 
 Or use the terminal:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 git add README.md
 git commit -m "docs: verify Dev Spaces Git integration"
@@ -186,7 +187,7 @@ git push origin main
 
 Open a terminal in the workspace from menu:Terminal[New Terminal] and confirm the LLM environment variables are set:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 echo $LLM_API_KEY
 echo $LLM_BASE_URL
@@ -202,7 +203,7 @@ Check that the Continue extension is configured:
 
 If Continue does not appear, confirm that the extension is installed in the workspace and check that the `postStart` event ran successfully:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 cat ~/.continue/config.yaml
 ----
@@ -213,7 +214,7 @@ The file should contain the model configuration with your API key and base URL.
 
 Confirm Podman is available inside the workspace:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 podman version
 podman run --rm registry.access.redhat.com/ubi9-minimal:latest echo "Nested containers work"
@@ -231,7 +232,7 @@ Quarkus Dev Services uses Testcontainers under the hood, which calls Podman to s
 
 Open a terminal in the IDE and start Quarkus in dev mode:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 ./mvnw compile quarkus:dev
 ----
