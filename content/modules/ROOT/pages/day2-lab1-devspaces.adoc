@@ -42,14 +42,31 @@ Dev Spaces will create a workspace using the Universal Developer Image (UDI) sin
 
 Once the workspace opens, create a `devfile.yaml` file that will configure your development environment.
 
-Open a terminal from the main menu (hamburger icon in the top-left corner: menu:Terminal[New Terminal]) and create the devfile:
+Open a terminal from the main menu (hamburger icon in the top-left corner: menu:Terminal[New Terminal]) and create the devfile.
+
+First, get the GitLab URL:
+
+[source,bash,subs="attributes+"]
+----
+GITLAB_URL="{gitlab_url}"
+echo "Using GitLab URL: $GITLAB_URL"
+----
+
+Now create the devfile:
 
 [source,bash]
 ----
-cat > devfile.yaml <<'EOF'
+cat > devfile.yaml <<EOF
 schemaVersion: 2.2.0
 metadata:
   name: etx-app-base-app
+projects:
+  - name: etx-app-base-app
+    git:
+      remotes:
+        origin: "$GITLAB_URL/software-factory/etx_app_base_app.git"
+      checkoutFrom:
+        revision: feature/add-devfile
 components:
   - name: development-tooling
     container:
