@@ -181,11 +181,11 @@ Create a new workspace with your devfile:
 
 . Click btn:[Create Workspace]
 . Select *Import from Git*
-. Paste this URL (includes branch and devfile path):
+. Paste the repository URL with the branch reference:
 +
 [source,text,subs="attributes+"]
 ----
-{gitlab_url}/software-factory/etx_app_base_app/-/tree/feature/add-devfile?devfilePath=devfile.yaml
+{gitlab_url}/software-factory/etx_app_base_app.git#feature/add-devfile
 ----
 . Click btn:[Create & Open]
 
