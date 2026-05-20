@@ -9,7 +9,7 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 
 . Open {gitlab_url}[GitLab^] and authenticate with your SSO credentials.
 . Click your avatar in the upper-right corner.
-. Select menu:Edit profile[Applications] to open the User Settings applications page.
+. Select menu:Edit profile[Access > Applications] to open the User Settings applications page.
 +
 [source,text,subs="attributes+"]
 ----
@@ -33,12 +33,25 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 Create a Kubernetes secret that Dev Spaces will use to authenticate against GitLab.
 The labels and annotations are required -- Dev Spaces discovers the secret automatically based on them.
 
-[source,bash,subs="attributes"]
-----
-GITLAB_APPLICATION_ID="REPLACE_APPLICATION_ID"
-GITLAB_APPLICATION_SECRET="REPLACE_APPLICATION_SECRET"
+Export your GitLab application ID and secret:
 
-oc apply -f - <<EOF
+WARNING: Replace `GITLAB_APPLICATION_ID` and `GITLAB_APPLICATION_SECRET` before running the command.
+
+[source,bash,role=execute,subs="attributes"]
+----
+export GITLAB_URL="{gitlab_url}"
+export GITLAB_APPLICATION_ID="REPLACE_APPLICATION_ID"
+export GITLAB_APPLICATION_SECRET="REPLACE_APPLICATION_SECRET"
+----
+
+Create the secret:
+
+WARNING: Remove the character ' around the EOF keyword. They were added just for 
+rendering purposes of this documentation. Otherwise, the variables will not be substituted.
+
+[source,bash,role=execute,subs="attributes"]
+----
+oc apply -f - <<'EOF'
 apiVersion: v1
 kind: Secret
 metadata:
@@ -49,21 +62,19 @@ metadata:
     app.kubernetes.io/component: oauth-scm-configuration
   annotations:
     che.eclipse.org/oauth-scm-server: gitlab
-    che.eclipse.org/scm-server-endpoint: {gitlab_url}
+    che.eclipse.org/scm-server-endpoint: $GITLAB_URL
 type: Opaque
 stringData:
-  id: "$GITLAB_APPLICATION_ID"
-  secret: "$GITLAB_APPLICATION_SECRET"
+  id: $GITLAB_APPLICATION_ID
+  secret: $GITLAB_APPLICATION_SECRET
 EOF
 ----
-
-WARNING: Replace `GITLAB_APPLICATION_ID` and `GITLAB_APPLICATION_SECRET` before running the command.
 
 === Register GitLab in the CheCluster
 
 Add the `gitServices` section to your CheCluster CR:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc patch checluster/devspaces -n openshift-devspaces \
   --type='merge' \
@@ -112,11 +123,19 @@ If you already have an API key, you can use it by following these steps:
 
 Then create the secret:
 
-[source,bash,subs="attributes"]
-----
-LLM_API_KEY="REPLACE_API_KEY"
+WARNING: Replace `LLM_API_KEY` before running the command.
 
-oc apply -f - <<EOF
+[source,bash,role=execute,subs="attributes"]
+----
+export LLM_API_KEY="REPLACE_API_KEY"
+----
+
+WARNING: Remove the character ' around the EOF keyword. They were added just for 
+rendering purposes of this documentation. Otherwise, the variables will not be substituted.
+
+[source,bash,role=execute,subs="attributes"]
+----
+oc apply -f - <<'EOF'
 apiVersion: v1
 kind: Secret
 metadata:
@@ -133,8 +152,6 @@ stringData:
   LLM_BASE_URL: https://litellm-prod.apps.maas.redhatworkshops.io
 EOF
 ----
-
-WARNING: Replace `LLM_API_KEY` before running the command.
 
 Every new workspace will now have `LLM_API_KEY` and `LLM_BASE_URL` available as environment variables.
 The devfile's `postStart` command can use these to configure the Continue extension automatically (see xref:day2-devspaces-devfiles.adoc[Devfiles]).
