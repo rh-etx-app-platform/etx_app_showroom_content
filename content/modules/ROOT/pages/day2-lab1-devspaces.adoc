@@ -42,7 +42,7 @@ Dev Spaces will create a workspace using the Universal Developer Image (UDI) sin
 
 Once the workspace opens, create a `devfile.yaml` file that will configure your development environment.
 
-Open a terminal (menu:Terminal[New Terminal]) and create the devfile:
+Open a terminal from the main menu (hamburger icon in the top-left corner: menu:Terminal[New Terminal]) and create the devfile:
 
 [source,bash]
 ----
