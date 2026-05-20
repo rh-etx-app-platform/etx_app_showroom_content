@@ -55,6 +55,13 @@ spec:
 <4> Required for nested containers (Podman-in-workspace). Must be `false`.
 <5> `per-workspace` gives each workspace its own PVC. This supports multiple workspaces per user without conflicts and provides clean isolation. Alternative: `per-user` shares a single PVC across all workspaces.
 
+Create the namespace for Dev Spaces:
+
+[source,bash]
+----
+oc create namespace openshift-devspaces
+----
+
 Apply the CheCluster configuration:
 
 [source,bash]
