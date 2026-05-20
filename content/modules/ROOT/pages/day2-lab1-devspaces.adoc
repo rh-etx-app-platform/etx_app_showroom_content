@@ -62,11 +62,11 @@ NOTE: We use a feature branch because `main` is protected and requires pull requ
 
 Now create a `devfile.yaml` file that will configure your development environment.
 
-First, get the GitLab URL:
+First, get the GitLab URL from the cluster:
 
-[source,bash,subs="attributes+"]
+[source,bash]
 ----
-GITLAB_URL="{gitlab_url}"
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
 echo "Using GitLab URL: $GITLAB_URL"
 ----
 
@@ -185,6 +185,12 @@ git commit -m "feat: add devfile for Dev Spaces configuration"
 
 # Push to GitLab
 git push origin feature/add-devfile
+
+# Print the URL to use for workspace creation
+echo ""
+echo "Use this URL to create your workspace in Step 5:"
+echo "$GITLAB_URL/software-factory/etx_app_base_app.git#feature/add-devfile"
+echo ""
 ----
 
 When you run `git push`, Dev Spaces will prompt you to authorize with GitLab:
@@ -193,6 +199,8 @@ When you run `git push`, Dev Spaces will prompt you to authorize with GitLab:
 . Click *Proceed* to open GitLab authorization
 . Grant Dev Spaces access to your repositories
 . Return to the IDE - the push will complete automatically
+
+IMPORTANT: Copy the URL printed at the end of the commands above. You will need it in Step 5.
 
 == Step 5: Create Workspace from Devfile
 
@@ -207,11 +215,13 @@ Create a new workspace with your devfile:
 
 . Click btn:[Create Workspace]
 . Select *Import from Git*
-. Paste the repository URL with the branch reference:
+. Paste the repository URL that was printed at the end of Step 4
 +
-[source,text,subs="attributes+"]
+It should look like:
++
+[source,text]
 ----
-{gitlab_url}/software-factory/etx_app_base_app.git#feature/add-devfile
+https://gitlab.apps.cluster-xxxxx.dynamic2.redhatworkshops.io/software-factory/etx_app_base_app.git#feature/add-devfile
 ----
 . Click btn:[Create & Open]
 
