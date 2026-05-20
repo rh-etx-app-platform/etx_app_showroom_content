@@ -1,0 +1,25 @@
+= Lab Scenario
+:navtitle: Lab Scenario
+
+== Situation
+
+The **Coolstore** application is a business-critical retail application currently running on **JBoss EAP 7 as a containerized workload on OpenShift**. 
+
+The application is built using legacy **javax APIs** and packaged for deployment in a container, allowing it to run reliably in a Kubernetes-based platform—but on an aging Java EE stack.
+
+To stay aligned with modern enterprise standards and supported runtimes, the organization needs to **migrate Coolstore to JBoss EAP 8**, also containerized and deployed on OpenShift. This migration requires transforming the application from **javax to jakarta**, while ensuring compatibility, stability, and operational consistency within the OpenShift environment.
+
+In this hands-on, lab-oriented training, learners use **Red Hat Migration Toolkit for Applications (MTA) with Developer Lightspeed** to analyze the Coolstore codebase running on EAP 7 containers, identify migration issues, and receive AI-assisted recommendations for modernization.
+
+Learners then apply these insights to refactor the legacy code, rebuild the container image, and **deploy the migrated jakarta-based Coolstore application on JBoss EAP 8 running on OpenShift**. The labs closely mirror real-world enterprise modernization efforts, combining application migration with container and platform-aware validation.
+
+== Training Scenario and Approach
+
+* You are responsible for modernizing the **Coolstore** retail application, a production-like enterprise Java workload running as a containerized **JBoss EAP 7** application on OpenShift. While the application is stable, it relies on legacy **javax** APIs, which makes it incompatible with newer **Jakarta EE-based** runtimes.
+
+* In this training, you use **Red Hat Developer Lightspeed for Migration Toolkit for Applications (MTA)** to guide and accelerate the modernization process. Your goal is to migrate Coolstore to **JBoss EAP 8**, running in containers on OpenShift, by following a controlled, tool-assisted, and repeatable approach—mirroring how application modernization is performed in real-world enterprise environments.
+
+[NOTE]
+====
+https://docs.redhat.com/en/documentation/red_hat_jboss_enterprise_application_platform/8.0/html-single/migration_guide/index#review-the-jakarta-ee-10-features_preparing-for-migration-to-jboss-eap-8[Java EE 7 to Jakarta EE 10 Migration Guide]
+====

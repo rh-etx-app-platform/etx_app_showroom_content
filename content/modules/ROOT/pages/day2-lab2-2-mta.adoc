@@ -10,7 +10,7 @@ The modernized application will then be integrated into the CI pipeline built in
 
 === Install via OperatorHub
 
-. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. In the OpenShift Web Console, go to menu:Echosystem[Software Catalog]
 . Search for *Migration Toolkit for Applications*
 . Click btn:[Install]
 . Accept the defaults and click btn:[Install]
@@ -37,14 +37,14 @@ kind: Tackle
 metadata:
   name: mta
   namespace: openshift-mta
-spec: {}
+spec:
+  feature_auth_required: 'false'
 ----
 
 Apply it:
 
 [source,bash]
 ----
-oc create namespace openshift-mta
 oc apply -f mta-tackle.yaml
 ----
 

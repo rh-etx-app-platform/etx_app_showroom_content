@@ -1,0 +1,70 @@
+= Lab 2: Migrating legacy code using MTA and Developer Lightspeed
+:navtitle: Migrate Coolstore Application
+
+With the legacy application running, you move on to analysis.
+In this section, you use **Red Hat Migration Toolkit for Applications (MTA)** enhanced with Developer Lightspeed to scan the Coolstore codebase.
+
+You identify migration issues, incompatible APIs, and required changes for moving from **javax to jakarta**. Developer Lightspeed provides **AI-assisted recommendations**, helping you focus on the most relevant migration tasks and understand why changes are needed—not just what to change.
+
+
+== Instructions
+
+* _Configure an MTA Analysis Profile_
+
+1. In Visual Studio Code, open the **MTA extension** and select **Open Analysis View**.
++
+image::mta1.png[align="center"]
+
+2. In the Analysis View, observe that no active profile is currently configured. Select **Manage Profiles** to begin profile configuration.
++
+image::mta2.png[align="center"]
+
+3. Select **+ New Profile** to create a new analysis profile.
++
+image::mta3.png[align="center"]
+
+4. Enter **Coolstore** as the profile name and set **Target Technologies** to **jakarta-ee**. Use the reference screenshot to ensure the settings are configured correctly.
++
+image::mta4.png[align="center"]
+
+5. Return to the **MTA Analysis View**, confirm that **Agent Mode** is enabled, and select **Start** to activate the newly created profile.
++
+image::mta5.png[align="center"]
+
+6. Select **Run Analysis** to begin the application analysis. MTA, in combination with Developer Lightspeed and the configured GenAI model, analyzes the entire source codebase. Wait until the analysis reaches **100% completion**.
++
+image::mta7.png[align="center"]
+
+7. Review the analysis results, which highlight reported issues and provide guided recommendations for migrating the application from the javax namespace to the Jakarta EE platform.
++
+image::mta8.png[align="center"]
++
+[NOTE]
+====
+Analysis results may vary depending on the Generative AI (GenAI) model service configured in your environment.
+====
+
+8. Select the first reported issue and follow the accompanying Arcade video, which demonstrates how Developer Lightspeed proposes code changes directly within the source files. As the suggestions are presented, you may choose to accept or reject each change. Based on your selections, Developer Lightspeed iteratively refines its recommendations and may propose additional updates as required.
++
+++++
+<!--ARCADE EMBED START--><div style="position: relative; padding-bottom: calc(56.25% + 41px); height: 0px; width: 100%;"><iframe src="https://demo.arcade.software/t3XzB4yORwqLdF8wDzpZ?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true" title="MTA with Developer Lightspeed" frameborder="0" loading="lazy" webkitallowfullscreen mozallowfullscreen allowfullscreen allow="clipboard-write" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; color-scheme: light;" ></iframe></div><!--ARCADE EMBED END-->
+++++
++
+[NOTE]
+====
+Applying a recommended change can introduce additional impacts in other parts of the codebase. By using the **Agent Mode** option, Developer Lightspeed is able to identify and suggest these follow-on changes. Without **Agent Mode** enabled, such dependent updates may not be detected or reflected.
+====
+
+8. Observe how the total number of reported issues decreases as the first issue is resolved, and note how the analysis results are updated accordingly to reflect the applied changes.
++
+image::mta9.png[align="center"]
+
+9. For the purpose of this lab, a separate repository has been created that contains the fully migrated code as suggested by Developer Lightspeed. You may refer to the following migrated repository for comparison and verification, or to correct your implementation if required.
++
+[source,subs="verbatim,quotes",bash]
+----
+https://github.com/opentraining-labs-customizations/getting-started-migrated.git
+
+----
++
+In the next section, you will use this migrated repository to deploy the updated application.
