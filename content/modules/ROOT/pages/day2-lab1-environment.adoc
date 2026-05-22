@@ -128,10 +128,21 @@ Once logged into GitLab, clone the ETX App Base application.
 
 TIP: Use the **OpenShift Web Terminal** for these commands. Access it by clicking the command prompt icon (>_) in the top-right corner of the OpenShift Console.
 
-[source,bash,subs="+attributes"]
+First, get the GitLab URL dynamically:
+
+[source,bash]
+----
+# Get GitLab URL
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "GitLab URL: $GITLAB_URL"
+----
+
+Then clone the repository:
+
+[source,bash]
 ----
 cd ~
-git clone {gitlab_url}/software-factory/etx_app_base_app.git
+git clone ${GITLAB_URL}/software-factory/etx_app_base_app.git
 cd etx_app_base_app
 ----
 
