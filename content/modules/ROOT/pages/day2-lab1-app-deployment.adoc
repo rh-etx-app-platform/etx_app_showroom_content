@@ -39,6 +39,11 @@ CLIENT_SECRET="abJIhC36Q7DPscCUNNu27QKSdF9euOpIr16e7VvM"
 oc create secret generic argocd-oidc-secret -n etx-app-dev \
   --from-literal=clientSecret=${CLIENT_SECRET}
 
+# Add labels to help ArgoCD operator recognize the secret
+oc label secret argocd-oidc-secret -n etx-app-dev \
+  app.kubernetes.io/name=argocd-oidc-secret \
+  app.kubernetes.io/part-of=argocd
+
 echo "Keycloak issuer: ${KEYCLOAK_URL}/realms/etx-lab"
 ----
 
@@ -46,11 +51,24 @@ IMPORTANT: The ArgoCD OIDC client is shared across all ArgoCD instances in the E
 
 == Deploy Your Argo CD Instance
 
-Create an Argo CD instance in your namespace for managing application deployments:
+Create an Argo CD instance in your namespace for managing application deployments.
 
-[source,bash,role=execute]
+First, get the cluster domain dynamically:
+
+[source,bash]
 ----
-oc apply -f - <<'EOF'
+# Get cluster domain from existing Keycloak route
+CLUSTER_DOMAIN="$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
+echo "Cluster domain: ${CLUSTER_DOMAIN}"
+----
+
+Then create the ArgoCD instance with OIDC configuration:
+
+[source,bash,role=execute,subs="attributes+"]
+----
+CLUSTER_DOMAIN="$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
+
+cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1beta1
 kind: ArgoCD
 metadata:
@@ -99,6 +117,18 @@ spec:
       g, platform-admin, role:admin
       g, platform-developer, role:admin
     scopes: '[groups, preferred_username]'
+  extraConfig:
+    oidc.config: |
+      name: ETX Keycloak
+      issuer: https://etx-sso.apps.${CLUSTER_DOMAIN}/realms/etx-lab
+      clientID: argocd
+      clientSecret: \$argocd-oidc-secret:clientSecret
+      requestedScopes:
+        - openid
+      requestedIDTokenClaims:
+        groups:
+          essential: true
+      logoutURL: https://etx-sso.apps.${CLUSTER_DOMAIN}/realms/etx-lab/protocol/openid-connect/logout
   repo:
     resources:
       limits:
@@ -145,6 +175,8 @@ argocd.argoproj.io/argocd created
 
 IMPORTANT: The `server.insecure: true` setting configures Argo CD to serve HTTP traffic internally while the OpenShift route handles TLS termination. This is required to prevent redirect loops (`ERR_TOO_MANY_REDIRECTS`) when using edge TLS termination.
 
+NOTE: The ArgoCD CR includes `extraConfig` with OIDC configuration for ETX Keycloak integration. This provides centralized authentication using the same credentials as GitLab, Quay, and Vault. The argocd-oidc-secret created earlier is referenced automatically.
+
 Wait for Argo CD to be ready (this may take 3-5 minutes):
 
 [source,bash,role=execute]
@@ -154,45 +186,25 @@ oc get pods -n etx-app-dev -w
 
 Press Ctrl+C when you see all `argocd-*` pods showing `1/1 Ready`.
 
-== Configure OIDC Authentication
+== Verify Route Creation
 
-Update the ArgoCD ConfigMap to enable Keycloak OIDC authentication using the same configuration as etx-gitops:
-
-[source,bash]
-----
-# Get required URLs
-KEYCLOAK_URL="https://etx-sso.apps.$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
-ARGOCD_URL="https://$(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}')"
-
-# Update ArgoCD ConfigMap with ETX Keycloak OIDC configuration
-oc patch configmap argocd-cm -n etx-app-dev --type=merge -p "{\"data\":{
-  \"url\": \"${ARGOCD_URL}\",
-  \"oidc.config\": \"name: ETX Keycloak\\nissuer: ${KEYCLOAK_URL}/realms/etx-lab\\nclientID: argocd\\nclientSecret: \\\$argocd-oidc-secret:clientSecret\\nrequestedScopes:\\n  - openid\\nrequestedIDTokenClaims:\\n  groups:\\n    essential: true\\nlogoutURL: ${KEYCLOAK_URL}/realms/etx-lab/protocol/openid-connect/logout\"
-}}"
-
-# Update RBAC policy to match etx-gitops configuration
-oc patch configmap argocd-rbac-cm -n etx-app-dev --type=merge -p '{
-  "data":{
-    "policy.csv": "g, platform-admin, role:admin\ng, platform-developer, role:admin\ng, argocd-admins, role:admin",
-    "policy.default": "role:readonly",
-    "scopes": "[groups, preferred_username]"
-  }
-}'
-
-# Restart ArgoCD server to apply changes
-oc delete pod -n etx-app-dev -l app.kubernetes.io/name=argocd-server
-
-echo "Configuration updated to match etx-gitops integration with ETX Keycloak"
-----
-
-Wait for the new argocd-server pod to be ready:
+The ArgoCD operator should automatically create a route. Verify it exists:
 
 [source,bash]
 ----
-oc get pods -n etx-app-dev -l app.kubernetes.io/name=argocd-server -w
+oc get route argocd-server -n etx-app-dev
 ----
 
-Press Ctrl+C when you see `1/1 Running`.
+If the route doesn't exist, create it manually:
+
+[source,bash]
+----
+oc create route edge argocd-server \
+  --service=argocd-server \
+  --port=http \
+  --insecure-policy=Redirect \
+  -n etx-app-dev
+----
 
 == Access the Argo CD Dashboard
 
@@ -208,11 +220,13 @@ You can log into Argo CD using either the admin account or Keycloak SSO.
 === Option 1: ETX Keycloak SSO (Recommended)
 
 . Open the Argo CD URL in your browser
-. Click *LOG IN VIA ETX KEYCLOAK*
-. You'll be redirected to ETX Keycloak
+. You'll be automatically redirected to ETX Keycloak login page
 . Log in with your ETX credentials:
   * `platform-admin` / `openshift` (admin access)
   * `platform-developer` / `openshift` (admin access)
+. After successful authentication, you'll be redirected back to the Argo CD dashboard
+
+NOTE: The OIDC integration provides automatic redirect to Keycloak for a streamlined login experience. No need to click a separate login button.
 
 === Option 2: Admin Account
 
