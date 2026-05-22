@@ -144,7 +144,7 @@ Get the Argo CD route:
 
 [source,bash,role=execute]
 ----
-oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}'
+oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}{"\n"}'
 ----
 
 Get the default admin password:
@@ -360,7 +360,7 @@ Check that Argo CD has synced the application:
 ----
 # Argo CD application status
 oc get application etx-app-dev -n etx-app-dev \
-  -o jsonpath='{.status.sync.status}'
+  -o jsonpath='{.status.sync.status}{"\n"}'
 ----
 
 The output should be `Synced`.
@@ -370,7 +370,7 @@ Verify the application is running:
 [source,bash,role=execute]
 ----
 oc get pods -n etx-app-dev -l app=etx-app-base-app
-oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}'
+oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}{"\n"}'
 ----
 
 Open the route URL in your browser to confirm the application is accessible.
@@ -382,7 +382,7 @@ Check that the Java agent was injected into the application pod:
 [source,bash,role=execute]
 ----
 oc get pod -n etx-app-dev -l app=etx-app-base-app \
-  -o jsonpath='{.items[0].spec.initContainers[*].name}'
+  -o jsonpath='{.items[0].spec.initContainers[*].name}{"\n"}'
 ----
 
 You should see an `opentelemetry-auto-instrumentation` init container.
@@ -715,7 +715,7 @@ Check the stage application status:
 [source,bash,role=execute]
 ----
 oc get application etx-app-stage -n etx-app-dev \
-  -o jsonpath='{.status.sync.status}'
+  -o jsonpath='{.status.sync.status}{"\n"}'
 ----
 
 The output should be `Synced`.
@@ -753,7 +753,7 @@ Verify the complete deployment:
 [source,bash]
 ----
 # Check Argo CD application status
-oc get application etx-app-dev -n etx-app-dev -o jsonpath='{.status.sync.status}: {.status.health.status}'
+oc get application etx-app-dev -n etx-app-dev -o jsonpath='{.status.sync.status}: {.status.health.status}{"\n"}'
 
 # Check application pods
 oc get pods -n etx-app-dev -l app=etx-app-base-app
@@ -763,7 +763,7 @@ curl http://$(oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.h
 
 # Check OpenTelemetry injection
 oc get pod -n etx-app-dev -l app=etx-app-base-app \
-  -o jsonpath='{.items[0].spec.initContainers[*].name}'
+  -o jsonpath='{.items[0].spec.initContainers[*].name}{"\n"}'
 ----
 
 Expected output should show: `Synced: Healthy` for Argo CD, `Running` pods, and `opentelemetry-auto-instrumentation` init container.

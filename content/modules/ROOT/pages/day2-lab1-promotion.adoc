@@ -410,7 +410,7 @@ Check the Argo CD application status:
 
 [source,bash,role=execute]
 ----
-oc get application etx-app-stage -n etx-app-dev -o jsonpath='{.status.sync.status}'
+oc get application etx-app-stage -n etx-app-dev -o jsonpath='{.status.sync.status}{"\n"}'
 ----
 
 The output should be `Synced`.

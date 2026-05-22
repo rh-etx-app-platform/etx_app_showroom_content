@@ -380,7 +380,7 @@ The GitLab URL is incorrect. Verify:
 
 [source,bash]
 ----
-oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}'
+oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}{"\n"}'
 ----
 
 Recreate the PipelineRun with the correct GitLab URL.
