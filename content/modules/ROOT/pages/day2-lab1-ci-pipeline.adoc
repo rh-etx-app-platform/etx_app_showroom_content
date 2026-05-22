@@ -475,21 +475,32 @@ EOF
 
 === Expose the EventListener
 
-Create a route so GitLab can reach the EventListener:
+Create a route with TLS so GitLab can reach the EventListener securely:
 
 [source,bash,role=execute]
 ----
-oc expose svc el-gitlab-listener -n etx-app-dev
+oc create route edge el-gitlab-listener \
+  --service=el-gitlab-listener \
+  --port=http-listener \
+  -n etx-app-dev
 ----
+
+NOTE: GitLab requires HTTPS for webhooks, so we create a route with edge TLS termination. If the route already exists, delete it first with `oc delete route el-gitlab-listener -n etx-app-dev` and recreate with TLS.
 
 Get the webhook URL:
 
 [source,bash,role=execute]
 ----
-echo "http://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
+echo "https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
 
 Copy this URL for the next step.
+
+Expected format:
+[source,text]
+----
+https://el-gitlab-listener-etx-app-dev.apps.cluster-xxxxx.dynamic.redhatworkshops.io
+----
 
 === Configure GitLab Webhook
 
@@ -512,11 +523,13 @@ echo "GitLab URL: $GITLAB_URL"
 . Navigate to *Projects* → *software-factory* → *etx_app_base_app*
 . Go to menu:Settings[Webhooks]
 . Add a new webhook:
-  * *URL*: Paste the EventListener route URL from above
+  * *URL*: Paste the EventListener route URL from above (starts with `https://`)
   * *Trigger*: Check *Push events*
-  * *SSL verification*: Leave unchecked (HTTP endpoint)
+  * *SSL verification*: Enable SSL verification (recommended) or leave unchecked if using self-signed certificates
 . Click btn:[Add webhook]
 . Click btn:[Test] → *Push events* to send a test payload
+
+TIP: If you get "SSL certificate problem" error, uncheck "Enable SSL verification". This is safe in lab environments with self-signed certificates.
 
 ==== Option 2: Request Maintainer Access
 
