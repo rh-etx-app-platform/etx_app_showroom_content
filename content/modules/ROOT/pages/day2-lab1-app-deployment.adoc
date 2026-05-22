@@ -41,6 +41,7 @@ spec:
         enabled: false
     ingress:
       enabled: false
+    insecure: true
     resources:
       limits:
         cpu: 500m
@@ -129,6 +130,8 @@ Expected output:
 argocd.argoproj.io/argocd created
 ----
 
+IMPORTANT: The `server.insecure: true` setting configures Argo CD to serve HTTP traffic internally while the OpenShift route handles TLS termination. This is required to prevent redirect loops (`ERR_TOO_MANY_REDIRECTS`) when using edge TLS termination.
+
 Wait for Argo CD to be ready (this may take 3-5 minutes):
 
 [source,bash,role=execute]
@@ -140,11 +143,11 @@ Press Ctrl+C when you see all `argocd-*` pods showing `1/1 Ready`.
 
 == Access the Argo CD Dashboard
 
-Get the Argo CD route:
+Get the Argo CD dashboard URL:
 
 [source,bash,role=execute]
 ----
-oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}{"\n"}'
+echo "https://$(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
 
 Get the default admin password:
@@ -160,6 +163,28 @@ Open the Argo CD URL in your browser and log in with:
 * Password: (from above command)
 
 Alternatively, use OpenShift OAuth by clicking *LOG IN VIA OPENSHIFT*.
+
+=== Troubleshooting: ERR_TOO_MANY_REDIRECTS
+
+If you get `ERR_TOO_MANY_REDIRECTS` when accessing the Argo CD dashboard:
+
+**Cause:** The Argo CD server is not configured for insecure mode behind a TLS-terminating proxy.
+
+**Solution:** Update the ArgoCD CR to add `server.insecure: true`:
+
+[source,bash]
+----
+oc patch argocd argocd -n etx-app-dev --type=merge -p '{"spec":{"server":{"insecure":true}}}'
+----
+
+Wait for the argocd-server pod to restart:
+
+[source,bash]
+----
+oc get pods -n etx-app-dev -l app.kubernetes.io/name=argocd-server -w
+----
+
+Then try accessing the dashboard again.
 
 == Prepare the GitOps Repository
 
