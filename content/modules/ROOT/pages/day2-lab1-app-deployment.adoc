@@ -170,21 +170,43 @@ If you get `ERR_TOO_MANY_REDIRECTS` when accessing the Argo CD dashboard:
 
 **Cause:** The Argo CD server is not configured for insecure mode behind a TLS-terminating proxy.
 
-**Solution:** Update the ArgoCD CR to add `server.insecure: true`:
+**Solution:**
 
+1. Update the ArgoCD CR to add `server.insecure: true`:
++
 [source,bash]
 ----
 oc patch argocd argocd -n etx-app-dev --type=merge -p '{"spec":{"server":{"insecure":true}}}'
 ----
 
-Wait for the argocd-server pod to restart:
-
+2. Wait for the argocd-server pod to restart (this happens automatically):
++
 [source,bash]
 ----
 oc get pods -n etx-app-dev -l app.kubernetes.io/name=argocd-server -w
 ----
++
+Press Ctrl+C when you see the new pod showing `1/1 Running`.
 
-Then try accessing the dashboard again.
+3. Verify the configuration was applied:
++
+[source,bash]
+----
+oc get argocd argocd -n etx-app-dev -o jsonpath='{.spec.server.insecure}{"\n"}'
+----
++
+Should output: `true`
+
+4. Clear your browser cache or use incognito/private mode to avoid cached redirects
+
+5. Try accessing the dashboard again:
++
+[source,bash]
+----
+echo "https://$(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}')"
+----
+
+TIP: If you still see the error after following these steps, try a different browser or clear all site data for the ArgoCD URL. The browser may have cached the redirect loop.
 
 == Prepare the GitOps Repository
 
