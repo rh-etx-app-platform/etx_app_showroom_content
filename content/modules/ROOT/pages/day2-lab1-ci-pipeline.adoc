@@ -513,27 +513,74 @@ IMPORTANT: Configuring webhooks in GitLab requires **Maintainer** or **Owner** r
 GitLab blocks webhooks to local/internal networks by default for security (SSRF protection). Since the EventListener runs in the same cluster as GitLab, you **must** enable this feature or webhook creation will fail with "Invalid url given" error.
 ====
 
-. Log into GitLab as administrator:
+. Get the GitLab Admin URLs:
 +
 [source,bash]
 ----
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
-echo "GitLab Admin URL: $GITLAB_URL/admin"
+echo "GitLab URL: $GITLAB_URL"
+echo "Admin Area: $GITLAB_URL/admin"
+echo "Network Settings (Direct): $GITLAB_URL/admin/application_settings/network"
 ----
-+
+
+. Log into GitLab as administrator:
+  * Open the GitLab URL in your browser
   * *Username:* `platform-admin`
   * *Password:* `openshift`
-  * Click *ETX Lab SSO* button
+  * Click *ETX Lab SSO* button to authenticate via Keycloak
 
-. Navigate to menu:Admin Area[Settings > Network]
-. Expand *Outbound requests* section
-. Check ☑️ *Allow requests to the local network from webhooks and integrations*
-. Optionally check ☑️ *Allow requests to the local network from system hooks*
-. Click btn:[Save changes]
+. Access the Admin Area:
++
+--
+**Option A - Direct URL (Recommended):**
+
+Open the admin URL directly (from the command above):
+[source,text]
+----
+https://<gitlab-url>/admin/application_settings/network
+----
+
+This takes you directly to the Network settings page.
+
+**Option B - UI Navigation:**
+
+* After logging in, look for the **wrench icon** 🔧 in the top navigation bar (usually far right)
+* OR click your **avatar/profile picture** (top right) → select **Admin Area**
+* If you don't see these options, verify you're logged in as `platform-admin`
+
+Then navigate:
+
+* In the left sidebar, find **Settings** section
+* Click **Settings** → **Network**
+--
+
+. Expand the *Outbound requests* section
+
+. Enable local network webhooks:
+  * Check ☑️ *Allow requests to the local network from webhooks and integrations*
+  * Optionally check ☑️ *Allow requests to the local network from system hooks*
+
+. Click btn:[Save changes] at the bottom
 
 [TIP]
 ====
-You can verify this setting is enabled by looking for a green checkmark next to "Allow requests to the local network" in the Network settings page.
+**Finding the Admin Area:**
+
+The Admin Area is only accessible to users with administrator privileges. When logged in as `platform-admin`, you should see:
+
+* A wrench icon (🔧) in the top navigation bar
+* "Admin Area" option when clicking your avatar
+
+If you don't see these, verify:
+
+* You're logged in as `platform-admin` (not `platform-developer`)
+* You clicked "ETX Lab SSO" during login
+* Your user has admin role in GitLab
+
+**Direct URL:** You can always access admin settings directly at:
+`https://<gitlab-url>/admin/application_settings/network`
+
+**Verification:** After saving, you should see a green checkmark or success message indicating "Allow requests to the local network from webhooks and integrations" is enabled.
 ====
 
 WARNING: This setting is cluster-wide and affects all GitLab projects. In production environments, consider using external webhooks, GitLab Runner with allowedHosts, or more restrictive network policies.
