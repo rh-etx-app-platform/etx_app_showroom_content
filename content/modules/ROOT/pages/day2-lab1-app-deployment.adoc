@@ -24,8 +24,9 @@ You should see `openshift-gitops-operator` with phase `Succeeded`.
 
 Create an Argo CD instance in your namespace for managing application deployments:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+oc apply -f - <<'EOF'
 apiVersion: argoproj.io/v1beta1
 kind: ArgoCD
 metadata:
@@ -118,13 +119,14 @@ spec:
       requests:
         cpu: 250m
         memory: 128Mi
+EOF
 ----
 
-Apply the ArgoCD CR:
+Expected output:
 
-[source,bash,role=execute]
+[source,text]
 ----
-oc apply -f argocd.yaml
+argocd.argoproj.io/argocd created
 ----
 
 Wait for Argo CD to be ready (this may take 3-5 minutes):
@@ -399,8 +401,9 @@ You should see trace data in the logs.
 The CI pipeline needs to update the image tag in the GitOps repository after a successful build.
 Add a final task to the pipeline that commits the new image tag:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -438,13 +441,7 @@ spec:
         git add .
         git commit -m "Update etx-app-base-app image to $(params.image-tag)"
         git push
-----
-
-Apply the task:
-
-[source,bash,role=execute]
-----
-oc apply -f update-gitops-task.yaml
+EOF
 ----
 
 Update the pipeline to include this task at the end.
