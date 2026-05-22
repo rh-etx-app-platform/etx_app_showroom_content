@@ -506,49 +506,122 @@ https://el-gitlab-listener-etx-app-dev.apps.cluster-xxxxx.dynamic.redhatworkshop
 
 IMPORTANT: Configuring webhooks in GitLab requires **Maintainer** or **Owner** role on the project. The `platform-developer` user does not have sufficient permissions. Use the `platform-admin` account or ask your instructor to grant you Maintainer access.
 
-==== Option 1: Use platform-admin Account (Recommended for Lab)
+==== Step 1: Enable Webhooks to Local Network (REQUIRED)
 
-. Get the GitLab URL and open it:
+[IMPORTANT]
+====
+GitLab blocks webhooks to local/internal networks by default for security (SSRF protection). Since the EventListener runs in the same cluster as GitLab, you **must** enable this feature or webhook creation will fail with "Invalid url given" error.
+====
+
+. Log into GitLab as administrator:
 +
 [source,bash]
 ----
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
-echo "GitLab URL: $GITLAB_URL"
+echo "GitLab Admin URL: $GITLAB_URL/admin"
 ----
 +
-. Log into GitLab with:
   * *Username:* `platform-admin`
   * *Password:* `openshift`
   * Click *ETX Lab SSO* button
-. Navigate to *Projects* → *software-factory* → *etx_app_base_app*
+
+. Navigate to menu:Admin Area[Settings > Network]
+. Expand *Outbound requests* section
+. Check ☑️ *Allow requests to the local network from webhooks and integrations*
+. Optionally check ☑️ *Allow requests to the local network from system hooks*
+. Click btn:[Save changes]
+
+[TIP]
+====
+You can verify this setting is enabled by looking for a green checkmark next to "Allow requests to the local network" in the Network settings page.
+====
+
+WARNING: This setting is cluster-wide and affects all GitLab projects. In production environments, consider using external webhooks, GitLab Runner with allowedHosts, or more restrictive network policies.
+
+==== Step 2: Add the Webhook to Your Repository
+
+You need Maintainer or Owner role to configure webhooks. Use `platform-admin` account or request access.
+
+. Navigate to your project:
+  * *Projects* → *software-factory* → *etx_app_base_app*
+
 . Go to menu:Settings[Webhooks]
-. Add a new webhook:
-  * *URL*: Paste the EventListener route URL from above (starts with `https://`)
-  * *Trigger*: Check *Push events*
-  * *SSL verification*: Enable SSL verification (recommended) or leave unchecked if using self-signed certificates
+
+. Click btn:[Add new webhook]
+
+. Configure the webhook:
+  * *URL*: Paste the EventListener route URL:
++
+[source,bash]
+----
+echo "https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
+----
++
+  * *Trigger*: Check ☑️ *Push events*
+  * *SSL verification*: Uncheck for lab environments with self-signed certificates
+
 . Click btn:[Add webhook]
-. Click btn:[Test] → *Push events* to send a test payload
 
-TIP: If you get "SSL certificate problem" error, uncheck "Enable SSL verification". This is safe in lab environments with self-signed certificates.
+. Test the webhook:
+  * Scroll down to *Project Hooks*
+  * Find your webhook in the list
+  * Click btn:[Test] → *Push events*
+  * You should see "Hook executed successfully: HTTP 200" or similar
 
-==== Option 2: Request Maintainer Access
+TIP: If you get "SSL certificate problem" error during testing, make sure "Enable SSL verification" is unchecked in the webhook configuration.
 
-If you want to use your `platform-developer` account, ask your instructor to grant you Maintainer role:
+[NOTE]
+====
+**Using platform-developer Account:**
 
-. In GitLab (as admin), navigate to the project
+If you want to use your `platform-developer` account instead of `platform-admin`, ask your instructor to grant you Maintainer role:
+
+. In GitLab (as admin), navigate to *software-factory/etx_app_base_app*
 . Go to menu:Settings[Members]
-. Find your user and change role to *Maintainer*
-. Refresh the project page - you should now see Settings → Webhooks
+. Find the user and change role to *Maintainer*
+. The user can now access Settings → Webhooks
+====
 
-==== Verify Webhook Configuration
+==== Troubleshooting Webhook Issues
 
-After adding the webhook, verify it was created:
+**Error: "Invalid url given"**
 
-. In GitLab, go to menu:Settings[Webhooks]
-. You should see your webhook listed with the EventListener URL
-. Under *Recent events*, you should see a test event with HTTP 200 status
+This error occurs when GitLab blocks webhooks to local/internal networks. Solutions:
 
-TIP: If the test event shows an error, check that the EventListener pod is running: `oc get pods -n etx-app-dev | grep el-gitlab-listener`
+1. **Enable local network webhooks** (required):
+   - Go to menu:Admin Area[Settings > Network > Outbound requests]
+   - Check "Allow requests to the local network from webhooks and integrations"
+   - Save changes and try again
+
+2. **Verify the URL format**:
+   - Must start with `https://` (not `http://`)
+   - Run: `echo "https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"`
+
+3. **Test EventListener is responding**:
++
+[source,bash]
+----
+curl -I https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')
+----
++
+Expected: HTTP 400 Bad Request (this is normal - it expects a webhook payload)
+
+**Error: "SSL certificate problem"**
+
+The cluster uses self-signed certificates. In GitLab webhook settings:
+
+* Uncheck "Enable SSL verification"
+* This is safe for lab environments
+
+**Test event fails with error**
+
+Check the EventListener pod is running:
+
+[source,bash]
+----
+oc get pods -n etx-app-dev | grep el-gitlab-listener
+oc logs -n etx-app-dev -l eventlistener=gitlab-listener
+----
 
 == Verify the Pipeline
 
