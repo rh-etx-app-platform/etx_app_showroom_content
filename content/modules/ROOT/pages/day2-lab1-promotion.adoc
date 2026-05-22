@@ -349,18 +349,42 @@ Pick one of the commit SHA tags from the output.
 
 === Run the Promotion Pipeline
 
-Trigger the promotion pipeline manually:
+Trigger the promotion pipeline manually.
+
+First, get an actual commit SHA from the images built by the CI pipeline:
+
+[source,bash]
+----
+oc get images -n etx-app-dev | grep etx-app-base-app
+----
+
+Then create a PipelineRun (replace `<COMMIT_SHA>` with an actual image tag from above):
 
 [source,bash,role=execute,subs="attributes+"]
 ----
-# Replace <COMMIT_SHA> with an actual image tag from above
-tkn pipeline start etx-app-promotion \
-  --param source-image-tag=<COMMIT_SHA> \
-  --param dest-image-tag=stable \
-  --param gitops-repo-url={gitlab_url}/software-factory/etx-app-gitops.git \
-  --workspace name=shared-workspace,claimName=promotion-workspace-pvc \
-  --serviceaccount pipeline \
-  --showlog
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: etx-app-promotion-
+  namespace: etx-app-dev
+spec:
+  pipelineRef:
+    name: etx-app-promotion
+  params:
+    - name: source-image-tag
+      value: <COMMIT_SHA>
+    - name: dest-image-tag
+      value: stable
+    - name: gitops-repo-url
+      value: {gitlab_url}/software-factory/etx-app-gitops.git
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: promotion-workspace-pvc
+  taskRunTemplate:
+    serviceAccountName: pipeline
+EOF
 ----
 
 Watch the pipeline logs. You should see:
@@ -475,11 +499,27 @@ Run the promotion pipeline with a previous image tag:
 
 [source,bash,role=execute]
 ----
-tkn pipeline start etx-app-promotion \
-  --param source-image-tag=<PREVIOUS_SHA> \
-  --param dest-image-tag=stable \
-  --workspace name=shared-workspace,claimName=promotion-workspace-pvc \
-  --serviceaccount pipeline
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: etx-app-promotion-
+  namespace: etx-app-dev
+spec:
+  pipelineRef:
+    name: etx-app-promotion
+  params:
+    - name: source-image-tag
+      value: <PREVIOUS_SHA>
+    - name: dest-image-tag
+      value: stable
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: promotion-workspace-pvc
+  taskRunTemplate:
+    serviceAccountName: pipeline
+EOF
 ----
 
 == Summary

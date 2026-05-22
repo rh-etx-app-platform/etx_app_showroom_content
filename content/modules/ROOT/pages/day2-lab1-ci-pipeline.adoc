@@ -33,6 +33,16 @@ metadata:
 EOF
 ----
 
+Expected output:
+
+[source,text]
+----
+persistentvolumeclaim/pipeline-workspace-pvc created
+serviceaccount/pipeline created
+----
+
+NOTE: If the ServiceAccount already exists (created during namespace setup), you may see `serviceaccount/pipeline configured` instead of `created`, along with a warning about a missing annotation. This is normal - `oc apply` automatically patches the annotation, and the resource is correctly configured.
+
 === Grant ServiceAccount Permissions
 
 The pipeline ServiceAccount needs permission to push images and manage resources in the namespace:
@@ -48,11 +58,22 @@ This grants the `edit` role, allowing the pipeline to create ImageStreams, Deplo
 
 == Retrieve Registry Credentials from Vault
 
-Create a Tekton Task that authenticates to Vault using the Kubernetes auth method configured in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section and writes registry credentials to the workspace:
+Create a Tekton Task that authenticates to Vault using the Kubernetes auth method configured in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section and writes registry credentials to the workspace.
 
-[source,bash,subs="attributes"]
+First, get the Vault URL from the cluster:
+
+[source,bash]
 ----
-oc apply -f - <<'EOF'
+# Get Vault URL dynamically
+VAULT_URL="https://$(oc get route -n vault -o jsonpath='{.items[0].spec.host}')"
+echo "Using Vault URL: $VAULT_URL"
+----
+
+Then create the Task:
+
+[source,bash]
+----
+oc apply -f - <<EOF
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -76,24 +97,24 @@ spec:
         microdnf install -y jq && microdnf clean all
 
         # Authenticate to Vault using ServiceAccount token
-        VAULT_ADDR="{vault_url}"
-        SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+        VAULT_ADDR="${VAULT_URL}"
+        SA_TOKEN=\$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 
-        VAULT_TOKEN=$(curl -s --request POST \
-          "${VAULT_ADDR}/v1/auth/kubernetes/login" \
-          --data "{\"role\":\"pipeline\",\"jwt\":\"${SA_TOKEN}\"}" \
+        VAULT_TOKEN=\$(curl -s --request POST \
+          "\${VAULT_ADDR}/v1/auth/kubernetes/login" \
+          --data "{\"role\":\"pipeline\",\"jwt\":\"\${SA_TOKEN}\"}" \
           | jq -r '.auth.client_token')
 
         # Fetch registry credentials
-        CREDS=$(curl -s --header "X-Vault-Token: ${VAULT_TOKEN}" \
-          "${VAULT_ADDR}/v1/secret/data/registry")
+        CREDS=\$(curl -s --header "X-Vault-Token: \${VAULT_TOKEN}" \
+          "\${VAULT_ADDR}/v1/secret/data/registry")
 
-        echo "${CREDS}" | jq -r '.data.data.server' \
-          | tr -d '\n' > $(results.registry-server.path)
-        echo "${CREDS}" | jq -r '.data.data.username' \
-          | tr -d '\n' > $(results.registry-username.path)
-        echo "${CREDS}" | jq -r '.data.data.password' \
-          | tr -d '\n' > $(results.registry-password.path)
+        echo "\${CREDS}" | jq -r '.data.data.server' \
+          | tr -d '\n' > \$(results.registry-server.path)
+        echo "\${CREDS}" | jq -r '.data.data.username' \
+          | tr -d '\n' > \$(results.registry-username.path)
+        echo "\${CREDS}" | jq -r '.data.data.password' \
+          | tr -d '\n' > \$(results.registry-password.path)
 EOF
 ----
 
@@ -188,25 +209,181 @@ spec:
 EOF
 ----
 
-NOTE: `git-clone`, `maven`, and `buildah` are standard Tasks installed in the `openshift-pipelines` namespace. This pipeline resolves them with the cluster resolver (replacing deprecated `ClusterTask` references). Run `oc get task -n openshift-pipelines` or `tkn task list -n openshift-pipelines` to verify they are available.
+NOTE: `git-clone`, `maven`, and `buildah` are standard Tasks installed in the `openshift-pipelines` namespace. This pipeline resolves them with the cluster resolver (replacing deprecated `ClusterTask` references). Run `oc get task -n openshift-pipelines` to verify they are available.
 
 == Test the Pipeline Manually
 
-Run the pipeline once to verify it works before adding webhooks:
+Run the pipeline once to verify it works before adding webhooks.
 
-[source,bash,role=execute,subs="attributes+"]
+First, get the GitLab URL from the cluster:
+
+[source,bash]
 ----
-tkn pipeline start etx-app-base-app-ci \
-  --namespace etx-app-dev \
-  --param git-url={gitlab_url}/software-factory/etx_app_base_app \
-  --param git-revision=main \
-  --param image-name=image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app \
-  --workspace name=shared-workspace,claimName=pipeline-workspace-pvc \
-  --serviceaccount pipeline \
-  --showlog
+# Get GitLab URL dynamically
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "Using GitLab URL: $GITLAB_URL"
 ----
+
+Then create the PipelineRun:
+
+[source,bash,role=execute]
+----
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: etx-app-base-app-ci-
+  namespace: etx-app-dev
+spec:
+  pipelineRef:
+    name: etx-app-base-app-ci
+  params:
+    - name: git-url
+      value: ${GITLAB_URL}/software-factory/etx_app_base_app
+    - name: git-revision
+      value: main
+    - name: image-name
+      value: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: pipeline-workspace-pvc
+  taskRunTemplate:
+    serviceAccountName: pipeline
+EOF
+----
+
+Expected output:
+
+[source,text]
+----
+pipelinerun.tekton.dev/etx-app-base-app-ci-xxxxx created
+----
+
+Monitor the PipelineRun:
+
+[source,bash]
+----
+# List all PipelineRuns
+oc get pipelinerun -n etx-app-dev
+----
+
+You should see your PipelineRun with status `Running` or `Succeeded`.
+
+=== Monitor Pipeline Execution
+
+There are several ways to monitor the pipeline:
+
+**Option 1: Watch PipelineRun status** (Recommended)
+
+[source,bash]
+----
+# Watch PipelineRun status in real-time (press Ctrl+C to exit)
+oc get pipelinerun -n etx-app-dev -w
+----
+
+This shows the overall status of all PipelineRuns and updates in real-time.
+
+**Option 2: View individual Task logs**
+
+[source,bash]
+----
+# Get the name of the latest PipelineRun
+LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+echo "PipelineRun: $LATEST_PR"
+
+# List all TaskRuns for this PipelineRun
+oc get taskrun -n etx-app-dev -l tekton.dev/pipelineRun=$LATEST_PR
+----
+
+To view logs of a specific TaskRun, use the name from the list above:
+
+[source,bash]
+----
+# View logs of a specific TaskRun (example: fetch-creds)
+oc logs -n etx-app-dev -l tekton.dev/taskRun=etx-app-base-app-ci-xxxxx-fetch-creds -f
+----
+
+Or automatically get logs from a failed TaskRun:
+
+[source,bash]
+----
+# Get the latest PipelineRun
+LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+# Get the first failed TaskRun
+FAILED_TASK=$(oc get taskrun -n etx-app-dev -l tekton.dev/pipelineRun=$LATEST_PR -o jsonpath='{.items[?(@.status.conditions[0].reason=="Failed")].metadata.name}' | awk '{print $1}')
+
+if [ -n "$FAILED_TASK" ]; then
+  echo "Viewing logs for failed TaskRun: $FAILED_TASK"
+  oc logs -n etx-app-dev -l tekton.dev/taskRun=$FAILED_TASK
+else
+  echo "No failed TaskRuns found"
+fi
+----
+
+**Option 3: View logs of currently running pod**
+
+[source,bash]
+----
+# Get the name of the latest PipelineRun
+LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+echo "Watching logs for PipelineRun: $LATEST_PR"
+
+# Follow the logs of the currently running pod
+oc logs -f $(oc get pods -n etx-app-dev -l tekton.dev/pipelineRun=$LATEST_PR --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}') -n etx-app-dev
+----
+
+NOTE: Option 3 only shows logs from one Task at a time. When that Task completes, the command exits. Use Option 1 for continuous monitoring or Option 2 to view specific Task logs.
 
 Watch the logs to confirm all tasks complete successfully.
+
+=== Troubleshooting Common Issues
+
+**fetch-creds task fails with "parse error: Invalid numeric literal"**
+
+This error means the Vault response is not valid JSON. Common causes:
+
+* **Vault is unavailable**: Check if Vault pods are running:
++
+[source,bash]
+----
+oc get pods -n vault
+----
++
+If Vault is down, wait for it to recover and retry the pipeline.
+
+* **Vault authentication not configured**: Verify the Kubernetes auth method exists in Vault UI at the vault URL.
+
+* **ServiceAccount lacks permissions**: Verify the pipeline ServiceAccount exists:
++
+[source,bash]
+----
+oc get serviceaccount pipeline -n etx-app-dev
+----
+
+**Pipeline succeeds but image not found in registry**
+
+Verify the image was pushed:
+
+[source,bash]
+----
+oc get imagestream etx-app-base-app -n etx-app-dev
+oc get imagestreamtag etx-app-base-app:main -n etx-app-dev
+----
+
+**git-clone task fails with "Could not resolve host"**
+
+The GitLab URL is incorrect. Verify:
+
+[source,bash]
+----
+oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}'
+----
+
+Recreate the PipelineRun with the correct GitLab URL.
 
 == Set Up Webhooks with Tekton Triggers
 
@@ -343,16 +520,22 @@ Check for new pipeline runs:
 
 [source,bash,role=execute]
 ----
-tkn pipelinerun list -n etx-app-dev
+oc get pipelinerun -n etx-app-dev
 ----
 
-You should see a new `etx-app-base-app-ci-*` PipelineRun.
+You should see a new `etx-app-base-app-ci-*` PipelineRun triggered by the webhook.
 
 Follow the latest run logs:
 
 [source,bash,role=execute]
 ----
-tkn pipelinerun logs -f -n etx-app-dev
+# Get the name of the latest PipelineRun
+LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+echo "Following logs for: $LATEST_PR"
+
+# Follow the logs
+oc logs -f $(oc get pods -n etx-app-dev -l tekton.dev/pipelineRun=$LATEST_PR --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}') -n etx-app-dev
 ----
 
 Verify the image was pushed:

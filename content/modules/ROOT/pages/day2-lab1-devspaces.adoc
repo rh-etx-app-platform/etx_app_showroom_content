@@ -153,19 +153,22 @@ cat devfile.yaml | head -20
 
 == Step 4: Commit and Push the Devfile
 
-Add and commit the devfile to main:
+Create a feature branch, commit the devfile, and push to GitLab:
 
 [source,bash]
 ----
+# Create and switch to feature branch
+git checkout -b feature/add-devfile
+
 # Add and commit the devfile
 git add devfile.yaml
 git commit -m "feat: add devfile for Dev Spaces configuration"
 
-# Push to GitLab main branch
-git push origin main
+# Push to GitLab
+git push origin feature/add-devfile
 ----
 
-NOTE: The etx_app_base_app repository main branch is unprotected for this lab to allow direct pushes. In production environments, you would create a feature branch and merge via pull request following xref:day1-branching-strategies.adoc[GitFlow best practices].
+This follows xref:day1-branching-strategies.adoc[GitFlow best practices] by isolating changes in a feature branch.
 
 When you run `git push`, Dev Spaces will prompt you to authorize with GitLab:
 
@@ -178,12 +181,51 @@ When you run `git push`, Dev Spaces will prompt you to authorize with GitLab:
 
 Now delete the temporary workspace and create a new one that will use your devfile.
 
+=== Delete the Temporary Workspace
+
 . Return to the Dev Spaces dashboard browser tab
 . Find your workspace in the list
 . Click the three dots (⋮) menu → *Delete Workspace*
 . Confirm deletion and wait until the workspace disappears
 
-Create a new workspace:
+=== Create Workspace from Devfile
+
+You can create a workspace using either a direct URL (faster) or the UI (manual).
+
+[tabs]
+====
+Direct URL (Recommended)::
++
+--
+Use a direct URL to create a workspace from a specific branch.
+
+Get the required URLs:
+
+[source,bash]
+----
+# Get Dev Spaces URL
+DEVSPACES_URL="https://$(oc get checluster devspaces -n openshift-devspaces -o jsonpath='{.status.cheURL}' | sed 's|https://||')"
+
+# Get GitLab URL
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+
+# Construct the direct workspace URL
+echo "${DEVSPACES_URL}#${GITLAB_URL}/software-factory/etx_app_base_app/-/tree/feature/add-devfile"
+----
+
+Open the generated URL in your browser. Dev Spaces will:
+
+. Automatically import the repository from the feature/add-devfile branch
+. Detect and use the devfile.yaml
+. Configure the workspace with all environment variables and settings
+
+This skips the manual "Create Workspace → Import from Git" flow.
+--
+
+Manual UI::
++
+--
+Create a workspace through the Dev Spaces dashboard.
 
 . Click btn:[Create Workspace]
 . Select *Import from Git*
@@ -194,6 +236,8 @@ Create a new workspace:
 {gitlab_url}/software-factory/etx_app_base_app.git
 ----
 . Click btn:[Create & Open]
+--
+====
 
 Dev Spaces will detect the devfile in the repository and use it to configure your workspace with:
 
@@ -204,32 +248,29 @@ Dev Spaces will detect the devfile in the repository and use it to configure you
 
 Wait for the workspace to fully start. This may take 2-3 minutes as the container image is pulled and configured.
 
-== Step 6: Clone the Repository
-
-Once the workspace opens, clone the repository manually.
-
-Open a terminal and clone the repository:
-
-[source,bash]
-----
-# Get GitLab URL
-GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
-
-# Clone the repository
-cd /projects
-git clone $GITLAB_URL/software-factory/etx_app_base_app.git
-cd etx_app_base_app
-
-# Verify you're on main branch
-git branch --show-current
-ls -la
-----
-
-You should see the application files including `devfile.yaml`.
+TIP: The direct URL method is faster and can be bookmarked for quick access. You can also specify different branches by changing `/tree/feature/add-devfile` to `/tree/<branch-name>`.
 
 == Verify Workspace Configuration
 
-Verify the workspace was configured correctly with your devfile.
+Once the workspace opens, verify it was configured correctly with your devfile.
+
+NOTE: Dev Spaces automatically clones the repository when you create a workspace from a Git URL. The repository will be available in `/projects/etx_app_base_app`.
+
+=== Verify Repository Clone
+
+Open a terminal and verify the repository was cloned correctly.
+
+NOTE: The terminal opens in `/projects/etx_app_base_app` by default. If you've navigated elsewhere, use `cd /projects/etx_app_base_app` to return.
+
+[source,bash]
+----
+# Verify current branch and recent commits
+git branch --show-current
+git log --oneline -3
+ls -la devfile.yaml
+----
+
+You should see `feature/add-devfile` as the current branch and the `devfile.yaml` file in the repository root.
 
 === Check Environment Variables
 
@@ -257,25 +298,11 @@ KAFKA_BOOTSTRAP_SERVERS: parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.l
 ====
 If these variables are **empty**, the workspace was not created with your devfile. This can happen if:
 
-* The devfile was not pushed to the main branch in Step 4
+* The devfile was not pushed to the feature/add-devfile branch in Step 4
 * The workspace was created before the devfile was pushed
 
 Go back to Step 5 and recreate the workspace after ensuring the devfile is in the repository.
 ====
-
-=== Verify Repository Clone
-
-Check that the repository was cloned correctly:
-
-[source,bash]
-----
-cd /projects/etx_app_base_app
-git branch --show-current
-git log --oneline -3
-ls -la devfile.yaml
-----
-
-You should see `main` branch and your devfile commit. The `devfile.yaml` file should exist in the repository root.
 
 === Test Service Connectivity
 
@@ -350,30 +377,93 @@ NOTE: If you see "error while fetching extensions", wait a moment and retry, or 
 . Send a message: `Hello, what model are you?`
 . You should receive a response from **qwen3-14b**
 
+Expected response:
+
+[source,text]
+----
+I am Qwen, a large language model developed by Alibaba Cloud.
+How can I assist you today?
+----
+
+This confirms Continue is connected to the LLM endpoint and ready to use.
+
 TIP: Continue is optional. If you encounter issues, proceed without it.
 
 == Run Quarkus in Development Mode
 
-Navigate to the project directory and start Quarkus development mode:
+When you open a terminal in the workspace, you are automatically positioned in the project directory.
+
+Verify your current location and start Quarkus development mode:
 
 [source,bash]
 ----
-cd /projects/etx_app_base_app
+# Verify you're in the project directory
+pwd
+
+# Start Quarkus in development mode
 ./mvnw compile quarkus:dev
+----
+
+Expected output from `pwd`:
+
+[source,text]
+----
+/projects/etx_app_base_app
 ----
 
 Quarkus connects to the external PostgreSQL and Kafka services using the environment variables from your devfile.
 
-Expected log output:
+Wait for the application to start. You should see output similar to:
 
 [source,text]
 ----
-Hibernate:
-    create table if not exists ...
-INFO  [io.qua.sma.dep.processor] Configuring channel 'emails-in' to be managed by connector 'smallrye-kafka'
+Listening for transport dt_socket at address: 5005
+__  ____  __  _____   ___  __ ____  ______
+ --/ __ \/ / / / _ | / _ \/ //_/ / / / __/
+ -/ /_/ / /_/ / __ |/ , _/ ,< / /_/ /\ \
+--\___\_\____/_/ |_/_/|_/_/|_|\____/___/
+
+INFO  [io.sma.rea.mes.kafka] SRMSG18229: Configured topics for channel 'emails-in': [intake]
+INFO  [io.sma.rea.mes.kafka] SRMSG18258: Kafka producer kafka-producer-emails-out, connected to Kafka brokers 'parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092'
+INFO  [io.sma.rea.mes.kafka] SRMSG18257: Kafka consumer kafka-consumer-emails-in, connected to Kafka brokers 'parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092'
+INFO  [io.quarkus] parasol-reimagined 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.17.5) started in 7.298s. Listening on: http://0.0.0.0:8080
+INFO  [io.quarkus] Profile dev activated. Live Coding activated.
+
+--
+Tests paused
+Press [e] to edit command line args, [r] to resume testing, [h] for more options>
 ----
 
-The application runs on port 8080. Click the endpoint notification or check the *Endpoints* panel for the URL.
+Key indicators of successful startup:
+
+* **Debug port listening**: `Listening for transport dt_socket at address: 5005`
+* **Kafka connected**: Messages showing connection to `parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092`
+* **Application started**: `Listening on: http://0.0.0.0:8080`
+* **Live Coding activated**: Hot reload is enabled
+
+=== Access the Application
+
+When Quarkus starts, a **popup notification** appears in the bottom-right corner with a button to open the application endpoint.
+
+Click *Open in New Tab* or *Open in Preview* to access the running application.
+
+TIP: If you miss the popup, press `Ctrl+C` to stop Quarkus, then run `./mvnw compile quarkus:dev` again to restart and see the notification.
+
+The endpoint URL follows this structure:
+
+[source,text,subs="attributes+"]
+----
+https://<username>-<project-name>-quarkus-dev.apps.<cluster-domain>/
+----
+
+For example:
+
+[source,text]
+----
+https://admin-etx-app-base-app-quarkus-dev.apps.cluster-grsml.dynamic2.redhatworkshops.io/
+----
+
+You can also find the URL in the *Endpoints* panel (usually in the bottom-left sidebar).
 
 === External Services Configuration
 
