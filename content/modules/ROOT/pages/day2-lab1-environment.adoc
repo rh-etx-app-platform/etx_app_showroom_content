@@ -28,9 +28,16 @@ TIP: Use these credentials to log into GitLab and Quay via the OIDC/OAuth button
 Source control and Git repository hosting.
 
 * **URL:** {gitlab_url}
-* **Authentication:** Keycloak OIDC (click "ETX Lab SSO")
+* **Authentication:**
+  - Keycloak OIDC (click "ETX Lab SSO") - Use Keycloak users for regular development
+  - Standard login - Use `root` user for GitLab administration
+* **Root Admin:**
+  - Username: `root`
+  - Password: Retrieve with `oc get secret -n gitlab gitlab-gitlab-initial-root-password -o jsonpath='{.data.password}' | base64 -d`
 * **Seeded Repositories:**
   - `software-factory/etx_app_base_app` - Your application workspace (read/write)
+
+NOTE: The `root` user has GitLab administrator privileges. Keycloak users (`platform-admin`, `platform-developer`) authenticate via SSO but do not have GitLab admin rights by default.
 
 === Quay Container Registry
 
