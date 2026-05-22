@@ -20,6 +20,74 @@ oc get csv -n openshift-operators | grep gitops
 
 You should see `openshift-gitops-operator` with phase `Succeeded`.
 
+== Configure Keycloak OIDC Client for Argo CD
+
+Before deploying Argo CD, create an OIDC client in Keycloak so users can authenticate with their ETX credentials (platform-admin, platform-developer).
+
+=== Access Keycloak Admin Console
+
+Get the Keycloak URL and root credentials:
+
+[source,bash]
+----
+KEYCLOAK_URL="https://$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}')"
+KEYCLOAK_ADMIN_PASSWORD=$(oc get secret -n keycloak credential-etx-lab-keycloak -o jsonpath='{.data.ADMIN_PASSWORD}' | base64 -d)
+
+echo "Keycloak URL: $KEYCLOAK_URL"
+echo "Admin Username: admin"
+echo "Admin Password: $KEYCLOAK_ADMIN_PASSWORD"
+----
+
+Open the Keycloak URL and log in with the admin credentials.
+
+=== Create ArgoCD OIDC Client
+
+. In Keycloak, select the *etx-lab* realm (dropdown in top-left)
+. Go to *Clients* → *Create client*
+. Configure the client:
+  * *Client type*: OpenID Connect
+  * *Client ID*: `argocd`
+  * Click *Next*
+. Configure capabilities:
+  * *Client authentication*: ON
+  * *Authorization*: OFF
+  * *Authentication flow*: Check *Standard flow* and *Direct access grants*
+  * Click *Next*
+. Configure login settings:
+  * *Root URL*: `https://argocd-server-etx-app-dev.apps.{openshift_cluster_ingress_domain}`
+  * *Valid redirect URIs*:
+    - `https://argocd-server-etx-app-dev.apps.{openshift_cluster_ingress_domain}/auth/callback`
+    - `https://argocd-server-etx-app-dev.apps.{openshift_cluster_ingress_domain}/api/dex/callback`
+  * *Web origins*: `+`
+  * Click *Save*
+
+NOTE: Replace `{openshift_cluster_ingress_domain}` with your actual cluster domain. Get it with: `oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}' | sed 's/argocd-server-etx-app-dev\.//'`
+
+=== Get Client Secret
+
+. In the *argocd* client, go to the *Credentials* tab
+. Copy the *Client secret* value
+. Save this value - you'll need it in the next step
+
+=== Create ArgoCD OIDC Secret
+
+Create a secret with the Keycloak client credentials:
+
+[source,bash]
+----
+# Get the cluster domain
+ARGOCD_HOST=$(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}' 2>/dev/null || echo "argocd-server-etx-app-dev.apps.cluster-xxxxx.example.com")
+KEYCLOAK_URL="https://$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}')"
+
+# Replace YOUR_CLIENT_SECRET with the value from Keycloak
+CLIENT_SECRET="YOUR_CLIENT_SECRET"
+
+oc create secret generic argocd-oidc-secret -n etx-app-dev \
+  --from-literal=clientID=argocd \
+  --from-literal=clientSecret=${CLIENT_SECRET} \
+  --from-literal=issuer=${KEYCLOAK_URL}/realms/etx-lab
+----
+
 == Deploy Your Argo CD Instance
 
 Create an Argo CD instance in your namespace for managing application deployments:
@@ -70,22 +138,19 @@ spec:
       enabled: false
   initialSSHKnownHosts: {}
   sso:
-    provider: dex
-    dex:
-      openShiftOAuth: true
-      resources:
-        limits:
-          cpu: 500m
-          memory: 256Mi
-        requests:
-          cpu: 250m
-          memory: 128Mi
+    provider: keycloak
+    keycloak:
+      rootCA: |
+        -----BEGIN CERTIFICATE-----
+        # OpenShift ingress CA - leave empty for now, will be auto-configured
+        -----END CERTIFICATE-----
+      verifyTLS: false
   rbac:
     defaultPolicy: 'role:readonly'
     policy: |
-      g, system:cluster-admins, role:admin
-      g, cluster-admins, role:admin
-    scopes: '[groups]'
+      g, platform-admin, role:admin
+      g, platform-developer, role:admin
+    scopes: '[sub, preferred_username, email, groups]'
   repo:
     resources:
       limits:
@@ -141,6 +206,40 @@ oc get pods -n etx-app-dev -w
 
 Press Ctrl+C when you see all `argocd-*` pods showing `1/1 Ready`.
 
+== Configure OIDC Authentication
+
+Update the ArgoCD ConfigMap to enable Keycloak OIDC authentication:
+
+[source,bash]
+----
+# Get required URLs
+KEYCLOAK_URL="https://$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}')"
+ARGOCD_URL="https://$(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}')"
+
+# Get the client secret you created earlier
+# If you didn't save it, retrieve it from Keycloak Admin Console → Clients → argocd → Credentials
+read -sp "Enter the argocd client secret from Keycloak: " CLIENT_SECRET
+echo
+
+# Update ArgoCD config
+oc patch configmap argocd-cm -n etx-app-dev --type=merge -p "{\"data\":{
+  \"url\": \"${ARGOCD_URL}\",
+  \"oidc.config\": \"name: Keycloak\nissuer: ${KEYCLOAK_URL}/realms/etx-lab\nclientID: argocd\nclientSecret: \$argocd-oidc-secret:clientSecret\nrequestedScopes: ['openid', 'profile', 'email', 'groups']\nrequestedIDTokenClaims: {'groups': {'essential': true}}\"
+}}"
+
+# Restart ArgoCD server to apply changes
+oc delete pod -n etx-app-dev -l app.kubernetes.io/name=argocd-server
+----
+
+Wait for the new argocd-server pod to be ready:
+
+[source,bash]
+----
+oc get pods -n etx-app-dev -l app.kubernetes.io/name=argocd-server -w
+----
+
+Press Ctrl+C when you see `1/1 Running`.
+
 == Access the Argo CD Dashboard
 
 Get the Argo CD dashboard URL:
@@ -150,19 +249,32 @@ Get the Argo CD dashboard URL:
 echo "https://$(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
 
+You can log into Argo CD using either the admin account or Keycloak SSO.
+
+=== Option 1: Keycloak SSO (Recommended)
+
+. Open the Argo CD URL in your browser
+. Click *LOG IN VIA KEYCLOAK*
+. You'll be redirected to Keycloak
+. Log in with your ETX credentials:
+  * `platform-admin` / `openshift` (full admin access)
+  * `platform-developer` / `openshift` (admin access)
+
+=== Option 2: Admin Account
+
 Get the default admin password:
 
 [source,bash,role=execute]
 ----
 oc get secret argocd-cluster -n etx-app-dev \
-  -o jsonpath='{.data.admin\.password}' | base64 -d
+  -o jsonpath='{.data.admin\.password}' | base64 -d && echo
 ----
 
-Open the Argo CD URL in your browser and log in with:
+Open the Argo CD URL and log in with:
 * Username: `admin`
 * Password: (from above command)
 
-Alternatively, use OpenShift OAuth by clicking *LOG IN VIA OPENSHIFT*.
+NOTE: Using Keycloak SSO is recommended as it provides centralized authentication with the same credentials used for GitLab, Quay, and Vault.
 
 === Troubleshooting: ERR_TOO_MANY_REDIRECTS
 
