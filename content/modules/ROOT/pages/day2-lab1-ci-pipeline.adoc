@@ -493,8 +493,23 @@ Copy this URL for the next step.
 
 === Configure GitLab Webhook
 
-. Log into GitLab {gitlab_url}
-. Navigate to your repository: *software-factory/etx_app_base_app*
+IMPORTANT: Configuring webhooks in GitLab requires **Maintainer** or **Owner** role on the project. The `platform-developer` user does not have sufficient permissions. Use the `platform-admin` account or ask your instructor to grant you Maintainer access.
+
+==== Option 1: Use platform-admin Account (Recommended for Lab)
+
+. Get the GitLab URL and open it:
++
+[source,bash]
+----
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "GitLab URL: $GITLAB_URL"
+----
++
+. Log into GitLab with:
+  * *Username:* `platform-admin`
+  * *Password:* `openshift`
+  * Click *ETX Lab SSO* button
+. Navigate to *Projects* → *software-factory* → *etx_app_base_app*
 . Go to menu:Settings[Webhooks]
 . Add a new webhook:
   * *URL*: Paste the EventListener route URL from above
@@ -502,6 +517,25 @@ Copy this URL for the next step.
   * *SSL verification*: Leave unchecked (HTTP endpoint)
 . Click btn:[Add webhook]
 . Click btn:[Test] → *Push events* to send a test payload
+
+==== Option 2: Request Maintainer Access
+
+If you want to use your `platform-developer` account, ask your instructor to grant you Maintainer role:
+
+. In GitLab (as admin), navigate to the project
+. Go to menu:Settings[Members]
+. Find your user and change role to *Maintainer*
+. Refresh the project page - you should now see Settings → Webhooks
+
+==== Verify Webhook Configuration
+
+After adding the webhook, verify it was created:
+
+. In GitLab, go to menu:Settings[Webhooks]
+. You should see your webhook listed with the EventListener URL
+. Under *Recent events*, you should see a test event with HTTP 200 status
+
+TIP: If the test event shows an error, check that the EventListener pod is running: `oc get pods -n etx-app-dev | grep el-gitlab-listener`
 
 == Verify the Pipeline
 
