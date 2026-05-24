@@ -22,10 +22,7 @@
 ** Lab 2: Application Modernization
 * xref:day2-lab2-1-intro.adoc[Lab Scenario]
 * xref:day2-lab2-2-mta.adoc[Application Modernization (MTA)]
-* xref:day2-lab2-3-deploy-legacy-coolstore.adoc[Deploy Legacy(EAP 7) Application] 
-* xref:day2-lab2-4-lightspeed.adoc[Developer Lightspeed Configuration]
-* xref:day2-lab2-5-migrate-coolstore-eap8.adoc[Migrate Coolstore Application]
-* xref:day2-lab2-6-deploy-modern-coolstore.adoc[Deploy Modern CoolStore (EAP 8)]
+* xref:day2-lab2-3-lightspeed.adoc[Migrate Application with Developer Lightspeed]
 * xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub]
 * xref:day2-lab2-dh2-golden-paths.adoc[Developer Hub: templates and integrations]
 * xref:day2-recap.adoc[Day 2 Recap]

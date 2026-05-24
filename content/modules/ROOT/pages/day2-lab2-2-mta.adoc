@@ -4,7 +4,30 @@
 == Overview
 
 Use the Migration Toolkit for Applications (MTA) to analyze a legacy Java application, identify migration issues, and modernize it to run on a Red Hat Runtime.
-The modernized application will then be integrated into the CI pipeline built in Lab 1.
+
+== Register with Red Hat MaaS platform
+
+. Open the Red Hat Model-as-a-Service portal in a new browser tab:
++
+link:https://litellm-prod-frontend.apps.maas.redhatworkshops.io/[Red Hat MaaS Portal^]
+
+. Sign in with your Red Hat credentials
++
+Use your Red Hat account associated with your OpenShift environment.
+
+. Navigate to **Models** from the dashboard
+. Select **granite-3-2-8b-instruct** from the list of models
+. Click btn:[Subscribe]
+. Navigate to **API Keys** from the dashboard
+. Click btn:[Create API Key] and fill in the details:
+  * **Name**: `MTA-Dev`
+  * **Description**: `AI-assisted modernization for MTA`
+  * **Model**: `granite-3-2-8b-instruct`
+. Click btn:[Create API Key]
+
+. Copy the generated API key
+
+. Save the API key to a secure location. You will need it in the next step.
 
 == Install MTA
 
@@ -28,6 +51,15 @@ oc get csv -n openshift-operators | grep mta
 
 //TODO the OCP console asked me for this in 30 seconds from start, I did it from yaml
 
+Create a secret for the MTA API key:
+
+[source,yaml]
+----
+oc create secret generic kai-api-keys -n openshift-mta \
+ --from-literal=OPENAI_API_BASE='https://litellm-prod.apps.maas.redhatworkshops.io/v1' \
+ --from-literal=OPENAI_API_KEY='<YOUR_MTA_API_KEY>'
+----
+
 Create a Tackle CR to deploy the MTA web console:
 
 [source,yaml]
@@ -39,6 +71,29 @@ metadata:
   namespace: openshift-mta
 spec:
   feature_auth_required: 'false'
+  feature_isolate_namespace: "false"
+  maven_data_volume_size: "10Gi"
+  analyzer_container_limits_cpu: "1"
+  analyzer_container_limits_memory: "4Gi"
+  analyzer_container_requests_cpu: "500m"
+  analyzer_container_requests_memory: "2Gi"
+  hub_container_limits_cpu: "2"
+  hub_container_limits_memory: "4Gi"
+  hub_container_requests_cpu: "500m"
+  hub_container_requests_memory: "2Gi"
+  kai_llm_proxy_enabled: true
+  kai_solution_server_enabled: true
+  kai_llm_provider: openai
+  kai_llm_model: granite-3-2-8b-instruct
+  kai_llm_baseurl: "https://litellm-prod.apps.maas.redhatworkshops.io/v1"
+  kai_solution_server_container_limits_cpu: "1"
+  kai_solution_server_container_limits_memory: "2Gi"
+  kai_solution_server_container_requests_cpu: "500m"
+  kai_solution_server_container_requests_memory: "1Gi"
+  kai_llm_proxy_container_limits_cpu: "1"
+  kai_llm_proxy_container_limits_memory: "2Gi"
+  kai_llm_proxy_container_requests_cpu: "500m"
+  kai_llm_proxy_container_requests_memory: "1Gi"
 ----
 
 Apply it:
@@ -48,22 +103,28 @@ Apply it:
 oc apply -f mta-tackle.yaml
 ----
 
-Wait for the pods to be ready:
+(OPTIONAL) Force a reconcile if you update the secret:
 
 [source,bash]
-//TODO this is vague and when I first did this, every pod show was "Running" but.. more pods appeared later, this is tottally running
-//NAME                                          READY   STATUS    RESTARTS   AGE
-//mta-hub-6f7c97f78d-5j9v6                      1/1     Running   0          2m56s
-//mta-keycloak-postgresql-15-68fbc8f956-pkvl2   1/1     Running   0          5m30s
-//mta-operator-6b9fd4d5df-pm9k9                 1/1     Running   0          8m8s
-//mta-rhbk-0                                    1/1     Running   0          4m36s
-//mta-ui-5dd64d98c7-j4q48                       1/1     Running   0          2m53s
-//rhbk-operator-64b66c5d54-xmc82                1/1     Running   0          8m6s
+----
+oc patch tackle mta -n openshift-mta --type=merge -p \
+'{"metadata":{"annotations":{"konveyor.io/force-reconcile":"'"$(date +%s)"'"}}}'
+----
 
+Wait for the pods to be ready:
 
 ----
 oc get pods -n openshift-mta -w
 ----
+
+You should see following pods running:
+ - kai-api-xxxx-xxx
+ - kai-db-xxxx-xxx
+ - llm-proxy-xxxx-xxx
+ - mta-hub-xxxx-xxx
+ - mta-operator-xxxx-xxx
+ - mta-ui-xxxx-xxx
+ - rhbk-operator-xxxx-xxx
 
 Get the MTA console route:
 
@@ -72,34 +133,54 @@ Get the MTA console route:
 oc get route -n openshift-mta
 ----
 
-Open the URL in your browser.
+Open the URL in your browser. You should see the MTA web console.
 
-//TODO this requires some sort of login, it's not obvious
-//It's the default
-// Username: admin
-// Password: Passw0rd!
-// If you enter it, it asks to change the password
-//TODO fix this?
+[source,text]
+----
+https://mta-openshift-mta.apps.apps.cluster-**<GUID>**.dynamic.redhatworkshops.io
+----
+
+Use Openshift Login to log in.
 
 == Analyze the Application
 
+=== Setup GitLab Integration
+
+. In the MTA web console
+. Go to menu:Administration[Credentials]
+. Click btn:[Create new]
+. Fill in the details:
+  * *Name*: gitlab
+  * *Type*: Select "Source Control"
+  * *User Credentials*: Select "Username/Password"
+  * *Default credential?*: Checked
+  * *Username*: `platform-admin`
+  * *Password*: `openshift`
+. Click btn:[Create]
++
+.Screenshot of the GitLab credentials page
+image::mta-gitlab-credentials.png[align="center"]
+
 === Create an Application in MTA
 
-. In the MTA web console, go to menu:Applications[Application inventory]
+. Go to menu:Migration[Applications > Application inventory]
 . Click btn:[Create new]
 . Fill in the application details:
-  * *Name*: `parasol-legacy`
-  * *Source repository*: Your GitLab repository URL for the legacy application
+  * *Name*: `coolstore`
+  * *Manual Tags*: `Runtime/EAP`
+  * *Source code -> Source repository*: https://gitlab.apps.cluster-**<GUID>**.dynamic2.redhatworkshops.io/software-factory/coolstore.git
   * *Branch*: `main`
 . Click btn:[Create]
 
 === Run the Analysis
 
 . Select the application and click btn:[Analyze]
-. Configure the analysis:
-  * *Source*: Source code
-  * *Target*: Quarkus
-  * *Scope*: Application and internal dependencies
+. Select *Mode*: Manual Selection and click btn:[Next]
+. Keep the default settings for *Analysis source* and click btn:[Next]
+. In *Set Target* select: "Jboss EAP 8" and click btn:[Next]
+. In *Set Scope* select: "Application and internal dependencies only" and click btn:[Next]
+. Keep the default settings for *Custom Rules* and click btn:[Next]
+. Keep the default settings for *Advanced options* and click btn:[Next]
 . Click btn:[Run]
 
 The analysis scans the source code, dependencies, and configuration files against MTA's rule sets.
@@ -114,160 +195,161 @@ Once the analysis completes:
   * *Mandatory* -- Changes required for the migration to succeed
   * *Optional* -- Improvements that are recommended but not required
   * *Information* -- Context and documentation links
-. Note the *Story Points* -- an effort estimate for the migration
 
-Common findings when migrating to Quarkus:
-
-* Replace `javax.*` imports with `jakarta.*`
-* Replace Spring-specific annotations with CDI equivalents
-* Update persistence configuration from `persistence.xml` to `application.properties`
-* Replace JAX-RS application class with Quarkus RESTEasy Reactive
-
-=== CLI Analysis (Alternative)
-
-You can also run analysis from the command line inside your Dev Spaces workspace:
-
-[source,bash]
-----
-mta-cli analyze \
-  --input /projects/parasol-legacy \
-  --output /tmp/mta-report \
-  --target quarkus
-----
-
-Open `/tmp/mta-report/index.html` in the IDE's preview to review results.
-
-== Modernize the Application
-
-Apply the changes identified by MTA.
-Work through the mandatory issues first:
-
-=== Update Dependencies
-
-Update `pom.xml` to use Quarkus BOM and extensions:
-
-[source,xml]
-----
-<dependencyManagement>
-  <dependencies>
-    <dependency>
-      <groupId>io.quarkus.platform</groupId>
-      <artifactId>quarkus-bom</artifactId>
-      <version>${quarkus.platform.version}</version>
-      <type>pom</type>
-      <scope>import</scope>
-    </dependency>
-  </dependencies>
-</dependencyManagement>
-----
-
-=== Update Imports and Annotations
-
-Replace `javax` with `jakarta` package imports:
-
-[source,java]
-----
-// Before
-import javax.inject.Inject;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-
-// After
-import jakarta.inject.Inject;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-----
-
-=== Update Configuration
-
-Move configuration from XML files to `application.properties`:
-
-[source,properties]
-----
-# Database configuration
-quarkus.datasource.db-kind=postgresql
-quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/parasol
-quarkus.datasource.username=${DB_USER:parasol}
-quarkus.datasource.password=${DB_PASSWORD:parasol}
-
-# Hibernate
-quarkus.hibernate-orm.database.generation=update
-----
-
-=== Validate the Build
-
-Build and test the modernized application in your Dev Spaces workspace:
-
-[source,bash]
-----
-./mvnw clean package -DskipTests=false
-----
-
-Start the application in dev mode to verify it runs:
-
-[source,bash]
-----
-./mvnw compile quarkus:dev
-----
-
-Quarkus Dev Services will start a PostgreSQL container automatically.
-
-== Integrate with the CI Pipeline
-
-Push the modernized application into the CI pipeline from Lab 1:
-
-. Commit and push the modernized source code to GitLab:
-+
-[source,bash]
-----
-git add .
-git commit -m "Modernize application to Quarkus"
-git push
-----
-
-. The GitLab webhook triggers the Tekton pipeline automatically
-
-. Monitor the pipeline run:
-+
-[source,bash]
-----
-tkn pipelinerun logs -f -n <your_namespace>
-----
-
-. Verify the pipeline completes all tasks:
-  * Source clone
-  * Maven build and test
-  * Vault credential retrieval
-  * Container image build and push
-
-. Confirm Argo CD syncs the updated image:
-+
-[source,bash]
-----
-oc get application parasol-dev -n openshift-gitops \
-  -o jsonpath='{.status.sync.status}'
-----
-
-. Verify the modernized application is running:
-+
-[source,bash]
-----
-oc get pods -n parasol-dev
-oc get route parasol-insurance -n parasol-dev -o jsonpath='{.spec.host}'
-----
-
-Open the route URL to confirm the modernized application is accessible and functional.
-
-== Summary
-
-You have:
-
-* Installed MTA and analyzed a legacy Java application
-* Identified mandatory and optional migration issues with effort estimates
-* Modernized the application to use Quarkus and Jakarta EE APIs
-* Integrated the modernized application into the existing CI/CD pipeline
-* Verified end-to-end deployment through the GitOps workflow
 
 == Next Steps
 
-Proceed to xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub].
+Proceed to xref:day2-lab2-4-lightspeed.adoc[Developer Lightspeed Configuration].
+// Proceed to xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub].
+
+// Common findings when migrating to Quarkus:
+
+// * Replace `javax.*` imports with `jakarta.*`
+// * Replace Spring-specific annotations with CDI equivalents
+// * Update persistence configuration from `persistence.xml` to `application.properties`
+// * Replace JAX-RS application class with Quarkus RESTEasy Reactive
+
+// === CLI Analysis (Alternative)
+
+// You can also run analysis from the command line inside your Dev Spaces workspace:
+
+// [source,bash]
+// ----
+// mta-cli analyze \
+//   --input /projects/parasol-legacy \
+//   --output /tmp/mta-report \
+//   --target quarkus
+// ----
+
+// Open `/tmp/mta-report/index.html` in the IDE's preview to review results.
+
+// == Modernize the Application
+
+// Apply the changes identified by MTA.
+// Work through the mandatory issues first:
+
+// === Update Dependencies
+
+// Update `pom.xml` to use Quarkus BOM and extensions:
+
+// [source,xml]
+// ----
+// <dependencyManagement>
+//   <dependencies>
+//     <dependency>
+//       <groupId>io.quarkus.platform</groupId>
+//       <artifactId>quarkus-bom</artifactId>
+//       <version>${quarkus.platform.version}</version>
+//       <type>pom</type>
+//       <scope>import</scope>
+//     </dependency>
+//   </dependencies>
+// </dependencyManagement>
+// ----
+
+// === Update Imports and Annotations
+
+// Replace `javax` with `jakarta` package imports:
+
+// [source,java]
+// ----
+// // Before
+// import javax.inject.Inject;
+// import javax.ws.rs.GET;
+// import javax.ws.rs.Path;
+
+// // After
+// import jakarta.inject.Inject;
+// import jakarta.ws.rs.GET;
+// import jakarta.ws.rs.Path;
+// ----
+
+// === Update Configuration
+
+// Move configuration from XML files to `application.properties`:
+
+// [source,properties]
+// ----
+// # Database configuration
+// quarkus.datasource.db-kind=postgresql
+// quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/parasol
+// quarkus.datasource.username=${DB_USER:parasol}
+// quarkus.datasource.password=${DB_PASSWORD:parasol}
+
+// # Hibernate
+// quarkus.hibernate-orm.database.generation=update
+// ----
+
+// === Validate the Build
+
+// Build and test the modernized application in your Dev Spaces workspace:
+
+// [source,bash]
+// ----
+// ./mvnw clean package -DskipTests=false
+// ----
+
+// Start the application in dev mode to verify it runs:
+
+// [source,bash]
+// ----
+// ./mvnw compile quarkus:dev
+// ----
+
+// Quarkus Dev Services will start a PostgreSQL container automatically.
+
+// == Integrate with the CI Pipeline
+
+// Push the modernized application into the CI pipeline from Lab 1:
+
+// . Commit and push the modernized source code to GitLab:
+// +
+// [source,bash]
+// ----
+// git add .
+// git commit -m "Modernize application to Quarkus"
+// git push
+// ----
+
+// . The GitLab webhook triggers the Tekton pipeline automatically
+
+// . Monitor the pipeline run:
+// +
+// [source,bash]
+// ----
+// tkn pipelinerun logs -f -n <your_namespace>
+// ----
+
+// . Verify the pipeline completes all tasks:
+//   * Source clone
+//   * Maven build and test
+//   * Vault credential retrieval
+//   * Container image build and push
+
+// . Confirm Argo CD syncs the updated image:
+// +
+// [source,bash]
+// ----
+// oc get application parasol-dev -n openshift-gitops \
+//   -o jsonpath='{.status.sync.status}'
+// ----
+
+// . Verify the modernized application is running:
+// +
+// [source,bash]
+// ----
+// oc get pods -n parasol-dev
+// oc get route parasol-insurance -n parasol-dev -o jsonpath='{.spec.host}'
+// ----
+
+// Open the route URL to confirm the modernized application is accessible and functional.
+
+// == Summary
+
+// You have:
+
+// * Installed MTA and analyzed a legacy Java application
+// * Identified mandatory and optional migration issues with effort estimates
+// * Modernized the application to use Quarkus and Jakarta EE APIs
+// * Integrated the modernized application into the existing CI/CD pipeline
+// * Verified end-to-end deployment through the GitOps workflow
