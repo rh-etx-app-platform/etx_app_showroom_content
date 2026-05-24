@@ -1,25 +1,25 @@
-= Lab 2: AI-assisted development with Red Hat Developer Lightspeed
-:navtitle: Developer Lightspeed Configuration
+= Lab 2: Migrate Application with Developer Lightspeed
+:navtitle: Migrate Application with Developer Lightspeed
 
 == Overview
 
-Red Hat Developer Lightspeed brings generative AI capabilities directly into your development environment, helping you understand migration patterns, generate code snippets, and receive context-aware recommendations as you modernize the Parasol application.
+Red Hat Developer Lightspeed brings generative AI capabilities directly into your development environment, helping you understand migration patterns, generate code snippets, and receive context-aware recommendations as you modernize the Coolstore application.
 
-In this module, you'll configure the Migration Toolkit for Applications extension in OpenShift Dev Spaces and integrate it with Red Hat's Model-as-a-Service platform to enable AI-assisted application modernization.
+In the previous lab, you analyzed Coolstore in the MTA web console. In this module, you configure the Migration Toolkit for Applications extension in OpenShift Dev Spaces, connect it to the MTA Hub, and use Agent Mode to apply AI-assisted migration changes from EAP 7 to EAP 8.
 
 == Learning objectives
 
 By the end of this module, you'll be able to:
 
 * Install and configure the Migration Toolkit for Applications extension in OpenShift Dev Spaces
-* Register an application with Red Hat Model-as-a-Service (MaaS) platform
-* Generate and securely configure API keys for Red Hat Developer Lightspeed
-* Validate AI-assisted development capabilities within your workspace
+* Connect the MTA extension to the MTA Hub deployed in the previous lab
+* Create an analysis profile and run Agent Mode analysis on the Coolstore application
+* Apply AI-assisted code changes with Developer Lightspeed to migrate from EAP 7 to EAP 8
 
 == Exercise 1: Install MTA extension in Dev Spaces
 
-Parasol Insurance needs to accelerate the application modernization process.
-You'll start by installing the MTA extension in your Dev Spaces workspace to bring migration analysis capabilities directly into the IDE.
+The Coolstore application needs to be migrated from EAP 7 to EAP 8.
+You'll start by installing the MTA extension in your Dev Spaces workspace to bring migration analysis and AI-assisted remediation directly into the IDE.
 
 === Access your Dev Spaces workspace
 
@@ -37,7 +37,7 @@ https://devspaces.apps.cluster-**<GUID>**.dynamic2.redhatworkshops.io
 If you don't have a workspace yet, create one from the GitLab repository: https://gitlab.apps.cluster-**<GUID>**.dynamic2.redhatworkshops.io/software-factory/coolstore.git
 
 === Switch Java Language Server to Standard Mode
-. From the Status Bar, Click the Java Language Server icon. 
+. From the Status Bar, click the Java Language Server icon.
 +
 image::java-language-standard.png[align="center"]
 
@@ -83,7 +83,7 @@ image::mta-hub-configure.png[align="center"]
 * **Enable authentication**: Checked
 * **Username**: `Cluster-user`
 * **Password**: `Cluster-password`
-* **Solution Server*: Enabled
+* **Solution Server**: Enabled
 * **Profile Sync**: Enabled
 
 . Click btn:[Save]
@@ -99,8 +99,8 @@ image::mta-hub-configure-complete.png[align="center"]
 +
 * **Profile Name**: `coolstore`
 * **Target Technologies**: Select `eap8`
-* **Source Technologies **: Select `eap7`
-* **Use Default Rules  **: Checked
+* **Source Technologies**: Select `eap7`
+* **Use Default Rules**: Checked
 +
 image::mta-profile-saved.png[align="center"]
 
@@ -110,11 +110,11 @@ image::mta-enable-agent.png[align="center"]
 
 . Select **Run Analysis** to begin the application analysis. MTA, in combination with Developer Lightspeed and the configured GenAI model, analyzes the entire source codebase. Wait until the analysis reaches **100% completion**.
 
-. Review the analysis results, which highlight reported issues and provide guided recommendations for migrating the application from the EAP 7 to EAP 8
+. Review the analysis results, which highlight reported issues and provide guided recommendations for migrating the application from EAP 7 to EAP 8
 +
 image::mta-analysis-results.png[align="center"]
 
-. Click through the analysis results and review the recommendations for migrating the application from the EAP 7 to EAP 8
+. Click through the analysis results and review the recommendations for migrating the application from EAP 7 to EAP 8
 
 . Select the first reported issue and follow the accompanying Arcade video, which demonstrates how Developer Lightspeed proposes code changes directly within the source files. As the suggestions are presented, you may choose to accept or reject each change. Based on your selections, Developer Lightspeed iteratively refines its recommendations and may propose additional updates as required.
 +
@@ -127,25 +127,25 @@ image::mta-analysis-results.png[align="center"]
 Applying a recommended change can introduce additional impacts in other parts of the codebase. By using the **Agent Mode** option, Developer Lightspeed is able to identify and suggest these follow-on changes. Without **Agent Mode** enabled, such dependent updates may not be detected or reflected.
 ====
 
-. Repeat the Analysis process and observe how the total number of reported issues decreases as the first issue is resolved, and note how the analysis results are updated accordingly to reflect the applied changes.
+. Repeat the analysis process and observe how the total number of reported issues decreases as the first issue is resolved, and note how the analysis results are updated accordingly to reflect the applied changes.
 
-. Go to Terminal and run
+. Go to the terminal and run the following:
 
 [source,bash]
 ----
-./mvnw clean package 
+./mvnw clean package
 ----
 
-. Verify the code compiles sucessfully
+. Verify the code compiles successfully
 +
 [NOTE]
 ====
-There could be AI introduced errors in pom.xml file. A separate repository has been created that contains the fully migrated code. You may refer to the following migrated repository for comparison and verification, or to correct your implementation if required. https://gitlab.apps.cluster-**<GUID>**.dynamic2.redhatworkshops.io/software-factory/coolstore-migrated.git
+There could be AI-introduced errors in the `pom.xml` file. A separate repository has been created that contains the fully migrated code. You may refer to the following migrated repository for comparison and verification, or to correct your implementation if required. https://gitlab.apps.cluster-**<GUID>**.dynamic2.redhatworkshops.io/software-factory/coolstore-migrated.git
 ====
 
-. The accepted solutions are captured in the **Solutions Server ** of the MTA Hub and will be used to generate the code changes for the next application. This is a powerful feature that allows you to reuse the same solutions for multiple applications.
+. The accepted solutions are captured in the **Solution Server** of the MTA Hub and will be used to generate code changes for future applications. This is a powerful feature that allows you to reuse the same solutions for multiple applications.
 
-. Once the analysis is complete and all issues are resolved, you can deploy the code to the OpenShift cluster by integrating the application to the pipeline that you created in Lab 1.
+. Once the analysis is complete and all issues are resolved, you can deploy the code to the OpenShift cluster by integrating the application into the pipeline that you created in Lab 1.
 
 == Summary
 

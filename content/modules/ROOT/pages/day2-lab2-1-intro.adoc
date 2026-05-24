@@ -3,7 +3,7 @@
 
 == Situation
 
-The **Coolstore** application is a business-critical retail application currently running on **JBoss EAP 7 as a containerized workload on OpenShift**. 
+The **Coolstore** application is a business-critical retail application currently running on **JBoss EAP 7 as a containerized workload on OpenShift**.
 
 The application is built using legacy **javax APIs** and packaged for deployment in a container, allowing it to run reliably in a Kubernetes-based platform—but on an aging Java EE stack.
 

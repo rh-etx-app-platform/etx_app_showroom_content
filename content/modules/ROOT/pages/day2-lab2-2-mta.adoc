@@ -33,7 +33,7 @@ Use your Red Hat account associated with your OpenShift environment.
 
 === Install via OperatorHub
 
-. In the OpenShift Web Console, go to menu:Echosystem[Software Catalog]
+. In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Migration Toolkit for Applications*
 . Click btn:[Install]
 . Accept the defaults and click btn:[Install]
@@ -117,7 +117,7 @@ Wait for the pods to be ready:
 oc get pods -n openshift-mta -w
 ----
 
-You should see following pods running:
+You should see the following pods running:
  - kai-api-xxxx-xxx
  - kai-db-xxxx-xxx
  - llm-proxy-xxxx-xxx
@@ -140,7 +140,7 @@ Open the URL in your browser. You should see the MTA web console.
 https://mta-openshift-mta.apps.apps.cluster-**<GUID>**.dynamic.redhatworkshops.io
 ----
 
-Use Openshift Login to log in.
+Use OpenShift Login to log in.
 
 == Analyze the Application
 
@@ -177,7 +177,7 @@ image::mta-gitlab-credentials.png[align="center"]
 . Select the application and click btn:[Analyze]
 . Select *Mode*: Manual Selection and click btn:[Next]
 . Keep the default settings for *Analysis source* and click btn:[Next]
-. In *Set Target* select: "Jboss EAP 8" and click btn:[Next]
+. In *Set Target* select: "JBoss EAP 8" and click btn:[Next]
 . In *Set Scope* select: "Application and internal dependencies only" and click btn:[Next]
 . Keep the default settings for *Custom Rules* and click btn:[Next]
 . Keep the default settings for *Advanced options* and click btn:[Next]
@@ -199,7 +199,7 @@ Once the analysis completes:
 
 == Next Steps
 
-Proceed to xref:day2-lab2-4-lightspeed.adoc[Developer Lightspeed Configuration].
+Proceed to xref:day2-lab2-3-lightspeed.adoc[Migrate Application with Developer Lightspeed].
 // Proceed to xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub].
 
 // Common findings when migrating to Quarkus:
