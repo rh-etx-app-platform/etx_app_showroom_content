@@ -16,7 +16,7 @@ By the end of this module, you'll be able to:
 * Create an analysis profile and run Agent Mode analysis on the Coolstore application
 * Apply AI-assisted code changes with Developer Lightspeed to migrate from EAP 7 to EAP 8
 
-== Exercise 1: Install MTA extension in Dev Spaces
+== Install the MTA extension in Dev Spaces
 
 The Coolstore application needs to be migrated from EAP 7 to EAP 8.
 You'll start by installing the MTA extension in your Dev Spaces workspace to bring migration analysis and AI-assisted remediation directly into the IDE.
@@ -63,6 +63,8 @@ image::installed-mta.png[align="center"]
 +
 image::mta-welcome.png[align="center"]
 
+=== Configure the MTA Extension
+
 . Open the Analysis Panel by clicking btn:[Open Analysis Panel]
 +
 image::mta-analysis-panel.png[align="center"]
@@ -104,27 +106,31 @@ image::mta-hub-configure-complete.png[align="center"]
 +
 image::mta-profile-saved.png[align="center"]
 
+=== Analyze the Application
+
 . Return to the **MTA Analysis View**, confirm that **Agent Mode** is enabled, and select **Start** to activate the newly created profile.
 +
 image::mta-enable-agent.png[align="center"]
 
 . Select **Run Analysis** to begin the application analysis. MTA, in combination with Developer Lightspeed and the configured GenAI model, analyzes the entire source codebase. Wait until the analysis reaches **100% completion**.
 
-. Review the analysis results, which highlight reported issues and provide guided recommendations for migrating the application from EAP 7 to EAP 8
+. Review the analysis results, which highlight reported issues and provide guided recommendations for migrating the application from EAP 7 to EAP 8.
 +
 image::mta-analysis-results.png[align="center"]
 
-. Click through the analysis results and review the recommendations for migrating the application from EAP 7 to EAP 8
+. Click through the analysis results and review the recommendations for migrating the application from EAP 7 to EAP 8.
 
-. Select the first reported issue and follow the accompanying Arcade video, which demonstrates how Developer Lightspeed proposes code changes directly within the source files. As the suggestions are presented, you may choose to accept or reject each change. Based on your selections, Developer Lightspeed iteratively refines its recommendations and may propose additional updates as required.
+. Select the first reported issue and follow the accompanying Arcade video, which demonstrates how Developer Lightspeed proposes code changes directly within the source files.
 +
 ++++
 <!--ARCADE EMBED START--><div style="position: relative; padding-bottom: calc(56.25% + 41px); height: 0px; width: 100%;"><iframe src="https://demo.arcade.software/t3XzB4yORwqLdF8wDzpZ?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true" title="MTA with Developer Lightspeed" frameborder="0" loading="lazy" webkitallowfullscreen mozallowfullscreen allowfullscreen allow="clipboard-write" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; color-scheme: light;" ></iframe></div><!--ARCADE EMBED END-->
 ++++
 +
+. As suggestions appear, accept or reject each change. Developer Lightspeed refines its recommendations based on your selections and may propose additional updates as needed.
++
 [NOTE]
 ====
-Applying a recommended change can introduce additional impacts in other parts of the codebase. By using the **Agent Mode** option, Developer Lightspeed is able to identify and suggest these follow-on changes. Without **Agent Mode** enabled, such dependent updates may not be detected or reflected.
+Applying recommended changes can introduce additional impacts in other parts of the codebase. By using the **Agent Mode** option, Developer Lightspeed is able to identify and suggest these follow-on changes. Without **Agent Mode** enabled, such dependent updates may not be detected or reflected.
 ====
 
 . Repeat the analysis process and observe how the total number of reported issues decreases as the first issue is resolved, and note how the analysis results are updated accordingly to reflect the applied changes.
@@ -153,9 +159,9 @@ You have:
 
 * Installed the MTA extension in your Dev Spaces workspace
 * Configured the MTA extension to use the MTA Hub
-* Created a new profile for the coolstore application
-* Analyzed the coolstore application using the MTA extension
-* Migrated the coolstore application to EAP 8
+* Created a new profile for the Coolstore application
+* Analyzed the Coolstore application using the MTA extension
+* Migrated the Coolstore application to EAP 8
 
 == Next Steps
 Proceed to xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub].

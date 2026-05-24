@@ -5,7 +5,7 @@
 
 Use the Migration Toolkit for Applications (MTA) to analyze a legacy Java application, identify migration issues, and modernize it to run on a Red Hat Runtime.
 
-== Register with Red Hat MaaS platform
+== Register with the Red Hat MaaS platform
 
 . Open the Red Hat Model-as-a-Service portal in a new browser tab:
 +
@@ -14,7 +14,7 @@ link:https://litellm-prod-frontend.apps.maas.redhatworkshops.io/[Red Hat MaaS Po
 . Sign in with your Red Hat credentials
 +
 Use your Red Hat account associated with your OpenShift environment.
-
+C
 . Navigate to **Models** from the dashboard
 . Select **granite-3-2-8b-instruct** from the list of models
 . Click btn:[Subscribe]
@@ -144,7 +144,7 @@ Use OpenShift Login to log in.
 
 == Analyze the Application
 
-=== Setup GitLab Integration
+=== Set Up GitLab Integration
 
 . In the MTA web console
 . Go to menu:Administration[Credentials]
