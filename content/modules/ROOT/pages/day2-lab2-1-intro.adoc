@@ -11,13 +11,13 @@ To stay aligned with modern enterprise standards and supported runtimes, the org
 
 In this hands-on, lab-oriented training, learners use **Red Hat Migration Toolkit for Applications (MTA) with Developer Lightspeed** to analyze the Coolstore codebase running on EAP 7 containers, identify migration issues, and receive AI-assisted recommendations for modernization.
 
-Learners then apply these insights to refactor the legacy code, rebuild the container image, and **deploy the migrated jakarta-based Coolstore application on JBoss EAP 8 running on OpenShift**. The labs closely mirror real-world enterprise modernization efforts, combining application migration with container and platform-aware validation.
+Learners then apply these insights to refactor the legacy code and **verify the migrated jakarta-based application builds successfully for JBoss EAP 8**. The labs closely mirror real-world enterprise modernization efforts, combining application analysis with AI-assisted code migration.
 
 == Training Scenario and Approach
 
 * You are responsible for modernizing the **Coolstore** retail application, a production-like enterprise Java workload running as a containerized **JBoss EAP 7** application on OpenShift. While the application is stable, it relies on legacy **javax** APIs, which makes it incompatible with newer **Jakarta EE-based** runtimes.
 
-* In this training, you use **Red Hat Developer Lightspeed for Migration Toolkit for Applications (MTA)** to guide and accelerate the modernization process. Your goal is to migrate Coolstore to **JBoss EAP 8**, running in containers on OpenShift, by following a controlled, tool-assisted, and repeatable approach—mirroring how application modernization is performed in real-world enterprise environments.
+* In this training, you use **Red Hat Developer Lightspeed for Migration Toolkit for Applications (MTA)** to guide and accelerate the modernization process. Your goal is to migrate Coolstore to **JBoss EAP 8**-compatible code by following a controlled, tool-assisted, and repeatable approach—mirroring how application modernization is performed in real-world enterprise environments.
 
 [NOTE]
 ====

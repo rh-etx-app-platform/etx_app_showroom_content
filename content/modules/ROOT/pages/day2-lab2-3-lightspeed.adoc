@@ -151,7 +151,7 @@ There could be AI-introduced errors in the `pom.xml` file. A separate repository
 
 . The accepted solutions are captured in the **Solution Server** of the MTA Hub and will be used to generate code changes for future applications. This is a powerful feature that allows you to reuse the same solutions for multiple applications.
 
-. Once the analysis is complete and all issues are resolved, you can deploy the code to the OpenShift cluster by integrating the application into the pipeline that you created in Lab 1.
+. Once the analysis is complete, all issues are resolved, and `./mvnw clean package` succeeds, you have completed the migration exercise for this lab.
 
 == Summary
 
@@ -161,7 +161,7 @@ You have:
 * Configured the MTA extension to use the MTA Hub
 * Created a new profile for the Coolstore application
 * Analyzed the Coolstore application using the MTA extension
-* Migrated the Coolstore application to EAP 8
+* Migrated the Coolstore application to EAP 8 and verified the build
 
 == Next Steps
 Proceed to xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub].

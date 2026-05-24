@@ -14,7 +14,7 @@ link:https://litellm-prod-frontend.apps.maas.redhatworkshops.io/[Red Hat MaaS Po
 . Sign in with your Red Hat credentials
 +
 Use your Red Hat account associated with your OpenShift environment.
-C
+
 . Navigate to **Models** from the dashboard
 . Select **granite-3-2-8b-instruct** from the list of models
 . Click btn:[Subscribe]
