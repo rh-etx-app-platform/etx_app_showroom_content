@@ -34,7 +34,16 @@ https://devspaces.{openshift_cluster_ingress_domain}
 
 . Open your existing `coolstore` workspace
 +
-If you don't have a workspace yet, create one from the GitLab repository: {gitlab_url}/software-factory/coolstore.git
+If you don't have a workspace yet, create one from the GitLab repository: {gitlab_url}/mta-apps/coolstore.git
+
+=== Install the Language Support for Java extension
+
+. From the lower-left corner, select the **Settings (gear) icon**, and then choose **Extensions** to open the Extensions Marketplace.
++
+image::mta-extension.png[align="center"]
+. In the Extensions search bar, search for **Language Support for Java\(TM)** and install the extension.
++
+image::mta-extension-java.png[align="center"]
 
 === Switch Java Language Server to Standard Mode
 . From the Status Bar, click the Java Language Server icon.
@@ -51,6 +60,10 @@ image::mta-extension.png[align="center"]
 . In the Extensions search bar, search for **Migration Toolkit for Applications (MTA)** and install the extension.
 +
 image::mta-extension-search.png[align="center"]
+[NOTE]
+====
+You may see 2 Migration Toolkit for Applications extensions.  Ensure it is the one listed above in the screen shot with the new logo.
+====
 
 . Once the installation is complete, verify that the **MTA extension icon** appears in the left-hand Activity Bar. Select this icon to open the MTA analysis view.
 +
@@ -83,8 +96,8 @@ image::mta-hub-configure.png[align="center"]
 * **Hub URL**: `https://mta-openshift-mta.{openshift_cluster_ingress_domain}`
 * **Insecure connection**: Checked
 * **Enable authentication**: Checked
-* **Username**: `Cluster-user`
-* **Password**: `Cluster-password`
+* **Username**: `{user}`
+* **Password**: `{password}`
 * **Solution Server**: Enabled
 * **Profile Sync**: Enabled
 
@@ -120,7 +133,7 @@ image::mta-analysis-results.png[align="center"]
 
 . Click through the analysis results and review the recommendations for migrating the application from EAP 7 to EAP 8.
 
-. Select the first reported issue and follow the accompanying Arcade video, which demonstrates how Developer Lightspeed proposes code changes directly within the source files.
+. Select the `javax groupId has been replaced by jakarta.platform` reported issue and follow the accompanying Arcade video, which demonstrates how Developer Lightspeed proposes code changes directly within the source files.
 +
 ++++
 <!--ARCADE EMBED START--><div style="position: relative; padding-bottom: calc(56.25% + 41px); height: 0px; width: 100%;"><iframe src="https://demo.arcade.software/t3XzB4yORwqLdF8wDzpZ?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true" title="MTA with Developer Lightspeed" frameborder="0" loading="lazy" webkitallowfullscreen mozallowfullscreen allowfullscreen allow="clipboard-write" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; color-scheme: light;" ></iframe></div><!--ARCADE EMBED END-->
@@ -139,19 +152,19 @@ Applying recommended changes can introduce additional impacts in other parts of 
 
 [source,bash]
 ----
-./mvnw clean package
+./mvn clean package
 ----
 
 . Verify the code compiles successfully
 +
 [NOTE]
 ====
-There could be AI-introduced errors in the `pom.xml` file. A separate repository has been created that contains the fully migrated code. You may refer to the following migrated repository for comparison and verification, or to correct your implementation if required. {gitlab_url}/software-factory/coolstore-migrated.git
+There could be AI-introduced errors in the `pom.xml` file. A separate repository has been created that contains the fully migrated code. You may refer to the following migrated repository for comparison and verification, or to correct your implementation if required. {gitlab_url}/mta-apps/coolstore-migrated.git
 ====
 
 . The accepted solutions are captured in the **Solution Server** of the MTA Hub and will be used to generate code changes for future applications. This is a powerful feature that allows you to reuse the same solutions for multiple applications.
 
-. Once the analysis is complete, all issues are resolved, and `./mvnw clean package` succeeds, you have completed the migration exercise for this lab.
+. Once the analysis is complete, all issues are resolved, and `./mvn clean package` succeeds, you have completed the migration exercise for this lab.
 
 == Summary
 

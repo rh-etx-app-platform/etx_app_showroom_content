@@ -169,7 +169,7 @@ image::mta-gitlab-credentials.png[align="center"]
 . Fill in the application details:
   * *Name*: `coolstore`
   * *Manual Tags*: `Runtime/EAP`
-  * *Source code -> Source repository*: {gitlab_url}/software-factory/coolstore.git
+  * *Source code -> Source repository*: {gitlab_url}/mta-apps/coolstore.git
   * *Branch*: `main`
 . Click btn:[Create]
 
