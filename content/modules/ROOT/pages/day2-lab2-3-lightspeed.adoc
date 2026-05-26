@@ -25,16 +25,16 @@ You'll start by installing the MTA extension in your Dev Spaces workspace to bri
 
 . Open the OpenShift Dev Spaces console:
 +
-[source,role="execute"]
+[source,role="execute",subs="attributes+"]
 ----
-https://devspaces.apps.cluster-**<GUID>**.dynamic2.redhatworkshops.io
+https://devspaces.{openshift_cluster_ingress_domain}
 ----
 
 . Log in with your OpenShift credentials if prompted
 
 . Open your existing `coolstore` workspace
 +
-If you don't have a workspace yet, create one from the GitLab repository: https://gitlab.apps.cluster-**<GUID>**.dynamic2.redhatworkshops.io/software-factory/coolstore.git
+If you don't have a workspace yet, create one from the GitLab repository: {gitlab_url}/software-factory/coolstore.git
 
 === Switch Java Language Server to Standard Mode
 . From the Status Bar, click the Java Language Server icon.
@@ -80,7 +80,7 @@ image::mta-hub-configure.png[align="center"]
 . In the settings screen, fill in the details:
 +
 * **Enable Hub**: Checked
-* **Hub URL**: `https://mta-openshift-mta.apps.apps.cluster-**<GUID>**.dynamic.redhatworkshops.io`
+* **Hub URL**: `https://mta-openshift-mta.{openshift_cluster_ingress_domain}`
 * **Insecure connection**: Checked
 * **Enable authentication**: Checked
 * **Username**: `Cluster-user`
@@ -104,7 +104,7 @@ image::mta-hub-configure-complete.png[align="center"]
 * **Source Technologies**: Select `eap7`
 * **Use Default Rules**: Checked
 +
-image::mta-profile-saved.png[align="center"]
+image::mta-profile-save.png[align="center"]
 
 === Analyze the Application
 
@@ -146,7 +146,7 @@ Applying recommended changes can introduce additional impacts in other parts of 
 +
 [NOTE]
 ====
-There could be AI-introduced errors in the `pom.xml` file. A separate repository has been created that contains the fully migrated code. You may refer to the following migrated repository for comparison and verification, or to correct your implementation if required. https://gitlab.apps.cluster-**<GUID>**.dynamic2.redhatworkshops.io/software-factory/coolstore-migrated.git
+There could be AI-introduced errors in the `pom.xml` file. A separate repository has been created that contains the fully migrated code. You may refer to the following migrated repository for comparison and verification, or to correct your implementation if required. {gitlab_url}/software-factory/coolstore-migrated.git
 ====
 
 . The accepted solutions are captured in the **Solution Server** of the MTA Hub and will be used to generate code changes for future applications. This is a powerful feature that allows you to reuse the same solutions for multiple applications.

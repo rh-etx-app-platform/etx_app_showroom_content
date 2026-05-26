@@ -9,13 +9,23 @@ asciidoc:
     experimental: true
     page-pagination: true
     showroom-collection-version: v1.5.6
-    guid: abc123
-    bastion_public_hostname: bastion.abc123.ocpv00.rhdp.net
+    guid: cluster-id
+    guid2: cluster-id2
+    workshop_base_domain: dynamic.redhatworkshops.io
+    bastion_public_hostname: bastion.{guid}.{workshop_base_domain}
     bastion_ssh_user_name: lab-user
     bastion_ssh_password: password
     ssh_user: lab-user
-    openshift_console_url: https://console-openshift-console.apps.cluster-abc123.ocpv00.rhdp.net
-    openshift_cluster_ingress_domain: apps.cluster-abc123.ocpv00.rhdp.net
-    ocp_version: "4.18"
-    user: kubeadmin
-    password: changeme
+    openshift_cluster_ingress_domain: apps.cluster-{guid}.{workshop_base_domain}
+    openshift_console_url: https://console-openshift-console.{openshift_cluster_ingress_domain}
+    openshift_api_url: https://api.cluster-{guid}.{workshop_base_domain}:6443
+    ocp_version: "4.21"
+    user: platform-admin
+    password: openshift
+    gitlab_url: https://gitlab.{openshift_cluster_ingress_domain}
+    keycloak_url: https://etx-sso.{openshift_cluster_ingress_domain}
+    quay_url: https://quay.{openshift_cluster_ingress_domain}
+    quay_registry_url: quay-registry-quay.{openshift_cluster_ingress_domain}
+    vault_url: https://vault.{openshift_cluster_ingress_domain}
+    etx_gitops_url: https://etx-gitops-server-etx-gitops.{openshift_cluster_ingress_domain}
+    devspaces_url: https://devspaces.{openshift_cluster_ingress_domain}

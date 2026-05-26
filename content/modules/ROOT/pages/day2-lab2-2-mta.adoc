@@ -44,7 +44,7 @@ Verify from the CLI:
 [source,bash]
 //TODO this doesn't work (nothing comes up)
 ----
-oc get csv -n openshift-operators | grep mta
+oc get csv -n openshift-mta | grep mta
 ----
 
 === Deploy the MTA Web Console
@@ -118,6 +118,7 @@ oc get pods -n openshift-mta -w
 ----
 
 You should see the following pods running:
+
  - kai-api-xxxx-xxx
  - kai-db-xxxx-xxx
  - llm-proxy-xxxx-xxx
@@ -135,9 +136,9 @@ oc get route -n openshift-mta
 
 Open the URL in your browser. You should see the MTA web console.
 
-[source,text]
+[source,text,subs="attributes+"]
 ----
-https://mta-openshift-mta.apps.apps.cluster-**<GUID>**.dynamic.redhatworkshops.io
+https://mta-openshift-mta.{openshift_cluster_ingress_domain}
 ----
 
 Use OpenShift Login to log in.
@@ -168,7 +169,7 @@ image::mta-gitlab-credentials.png[align="center"]
 . Fill in the application details:
   * *Name*: `coolstore`
   * *Manual Tags*: `Runtime/EAP`
-  * *Source code -> Source repository*: https://gitlab.apps.cluster-**<GUID>**.dynamic2.redhatworkshops.io/software-factory/coolstore.git
+  * *Source code -> Source repository*: {gitlab_url}/software-factory/coolstore.git
   * *Branch*: `main`
 . Click btn:[Create]
 
