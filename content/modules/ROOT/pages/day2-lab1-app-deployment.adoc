@@ -519,18 +519,18 @@ Create `environments/stage/deployment.yaml`:
 
 [source,bash,role=execute,subs="attributes+"]
 ----
-cat > environments/stage/deployment.yaml <<'EOF'
+cat > environments/stage/deployment.yaml <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: etx-app-base-app
-  namespace: etx-app-staging # 1
+  namespace: etx-app-staging # # <1>
   labels:
     app: etx-app-base-app
   annotations:
     instrumentation.opentelemetry.io/inject-java: "true"
 spec:
-  replicas: 2 # 2
+  replicas: 2 # # <2>
   selector:
     matchLabels:
       app: etx-app-base-app
@@ -543,7 +543,7 @@ spec:
     spec:
       containers:
         - name: etx-app-base-app
-          image: {quay_url}/etx-app/etx-app-base-app:stable # 3
+          image: {quay_url}/etx-app/etx-app-base-app:stable # # <3>
           ports:
             - containerPort: 8080
           resources:

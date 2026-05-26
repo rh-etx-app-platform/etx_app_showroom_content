@@ -46,12 +46,9 @@ export GITLAB_APPLICATION_SECRET="REPLACE_APPLICATION_SECRET"
 
 Create the secret:
 
-WARNING: Remove the character ' around the EOF keyword. They were added just for 
-rendering purposes of this documentation. Otherwise, the variables will not be substituted.
-
-[source,bash,role=execute,subs="attributes"]
+[source,bash,role=execute,subs="attributes+"]
 ----
-oc apply -f - <<'EOF'
+oc apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -130,12 +127,9 @@ WARNING: Replace `LLM_API_KEY` before running the command.
 export LLM_API_KEY="REPLACE_API_KEY"
 ----
 
-WARNING: Remove the character ' around the EOF keyword. They were added just for 
-rendering purposes of this documentation. Otherwise, the variables will not be substituted.
-
-[source,bash,role=execute,subs="attributes"]
+[source,bash,role=execute,subs="attributes+"]
 ----
-oc apply -f - <<'EOF'
+oc apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
