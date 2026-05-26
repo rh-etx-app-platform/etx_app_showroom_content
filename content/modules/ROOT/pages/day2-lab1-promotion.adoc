@@ -323,8 +323,6 @@ spec:
           workspace: shared-workspace
 ----
 
-NOTE: Replace `{gitlab_url}` with your actual GitLab URL before applying.
-
 Apply the pipeline:
 
 [source,bash,role=execute]
@@ -334,9 +332,17 @@ oc apply -f etx-app-promotion-pipeline.yaml
 
 == Test the Promotion Pipeline
 
+First, get the GitLab URL dynamically:
+
+[source,bash,role=execute]
+----
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "GitLab URL: $GITLAB_URL"
+----
+
 === Get a Valid Image Tag
 
-First, find a recent image tag from your dev environment:
+Find a recent image tag from your dev environment:
 
 [source,bash,role=execute]
 ----
@@ -353,14 +359,14 @@ Trigger the promotion pipeline manually.
 
 First, get an actual commit SHA from the images built by the CI pipeline:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get images -n etx-app-dev | grep etx-app-base-app
 ----
 
 Then create a PipelineRun (replace `<COMMIT_SHA>` with an actual image tag from above):
 
-[source,bash,role=execute,subs="attributes+"]
+[source,bash,role=execute]
 ----
 oc create -f - <<EOF
 apiVersion: tekton.dev/v1
@@ -377,7 +383,7 @@ spec:
     - name: dest-image-tag
       value: stable
     - name: gitops-repo-url
-      value: {gitlab_url}/software-factory/etx-app-gitops.git
+      value: ${GITLAB_URL}/software-factory/etx-app-gitops.git
   workspaces:
     - name: shared-workspace
       persistentVolumeClaim:

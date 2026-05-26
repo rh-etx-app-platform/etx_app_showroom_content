@@ -158,14 +158,14 @@ EOF
 
 Wait for the Kafka cluster to be ready:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc wait kafka/parasol-kafka --for=condition=Ready --timeout=300s -n etx-app-dev
 ----
 
 Verify the Kafka pods are running:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -l strimzi.io/cluster=parasol-kafka -n etx-app-dev
 ----
@@ -176,7 +176,7 @@ You should see:
 
 Get the Kafka bootstrap server:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get service parasol-kafka-kafka-bootstrap -n etx-app-dev -o jsonpath='{.metadata.name}:{.spec.ports[0].port}{"\n"}'
 ----
@@ -208,7 +208,7 @@ EOF
 
 Verify the topic was created:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get kafkatopic -n etx-app-dev
 ----
@@ -315,21 +315,21 @@ IMPORTANT: This Deployment uses `emptyDir` for storage, which means data is lost
 
 Wait for PostgreSQL to be ready:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc rollout status deployment/parasol-db -n etx-app-dev
 ----
 
 Verify the PostgreSQL pod is running:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -l app=parasol-db -n etx-app-dev
 ----
 
 Test the database connection:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc run postgresql-test --rm -it --restart=Never \
   --image=registry.redhat.io/rhel9/postgresql-16:latest \

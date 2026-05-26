@@ -71,7 +71,7 @@ echo "Using Vault URL: $VAULT_URL"
 
 Then create the Task:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f - <<EOF
 apiVersion: tekton.dev/v1
@@ -217,7 +217,7 @@ Run the pipeline once to verify it works before adding webhooks.
 
 First, get the GitLab URL from the cluster:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get GitLab URL dynamically
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
@@ -262,7 +262,7 @@ pipelinerun.tekton.dev/etx-app-base-app-ci-xxxxx created
 
 Monitor the PipelineRun:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # List all PipelineRuns
 oc get pipelinerun -n etx-app-dev
@@ -276,7 +276,7 @@ There are several ways to monitor the pipeline:
 
 **Option 1: Watch PipelineRun status** (Recommended)
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Watch PipelineRun status in real-time (press Ctrl+C to exit)
 oc get pipelinerun -n etx-app-dev -w
@@ -286,7 +286,7 @@ This shows the overall status of all PipelineRuns and updates in real-time.
 
 **Option 2: View individual Task logs**
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get the name of the latest PipelineRun
 LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
@@ -299,7 +299,7 @@ oc get taskrun -n etx-app-dev -l tekton.dev/pipelineRun=$LATEST_PR
 
 To view logs of a specific TaskRun, use the name from the list above:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # View logs of a specific TaskRun (example: fetch-creds)
 oc logs -n etx-app-dev -l tekton.dev/taskRun=etx-app-base-app-ci-xxxxx-fetch-creds -f
@@ -307,7 +307,7 @@ oc logs -n etx-app-dev -l tekton.dev/taskRun=etx-app-base-app-ci-xxxxx-fetch-cre
 
 Or automatically get logs from a failed TaskRun:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get the latest PipelineRun
 LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
@@ -325,7 +325,7 @@ fi
 
 **Option 3: View logs of currently running pod**
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get the name of the latest PipelineRun
 LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
@@ -348,7 +348,7 @@ This error means the Vault response is not valid JSON. Common causes:
 
 * **Vault is unavailable**: Check if Vault pods are running:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n vault
 ----
@@ -359,7 +359,7 @@ If Vault is down, wait for it to recover and retry the pipeline.
 
 * **ServiceAccount lacks permissions**: Verify the pipeline ServiceAccount exists:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get serviceaccount pipeline -n etx-app-dev
 ----
@@ -368,7 +368,7 @@ oc get serviceaccount pipeline -n etx-app-dev
 
 Verify the image was pushed:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get imagestream etx-app-base-app -n etx-app-dev
 oc get imagestreamtag etx-app-base-app:main -n etx-app-dev
@@ -378,7 +378,7 @@ oc get imagestreamtag etx-app-base-app:main -n etx-app-dev
 
 The GitLab URL is incorrect. Verify:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}{"\n"}'
 ----
@@ -515,7 +515,7 @@ GitLab blocks webhooks to local/internal networks by default for security (SSRF 
 
 . Get the GitLab Admin URLs and root password:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
 GITLAB_ROOT_PASSWORD=$(oc get secret -n gitlab gitlab-gitlab-initial-root-password -o jsonpath='{.data.password}' | base64 -d)
@@ -633,7 +633,7 @@ NOTE: Configuring webhooks requires **Maintainer** or **Owner** role on the proj
 . Configure the webhook:
   * *URL*: Paste the EventListener route URL:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 echo "https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
@@ -680,7 +680,7 @@ This error occurs when GitLab blocks webhooks to local/internal networks. Soluti
 
 3. **Test EventListener is responding**:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 curl -I https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')
 ----
@@ -698,7 +698,7 @@ The cluster uses self-signed certificates. In GitLab webhook settings:
 
 Check the EventListener pod is running:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n etx-app-dev | grep el-gitlab-listener
 oc logs -n etx-app-dev -l eventlistener=gitlab-listener

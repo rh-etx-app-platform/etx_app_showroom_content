@@ -9,7 +9,7 @@ In this lab you will create a Dev Spaces workspace for the ETX App Base applicat
 
 Get the Dev Spaces dashboard URL:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get checluster devspaces -n openshift-devspaces \
   -o jsonpath='{.status.cheURL}{"\n"}'
@@ -44,7 +44,7 @@ Once the workspace opens, configure Git identity.
 
 Open a terminal from the main menu (hamburger icon in the top-left corner: menu:Terminal[New Terminal]).
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Configure Git identity
 git config --global user.email "platform-developer@example.com"
@@ -57,7 +57,7 @@ Now create a `devfile.yaml` file that will configure your development environmen
 
 Create the devfile:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 cat > devfile.yaml <<'EOF'
 schemaVersion: 2.2.0
@@ -155,7 +155,7 @@ cat devfile.yaml | head -20
 
 Create a feature branch, commit the devfile, and push to GitLab:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Create and switch to feature branch
 git checkout -b feature/add-devfile
@@ -328,7 +328,7 @@ NOTE: Setting up Continue is optional. Skip this section if you encounter issues
 
 Check if LLM credentials are available:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 echo "LLM_API_KEY: $LLM_API_KEY"
 echo "LLM_BASE_URL: $LLM_BASE_URL"

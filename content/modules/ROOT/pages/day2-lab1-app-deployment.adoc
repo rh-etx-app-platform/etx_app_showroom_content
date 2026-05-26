@@ -28,7 +28,7 @@ The ETX platform uses a shared Keycloak OIDC client (`argocd`) for all ArgoCD in
 
 The OIDC client `argocd` already exists in Keycloak realm `etx-lab`. Create a secret with the shared credentials:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get Keycloak URL (etx-sso route)
 KEYCLOAK_URL="https://etx-sso.apps.$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
@@ -55,7 +55,7 @@ Create an Argo CD instance in your namespace for managing application deployment
 
 First, get the cluster domain dynamically:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get cluster domain from existing Keycloak route
 CLUSTER_DOMAIN="$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
@@ -190,14 +190,14 @@ Press Ctrl+C when you see all `argocd-*` pods showing `1/1 Ready`.
 
 The ArgoCD operator should automatically create a route. Verify it exists:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get route argocd-server -n etx-app-dev
 ----
 
 If the route doesn't exist, create it manually:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc create route edge argocd-server \
   --service=argocd-server \
@@ -254,14 +254,14 @@ If you get `ERR_TOO_MANY_REDIRECTS` when accessing the Argo CD dashboard:
 
 1. Update the ArgoCD CR to add `server.insecure: true`:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 oc patch argocd argocd -n etx-app-dev --type=merge -p '{"spec":{"server":{"insecure":true}}}'
 ----
 
 2. Wait for the argocd-server pod to restart (this happens automatically):
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n etx-app-dev -l app.kubernetes.io/name=argocd-server -w
 ----
@@ -270,7 +270,7 @@ Press Ctrl+C when you see the new pod showing `1/1 Running`.
 
 3. Verify the configuration was applied:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get argocd argocd -n etx-app-dev -o jsonpath='{.spec.server.insecure}{"\n"}'
 ----
@@ -281,7 +281,7 @@ Should output: `true`
 
 5. Try accessing the dashboard again:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 echo "https://$(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
@@ -295,7 +295,7 @@ This repository holds the Kubernetes manifests that Argo CD will sync:
 
 . Log into GitLab (get the URL first):
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get GitLab URL
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
@@ -442,7 +442,7 @@ Create an Argo CD Application that watches the `dev` environment.
 
 First, get the GitLab URL:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get GitLab URL dynamically
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
@@ -575,7 +575,7 @@ Update the pipeline to include this task at the end.
 
 Add the `update-gitops` task to the pipeline spec. Get the GitLab URL first, then update the pipeline:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get GitLab URL dynamically
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
@@ -617,7 +617,7 @@ Check that Argo CD can see the secondary cluster.
 
 **Option 1: Using oc commands** (Recommended)
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # List cluster secrets in Argo CD
 oc get secret -n etx-app-dev -l argocd.argoproj.io/secret-type=cluster
@@ -635,7 +635,7 @@ You should see secrets for:
 
 If you have the argocd CLI installed:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Login to Argo CD
 argocd login $(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}') \
@@ -683,7 +683,7 @@ Update `environments/stage/deployment.yaml` to use the `etx-app-staging` namespa
 
 First, get the Quay URL:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get Quay URL dynamically
 QUAY_URL=$(oc get route -n quay -l app=quay -o jsonpath='{.items[0].spec.host}')
@@ -692,7 +692,7 @@ echo "Using Quay URL: $QUAY_URL"
 
 Then create the deployment manifest:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 cat > environments/stage/deployment.yaml <<EOF
 apiVersion: apps/v1
@@ -739,28 +739,28 @@ Key differences from dev:
 
 Update `environments/stage/service.yaml` to use `etx-app-staging` namespace:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 sed -i 's/namespace: etx-app-dev/namespace: etx-app-staging/' environments/stage/service.yaml
 ----
 
 Update `environments/stage/route.yaml` to use `etx-app-staging` namespace:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 sed -i 's/namespace: etx-app-dev/namespace: etx-app-staging/' environments/stage/route.yaml
 ----
 
 Update `environments/stage/namespace.yaml`:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 sed -i 's/name: etx-app-dev/name: etx-app-staging/' environments/stage/namespace.yaml
 ----
 
 Verify the changes:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 grep namespace environments/stage/*.yaml
 ----
@@ -780,7 +780,7 @@ Create an Argo CD Application for the staging environment on the secondary clust
 
 First, get the GitLab URL and the secondary cluster server URL:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get GitLab URL
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
@@ -877,7 +877,7 @@ This GitOps approach ensures:
 
 Verify the complete deployment:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Check Argo CD application status
 oc get application etx-app-dev -n etx-app-dev -o jsonpath='{.status.sync.status}: {.status.health.status}{"\n"}'
