@@ -27,7 +27,9 @@ By the end of this lab, you will be able to:
 
 . Open the OpenShift web console at {openshift_console_url} and sign in with `{user}` and `{password}`.
 . In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
-. Search for *Red Hat Developer Hub*
+. Search for *Red Hat Developer Hub*.
++
+WARNING: Make sure that you choose the **Operator Backed** entry from the results.
 . Click btn:[Install]
 . Keep the operator installation namespace as `rhdh-operator`
 . Accept the defaults for the rest (All namespaces, Automatic approval) and click btn:[Install]
@@ -37,7 +39,7 @@ From the terminal tab, create the `setup-rhdh` the project:
 
 [source,role="execute"]
 ----
-oc new-project setup-rhdh
+oc create namespace setup-rhdh
 ----
 
 Expected output (namespace line may vary slightly by cluster):

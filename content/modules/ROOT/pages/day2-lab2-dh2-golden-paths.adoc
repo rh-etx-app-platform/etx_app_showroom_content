@@ -18,7 +18,7 @@ best-practices and use approved processes and tooling. Development teams will be
 software and automate their tasks. Using Templates reduces cognitive load on the development teams by allowing them to
 focus on development tasks, while platform concerns are addressed by the template.
 
-Templates are defined using YAML, but are rendered as a rich form in the {product_rhdh_name} UI when used by development teams.
+Templates are defined using YAML, but are rendered as a rich form in the Red Hat Developer Hub UI when used by development teams.
 
 == Register a Golden Path Template
 
@@ -244,7 +244,9 @@ When a component has this annotation, the Developer Hub UI shows a "Dev Spaces" 
 
 === Configure the Dev Spaces Plugin
 
-Add the Dev Spaces plugin configuration to `app-config`, following the same steps as in the previous section.
+Add the Dev Spaces plugin configuration to *rhdh-config* ConfigMap. Under `data.app-config.yaml`, keep your
+existing `app`, `auth` and other settings and add the `devSpaces` block below.
+Do not replace the whole file—merge the new section with what is already there.
 
 [source,yaml,subs="attributes+"]
 ----
@@ -274,7 +276,11 @@ secret: GENERATE_A_RANDOM_SECRET
 EOF
 ----
 
-TIP: You can change the secret with other random value.
+TIP: You can generate a random secret value using the following command:
+[source,bash,role=execute,subs="attributes+"]
+----
+node -p 'require("crypto").randomBytes(24).toString("base64")'
+----
 
 === Create the Auth Secret
 
@@ -305,8 +311,15 @@ Replace the guest auth block with OIDC:
             metadataUrl: ${AUTH_OIDC_METADATA_URL}
             prompt: auto
 ----
-+
-. Click **Save** and wait for the Backstage pod to restart.
+
+TIP: You can replace `MY_SESSION_SECRET` with a random value using the following command:
+
+[source,bash,role=execute,subs="attributes+"]
+----
+node -p 'require("crypto").randomBytes(24).toString("base64")'
+----
+
+Click **Save** and wait for the Backstage pod to restart.
 
 `signInPage: oidc` shows the OpenShift sign-in flow on the login page.
 The `${AUTH_OIDC_*}` placeholders are resolved from the Secret mounted on the `Backstage` CR in the next step.
