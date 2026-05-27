@@ -61,7 +61,7 @@ commands:
       workingDir: /home/user
       commandLine: |
         mkdir -p /home/user/.continue
-        cat > /home/user/.continue/config.yaml << 'INNEREOF'
+        cat > /home/user/.continue/config.yaml << EOF
         name: Continue Config
         version: 0.0.1
         models:
@@ -72,7 +72,7 @@ commands:
             apiBase: ${LLM_BASE_URL}
             roles:
               - chat
-        INNEREOF
+        EOF
       group:
         kind: build
 events:

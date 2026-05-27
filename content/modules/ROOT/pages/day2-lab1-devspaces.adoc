@@ -123,7 +123,7 @@ commands:
       workingDir: /home/user
       commandLine: |
         mkdir -p /home/user/.continue
-        cat > /home/user/.continue/config.yaml << 'INNEREOF'
+        cat > /home/user/.continue/config.yaml << EOF
         name: Continue Config
         version: 0.0.1
         models:
@@ -134,7 +134,7 @@ commands:
             apiBase: ${LLM_BASE_URL}
             roles:
               - chat
-        INNEREOF
+        EOF
       group:
         kind: build
 events:
@@ -233,7 +233,7 @@ Create a workspace through the Dev Spaces dashboard.
 +
 [source,text,subs="attributes+"]
 ----
-{gitlab_url}/software-factory/etx_app_base_app.git
+{gitlab_url}/software-factory/etx_app_base_app/-/tree/feature/add-devfile
 ----
 . Click btn:[Create & Open]
 --
@@ -350,7 +350,7 @@ If the file doesn't exist, create it manually:
 [source,bash,role=execute]
 ----
 mkdir -p /home/user/.continue
-cat > /home/user/.continue/config.yaml << 'EOF'
+cat > /home/user/.continue/config.yaml << EOF
 name: Continue Config
 version: 0.0.1
 models:
