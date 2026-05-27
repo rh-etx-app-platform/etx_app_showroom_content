@@ -33,6 +33,16 @@ metadata:
 EOF
 ----
 
+Expected output:
+
+[source,text]
+----
+persistentvolumeclaim/pipeline-workspace-pvc created
+serviceaccount/pipeline created
+----
+
+NOTE: If the ServiceAccount already exists (created during namespace setup), you may see `serviceaccount/pipeline configured` instead of `created`, along with a warning about a missing annotation. This is normal - `oc apply` automatically patches the annotation, and the resource is correctly configured.
+
 === Grant ServiceAccount Permissions
 
 The pipeline ServiceAccount needs permission to push images and manage resources in the namespace:
@@ -48,11 +58,22 @@ This grants the `edit` role, allowing the pipeline to create ImageStreams, Deplo
 
 == Retrieve Registry Credentials from Vault
 
-Create a Tekton Task that authenticates to Vault using the Kubernetes auth method configured in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section and writes registry credentials to the workspace:
+Create a Tekton Task that authenticates to Vault using the Kubernetes auth method configured in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section and writes registry credentials to the workspace.
+
+First, get the Vault URL from the cluster:
 
 [source,bash,role=execute,subs="attributes"]
 ----
-oc apply -f - <<'EOF'
+# Get Vault URL dynamically
+VAULT_URL="https://$(oc get route -n vault -o jsonpath='{.items[0].spec.host}')"
+echo "Using Vault URL: $VAULT_URL"
+----
+
+Then create the Task:
+
+[source,bash,role=execute]
+----
+oc apply -f - <<EOF
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
@@ -76,24 +97,24 @@ spec:
         microdnf install -y jq && microdnf clean all
 
         # Authenticate to Vault using ServiceAccount token
-        VAULT_ADDR="{vault_url}"
-        SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+        VAULT_ADDR="${VAULT_URL}"
+        SA_TOKEN=\$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 
-        VAULT_TOKEN=$(curl -s --request POST \
-          "${VAULT_ADDR}/v1/auth/kubernetes/login" \
-          --data "{\"role\":\"pipeline\",\"jwt\":\"${SA_TOKEN}\"}" \
+        VAULT_TOKEN=\$(curl -s --request POST \
+          "\${VAULT_ADDR}/v1/auth/kubernetes/login" \
+          --data "{\"role\":\"pipeline\",\"jwt\":\"\${SA_TOKEN}\"}" \
           | jq -r '.auth.client_token')
 
         # Fetch registry credentials
-        CREDS=$(curl -s --header "X-Vault-Token: ${VAULT_TOKEN}" \
-          "${VAULT_ADDR}/v1/secret/data/registry")
+        CREDS=\$(curl -s --header "X-Vault-Token: \${VAULT_TOKEN}" \
+          "\${VAULT_ADDR}/v1/secret/data/registry")
 
-        echo "${CREDS}" | jq -r '.data.data.server' \
-          | tr -d '\n' > $(results.registry-server.path)
-        echo "${CREDS}" | jq -r '.data.data.username' \
-          | tr -d '\n' > $(results.registry-username.path)
-        echo "${CREDS}" | jq -r '.data.data.password' \
-          | tr -d '\n' > $(results.registry-password.path)
+        echo "\${CREDS}" | jq -r '.data.data.server' \
+          | tr -d '\n' > \$(results.registry-server.path)
+        echo "\${CREDS}" | jq -r '.data.data.username' \
+          | tr -d '\n' > \$(results.registry-username.path)
+        echo "\${CREDS}" | jq -r '.data.data.password' \
+          | tr -d '\n' > \$(results.registry-password.path)
 EOF
 ----
 
@@ -188,25 +209,181 @@ spec:
 EOF
 ----
 
-NOTE: `git-clone`, `maven`, and `buildah` are standard Tasks installed in the `openshift-pipelines` namespace. This pipeline resolves them with the cluster resolver (replacing deprecated `ClusterTask` references). Run `oc get task -n openshift-pipelines` or `tkn task list -n openshift-pipelines` to verify they are available.
+NOTE: `git-clone`, `maven`, and `buildah` are standard Tasks installed in the `openshift-pipelines` namespace. This pipeline resolves them with the cluster resolver (replacing deprecated `ClusterTask` references). Run `oc get task -n openshift-pipelines` to verify they are available.
 
 == Test the Pipeline Manually
 
-Run the pipeline once to verify it works before adding webhooks:
+Run the pipeline once to verify it works before adding webhooks.
 
-[source,bash,role=execute,subs="attributes+"]
+First, get the GitLab URL from the cluster:
+
+[source,bash,role=execute]
 ----
-tkn pipeline start etx-app-base-app-ci \
-  --namespace etx-app-dev \
-  --param git-url={gitlab_url}/software-factory/etx_app_base_app \
-  --param git-revision=main \
-  --param image-name=image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app \
-  --workspace name=shared-workspace,claimName=pipeline-workspace-pvc \
-  --serviceaccount pipeline \
-  --showlog
+# Get GitLab URL dynamically
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "Using GitLab URL: $GITLAB_URL"
 ----
+
+Then create the PipelineRun:
+
+[source,bash,role=execute]
+----
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: etx-app-base-app-ci-
+  namespace: etx-app-dev
+spec:
+  pipelineRef:
+    name: etx-app-base-app-ci
+  params:
+    - name: git-url
+      value: ${GITLAB_URL}/software-factory/etx_app_base_app
+    - name: git-revision
+      value: main
+    - name: image-name
+      value: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: pipeline-workspace-pvc
+  taskRunTemplate:
+    serviceAccountName: pipeline
+EOF
+----
+
+Expected output:
+
+[source,text]
+----
+pipelinerun.tekton.dev/etx-app-base-app-ci-xxxxx created
+----
+
+Monitor the PipelineRun:
+
+[source,bash,role=execute]
+----
+# List all PipelineRuns
+oc get pipelinerun -n etx-app-dev
+----
+
+You should see your PipelineRun with status `Running` or `Succeeded`.
+
+=== Monitor Pipeline Execution
+
+There are several ways to monitor the pipeline:
+
+**Option 1: Watch PipelineRun status** (Recommended)
+
+[source,bash,role=execute]
+----
+# Watch PipelineRun status in real-time (press Ctrl+C to exit)
+oc get pipelinerun -n etx-app-dev -w
+----
+
+This shows the overall status of all PipelineRuns and updates in real-time.
+
+**Option 2: View individual Task logs**
+
+[source,bash,role=execute]
+----
+# Get the name of the latest PipelineRun
+LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+echo "PipelineRun: $LATEST_PR"
+
+# List all TaskRuns for this PipelineRun
+oc get taskrun -n etx-app-dev -l tekton.dev/pipelineRun=$LATEST_PR
+----
+
+To view logs of a specific TaskRun, use the name from the list above:
+
+[source,bash,role=execute]
+----
+# View logs of a specific TaskRun (example: fetch-creds)
+oc logs -n etx-app-dev -l tekton.dev/taskRun=etx-app-base-app-ci-xxxxx-fetch-creds -f
+----
+
+Or automatically get logs from a failed TaskRun:
+
+[source,bash,role=execute]
+----
+# Get the latest PipelineRun
+LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+# Get the first failed TaskRun
+FAILED_TASK=$(oc get taskrun -n etx-app-dev -l tekton.dev/pipelineRun=$LATEST_PR -o jsonpath='{.items[?(@.status.conditions[0].reason=="Failed")].metadata.name}' | awk '{print $1}')
+
+if [ -n "$FAILED_TASK" ]; then
+  echo "Viewing logs for failed TaskRun: $FAILED_TASK"
+  oc logs -n etx-app-dev -l tekton.dev/taskRun=$FAILED_TASK
+else
+  echo "No failed TaskRuns found"
+fi
+----
+
+**Option 3: View logs of currently running pod**
+
+[source,bash,role=execute]
+----
+# Get the name of the latest PipelineRun
+LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+echo "Watching logs for PipelineRun: $LATEST_PR"
+
+# Follow the logs of the currently running pod
+oc logs -f $(oc get pods -n etx-app-dev -l tekton.dev/pipelineRun=$LATEST_PR --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}') -n etx-app-dev
+----
+
+NOTE: Option 3 only shows logs from one Task at a time. When that Task completes, the command exits. Use Option 1 for continuous monitoring or Option 2 to view specific Task logs.
 
 Watch the logs to confirm all tasks complete successfully.
+
+=== Troubleshooting Common Issues
+
+**fetch-creds task fails with "parse error: Invalid numeric literal"**
+
+This error means the Vault response is not valid JSON. Common causes:
+
+* **Vault is unavailable**: Check if Vault pods are running:
++
+[source,bash,role=execute]
+----
+oc get pods -n vault
+----
++
+If Vault is down, wait for it to recover and retry the pipeline.
+
+* **Vault authentication not configured**: Verify the Kubernetes auth method exists in Vault UI at the vault URL.
+
+* **ServiceAccount lacks permissions**: Verify the pipeline ServiceAccount exists:
++
+[source,bash,role=execute]
+----
+oc get serviceaccount pipeline -n etx-app-dev
+----
+
+**Pipeline succeeds but image not found in registry**
+
+Verify the image was pushed:
+
+[source,bash,role=execute]
+----
+oc get imagestream etx-app-base-app -n etx-app-dev
+oc get imagestreamtag etx-app-base-app:main -n etx-app-dev
+----
+
+**git-clone task fails with "Could not resolve host"**
+
+The GitLab URL is incorrect. Verify:
+
+[source,bash,role=execute]
+----
+oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}{"\n"}'
+----
+
+Recreate the PipelineRun with the correct GitLab URL.
 
 == Set Up Webhooks with Tekton Triggers
 
@@ -298,33 +475,235 @@ EOF
 
 === Expose the EventListener
 
-Create a route so GitLab can reach the EventListener:
+Create a route with TLS so GitLab can reach the EventListener securely:
 
 [source,bash,role=execute]
 ----
-oc expose svc el-gitlab-listener -n etx-app-dev
+oc create route edge el-gitlab-listener \
+  --service=el-gitlab-listener \
+  --port=http-listener \
+  -n etx-app-dev
 ----
+
+NOTE: GitLab requires HTTPS for webhooks, so we create a route with edge TLS termination. If the route already exists, delete it first with `oc delete route el-gitlab-listener -n etx-app-dev` and recreate with TLS.
 
 Get the webhook URL:
 
 [source,bash,role=execute]
 ----
-echo "http://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
+echo "https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
 
 Copy this URL for the next step.
 
+Expected format:
+[source,text]
+----
+https://el-gitlab-listener-etx-app-dev.apps.cluster-xxxxx.dynamic.redhatworkshops.io
+----
+
 === Configure GitLab Webhook
 
-. Log into GitLab {gitlab_url}
-. Navigate to your repository: *software-factory/etx_app_base_app*
+IMPORTANT: Configuring webhooks in GitLab requires **Maintainer** or **Owner** role on the project. The `platform-developer` user does not have sufficient permissions. Use the `platform-admin` account or ask your instructor to grant you Maintainer access.
+
+==== Step 1: Enable Webhooks to Local Network (REQUIRED)
+
+[IMPORTANT]
+====
+GitLab blocks webhooks to local/internal networks by default for security (SSRF protection). Since the EventListener runs in the same cluster as GitLab, you **must** enable this feature or webhook creation will fail with "Invalid url given" error.
+====
+
+. Get the GitLab Admin URLs and root password:
++
+[source,bash,role=execute]
+----
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+GITLAB_ROOT_PASSWORD=$(oc get secret -n gitlab gitlab-gitlab-initial-root-password -o jsonpath='{.data.password}' | base64 -d)
+
+echo "GitLab URL: $GITLAB_URL"
+echo "Admin Area: $GITLAB_URL/admin"
+echo "Network Settings (Direct): $GITLAB_URL/admin/application_settings/network"
+echo ""
+echo "Root Username: root"
+echo "Root Password: $GITLAB_ROOT_PASSWORD"
+----
+
+. Log into GitLab as root administrator:
+  * Open the GitLab URL in your browser
+  * Click *Standard* tab (not ETX Lab SSO)
+  * *Username:* `root`
+  * *Password:* Use the password from the command above
+
+IMPORTANT: The `root` user is the GitLab built-in administrator. The `platform-admin` user from Keycloak does not have admin privileges by default.
+
+. Access the Admin Area:
++
+--
+**Option A - Direct URL (Recommended):**
+
+Open the admin URL directly (from the command above):
+
+[source,text,subs="attributes+"]
+----
+{gitlab_url}/admin/application_settings/network
+----
+
+This takes you directly to the Network settings page.
+
+**Option B - UI Navigation:**
+
+* After logging in, look for the **wrench icon** 🔧 in the top navigation bar (usually far right)
+* OR click your **avatar/profile picture** (top right) → select **Admin Area**
+* If you don't see these options, verify you're logged in as `platform-admin`
+
+Then navigate:
+
+* In the left sidebar, find **Settings** section
+* Click **Settings** → **Network**
+--
+
+. Expand the *Outbound requests* section
+
+. Enable local network webhooks:
+  * Check ☑️ *Allow requests to the local network from webhooks and integrations*
+  * Optionally check ☑️ *Allow requests to the local network from system hooks*
+
+. Click btn:[Save changes] at the bottom
+
+[TIP]
+====
+**Finding the Admin Area:**
+
+The Admin Area is only accessible to users with administrator privileges. When logged in as `root`, you should see:
+
+* A wrench icon (🔧) in the top navigation bar
+* "Admin Area" option when clicking your avatar
+
+If you don't see these, verify:
+
+* You're logged in as `root` (GitLab built-in admin)
+* You used the Standard login (not ETX Lab SSO)
+* You're using the correct password from the OpenShift secret
+
+**Why not platform-admin?**
+
+The `platform-admin` user from Keycloak is not a GitLab administrator by default. To grant admin privileges to `platform-admin`:
+
+1. Log in as `root`
+2. Go to menu:Admin Area[Users]
+3. Find the `platform-admin` user
+4. Click *Edit* → Check *Admin* → *Save changes*
+
+**Direct URL:** You can always access admin settings directly at:
+`{gitlab_url}/admin/application_settings/network`
+
+**Verification:** After saving, you should see a green checkmark or success message indicating "Allow requests to the local network from webhooks and integrations" is enabled.
+====
+
+WARNING: This setting is cluster-wide and affects all GitLab projects. In production environments, consider using external webhooks, GitLab Runner with allowedHosts, or more restrictive network policies.
+
+==== Step 2: Add the Webhook to Your Repository
+
+NOTE: Configuring webhooks requires **Maintainer** or **Owner** role on the project (different from GitLab Admin). You can use `platform-admin` from Keycloak if it has Maintainer access to the project, or log in as `root`.
+
+**Option A: Use root account** (if you're already logged in from Step 1)
+
+. Navigate to your project:
+  * Click *Projects* → *Explore projects* → search for *etx_app_base_app*
+  * Or navigate directly: `{gitlab_url}/software-factory/etx_app_base_app`
+
+**Option B: Use platform-admin account**
+
+. Log out from `root` and log in via *ETX Lab SSO* as `platform-admin`
+
+. Navigate to your project:
+  * *Projects* → *software-factory* → *etx_app_base_app*
+
+. If you see "Settings → Webhooks", you have Maintainer access and can proceed
+
+. If you don't see "Settings → Webhooks":
+  * Ask your instructor to grant Maintainer role, OR
+  * Use the `root` account (Option A above)
+
+**Continue with either option:**
+
 . Go to menu:Settings[Webhooks]
-. Add a new webhook:
-  * *URL*: Paste the EventListener route URL from above
-  * *Trigger*: Check *Push events*
-  * *SSL verification*: Leave unchecked (HTTP endpoint)
+
+. Click btn:[Add new webhook]
+
+. Configure the webhook:
+  * *URL*: Paste the EventListener route URL:
++
+[source,bash,role=execute]
+----
+echo "https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"
+----
++
+  * *Trigger*: Check ☑️ *Push events*
+  * *SSL verification*: Uncheck for lab environments with self-signed certificates
+
 . Click btn:[Add webhook]
-. Click btn:[Test] → *Push events* to send a test payload
+
+. Test the webhook:
+  * Scroll down to *Project Hooks*
+  * Find your webhook in the list
+  * Click btn:[Test] → *Push events*
+  * You should see "Hook executed successfully: HTTP 200" or similar
+
+TIP: If you get "SSL certificate problem" error during testing, make sure "Enable SSL verification" is unchecked in the webhook configuration.
+
+[NOTE]
+====
+**Using platform-developer Account:**
+
+If you want to use your `platform-developer` account instead of `platform-admin`, ask your instructor to grant you Maintainer role:
+
+. In GitLab (as admin), navigate to *software-factory/etx_app_base_app*
+. Go to menu:Settings[Members]
+. Find the user and change role to *Maintainer*
+. The user can now access Settings → Webhooks
+====
+
+==== Troubleshooting Webhook Issues
+
+**Error: "Invalid url given"**
+
+This error occurs when GitLab blocks webhooks to local/internal networks. Solutions:
+
+1. **Enable local network webhooks** (required):
+   - Go to menu:Admin Area[Settings > Network > Outbound requests]
+   - Check "Allow requests to the local network from webhooks and integrations"
+   - Save changes and try again
+
+2. **Verify the URL format**:
+   - Must start with `https://` (not `http://`)
+   - Run: `echo "https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')"`
+
+3. **Test EventListener is responding**:
++
+[source,bash,role=execute]
+----
+curl -I https://$(oc get route el-gitlab-listener -n etx-app-dev -o jsonpath='{.spec.host}')
+----
++
+Expected: HTTP 400 Bad Request (this is normal - it expects a webhook payload)
+
+**Error: "SSL certificate problem"**
+
+The cluster uses self-signed certificates. In GitLab webhook settings:
+
+* Uncheck "Enable SSL verification"
+* This is safe for lab environments
+
+**Test event fails with error**
+
+Check the EventListener pod is running:
+
+[source,bash,role=execute]
+----
+oc get pods -n etx-app-dev | grep el-gitlab-listener
+oc logs -n etx-app-dev -l eventlistener=gitlab-listener
+----
 
 == Verify the Pipeline
 
@@ -336,23 +715,29 @@ Push a change to your repository and confirm the pipeline triggers:
 echo "# CI/CD test" >> README.md
 git add README.md
 git commit -m "Test webhook trigger"
-git push origin main
+git push origin feature/add-devfile
 ----
 
 Check for new pipeline runs:
 
 [source,bash,role=execute]
 ----
-tkn pipelinerun list -n etx-app-dev
+oc get pipelinerun -n etx-app-dev
 ----
 
-You should see a new `etx-app-base-app-ci-*` PipelineRun.
+You should see a new `etx-app-base-app-ci-*` PipelineRun triggered by the webhook.
 
 Follow the latest run logs:
 
 [source,bash,role=execute]
 ----
-tkn pipelinerun logs -f -n etx-app-dev
+# Get the name of the latest PipelineRun
+LATEST_PR=$(oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}')
+
+echo "Following logs for: $LATEST_PR"
+
+# Follow the logs
+oc logs -f $(oc get pods -n etx-app-dev -l tekton.dev/pipelineRun=$LATEST_PR --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}') -n etx-app-dev
 ----
 
 Verify the image was pushed:
@@ -397,10 +782,10 @@ oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp | tail -
 
 You now have:
 
-* ✅ Tekton CI pipeline with Vault secrets integration
-* ✅ Automated builds triggered by GitLab webhooks
-* ✅ Container images pushed to OpenShift internal registry
-* ✅ Maven-based Java/Quarkus build and test automation
+* Tekton CI pipeline with Vault secrets integration
+* Automated builds triggered by GitLab webhooks
+* Container images pushed to OpenShift internal registry
+* Maven-based Java/Quarkus build and test automation
 
 == Next Steps
 

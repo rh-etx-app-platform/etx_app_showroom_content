@@ -1,0 +1,80 @@
+schemaVersion: 2.2.0
+metadata:
+  name: etx-app-base-app
+components:
+  - name: development-tooling
+    container:
+      image: quay.io/devfile/universal-developer-image:ubi9-latest
+      env:
+        - name: QUARKUS_HTTP_HOST
+          value: "0.0.0.0"
+        - name: MAVEN_OPTS
+          value: "-Dmaven.repo.local=/home/user/.m2/repository"
+        # External service connection (from Supporting Services lab)
+        - name: POSTGRESQL_HOST
+          value: "parasol-db.etx-app-dev.svc.cluster.local"
+        - name: POSTGRESQL_DATABASE
+          value: "parasol"
+        - name: POSTGRESQL_USER
+          value: "parasol"
+        - name: POSTGRESQL_PASSWORD
+          value: "parasol"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092"
+      memoryLimit: 5Gi
+      cpuLimit: 2500m
+      volumeMounts:
+        - name: m2
+          path: /home/user/.m2
+      endpoints:
+        - name: quarkus-dev
+          targetPort: 8080
+          exposure: public
+          protocol: https
+        - name: debug
+          targetPort: 5005
+          exposure: none
+  - name: m2
+    volume:
+      size: 1G
+commands:
+  - id: package
+    exec:
+      label: "1. Package the application"
+      component: development-tooling
+      commandLine: "./mvnw package"
+      group:
+        kind: build
+        isDefault: true
+  - id: start-dev
+    exec:
+      label: "2. Start Development mode (Hot reload + debug)"
+      component: development-tooling
+      commandLine: "./mvnw compile quarkus:dev"
+      group:
+        kind: run
+        isDefault: true
+  - id: init-continue
+    exec:
+      label: "Initialize Continue config"
+      component: development-tooling
+      workingDir: /home/user
+      commandLine: |
+        mkdir -p /home/user/.continue
+        cat > /home/user/.continue/config.yaml << EOF
+        name: Continue Config
+        version: 0.0.1
+        models:
+          - name: qwen3-14b
+            provider: vllm
+            model: qwen3-14b
+            apiKey: ${LLM_API_KEY}
+            apiBase: ${LLM_BASE_URL}
+            roles:
+              - chat
+        EOF
+      group:
+        kind: build
+events:
+  postStart:
+    - init-continue

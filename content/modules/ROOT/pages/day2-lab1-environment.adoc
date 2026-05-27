@@ -4,7 +4,7 @@
 == Overview
 
 This workshop provides a pre-configured OpenShift environment with foundational infrastructure services.
-You will deploy the application platform services (DevSpaces, Vault, Tekton, Argo CD) and build a complete CI/CD pipeline.
+You will deploy application platform services (Dev Spaces, Tekton, Argo CD) and build a complete CI/CD pipeline.
 
 == Pre-Deployed Infrastructure
 
@@ -14,7 +14,7 @@ The following services are already installed and configured:
 
 Centralized SSO/OIDC provider for GitLab, Quay, and other services.
 
-* **URL:** {keycloak_url}
+* **URL:** {keycloak_url}[^]
 * **Realm:** `etx-lab`
 * **Available Users:**
   - `platform-admin` / `openshift` (administrator access)
@@ -27,16 +27,23 @@ TIP: Use these credentials to log into GitLab and Quay via the OIDC/OAuth button
 
 Source control and Git repository hosting.
 
-* **URL:** {gitlab_url}
-* **Authentication:** Keycloak OIDC (click "Sign in with OpenID Connect")
+* **URL:** {gitlab_url}[^]
+* **Authentication:**
+  - Keycloak OIDC (click "ETX Lab SSO") - Use Keycloak users for regular development
+  - Standard login - Use `root` user for GitLab administration
+* **Root Admin:**
+  - Username: `root`
+  - Password: Retrieve with `oc get secret -n gitlab gitlab-gitlab-initial-root-password -o jsonpath='{.data.password}' | base64 -d`
 * **Seeded Repositories:**
   - `software-factory/etx_app_base_app` - Your application workspace (read/write)
+
+NOTE: The `root` user has GitLab administrator privileges. Keycloak users (`platform-admin`, `platform-developer`) authenticate via SSO but do not have GitLab admin rights by default.
 
 === Quay Container Registry
 
 Enterprise container registry for storing and distributing images.
 
-* **URL:** {quay_url}
+* **URL:** {quay_url}[^]
 * **Authentication:** Keycloak OIDC or local account
 * **Purpose:** External image registry for production-grade workflows
 
@@ -51,11 +58,11 @@ Two GitOps control planes are available:
   - Read-only for students
 
 * **Dedicated ETX GitOps admin plane** (`etx-gitops` namespace)
-  - Pre-deployed Argo CD instance for application team use
+  - Control plane for the ETX workshop installation
   - Repository: `etx-gitops` - Contains infrastructure and application manifests
-  - You can deploy applications here or create your own Argo CD instance
+  - Can be used for user applications eventually
 
-IMPORTANT: In Lab 1 Step 5, you have the option to deploy your **own** Argo CD instance in your namespace or use the pre-deployed `etx-gitops` instance for application deployments.
+IMPORTANT: In Lab 1 Step 5, you will deploy your **own** Red Hat OpenShift GitOps instance to complete the lab.
 
 == Multi-Cluster Setup
 
@@ -63,18 +70,20 @@ Two OpenShift clusters are available for application promotion:
 
 === Primary Cluster (Development)
 
-* **API:** {openshift_api_url}
-* **Console:** {openshift_console_url}
+* **API:** {openshift_api_url}[^]
+* **Console:** {openshift_console_url}[^]
 * **Apps Domain:** `*.{openshift_cluster_ingress_domain}`
-* **Admin Credentials:** `admin` / `r0rDrvTWeTAbVk7L`
+* **Admin User:** `{user}`
+* **Admin Password:** `{password}`
 * **Your Namespace:** `etx-app-dev` (pre-created)
 
 === Secondary Cluster (Staging/Production)
 
-* **API:** https://api.cluster-{guid2}.dynamic.redhatworkshops.io:6443
-* **Console:** https://console-openshift-console.apps.cluster-{guid2}.dynamic.redhatworkshops.io
-* **Apps Domain:** `*.apps.cluster-{guid2}.dynamic.redhatworkshops.io`
-* **Admin Credentials:** `admin` / `G6VpeK3U6n8LpyhC`
+* **API:** https://api.cluster-{guid2}.{workshop_base_domain}:6443[^]
+* **Console:** https://console-openshift-console.apps.cluster-{guid2}.{workshop_base_domain}[^]
+* **Apps Domain:** `*.apps.cluster-{guid2}.{workshop_base_domain}`
+* **Admin User:** `{user}`
+* **Admin Password:** `{password}`
 * **Namespaces:** `etx-app-staging`, `etx-app-prod` (pre-created)
 
 You will configure multi-cluster promotion in the final section of this lab.
@@ -83,22 +92,23 @@ You will configure multi-cluster promotion in the final section of this lab.
 
 As part of this hands-on lab, you will install and configure:
 
-* ✅ **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser
-* ✅ **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
-* ✅ **AMQ Streams (Kafka)** - Messaging infrastructure for application services
-* ✅ **OpenTelemetry Operator** - Distributed tracing and observability
-* ✅ **Argo CD (student instance)** - GitOps continuous deployment
+* **PostgreSQL Database** - Application data persistence using Red Hat certified image
+* **AMQ Streams (Kafka)** - Messaging infrastructure for application services
+* **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
+* **OpenTelemetry Operator** - Distributed tracing and observability
+* **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser
+* **Argo CD (student instance)** - GitOps continuous deployment
 
-NOTE: HashiCorp Vault is pre-deployed as part of the infrastructure bootstrap and does not require student installation.
+NOTE: HashiCorp Vault is pre-deployed as part of the infrastructure bootstrap and does not require student installation. Supporting services (PostgreSQL and Kafka) are deployed first so Dev Spaces workspaces can connect to them.
 
 == Lab Workflow
 
 ```
 Lab 1 Step 1: Environment Overview (this page)
       ↓
-Lab 1 Step 2: Deploy and configure Dev Spaces
+Lab 1 Step 2: Deploy supporting services (PostgreSQL, Kafka, Tekton, OpenTelemetry)
       ↓
-Lab 1 Step 3: Deploy supporting services (AMQ Streams, Tekton, OpenTelemetry)
+Lab 1 Step 3: Deploy and configure Dev Spaces
       ↓
 Lab 1 Step 4: Create CI pipeline with Tekton
       ↓
@@ -107,10 +117,12 @@ Lab 1 Step 5: Deploy Argo CD for application delivery
 Lab 1 Step 6: Configure multi-cluster promotion
 ```
 
+IMPORTANT: Supporting services (PostgreSQL and Kafka) must be deployed BEFORE setting up Dev Spaces, as your application workspace will connect to these external services instead of using local containers.
+
 == Accessing GitLab with Keycloak
 
-. Open {gitlab_url}
-. Click btn:[Sign in with OpenID Connect]
+. Open {gitlab_url}[^]
+. Click btn:[ETX Lab SSO]
 . You will be redirected to Keycloak
 . Log in with one of the provided users (e.g., `platform-developer` / `openshift`)
 . You will be redirected back to GitLab and logged in
@@ -119,25 +131,33 @@ The first time you log in, GitLab will create a user profile linked to your Keyc
 
 == Clone Your Repository
 
-Once logged into GitLab, move to the existing workshop directory from the previous lab:
+Once logged into GitLab, clone the ETX App Base application.
 
-[source,bash,role=execute,subs="attributes+"]
+TIP: Use the **OpenShift Web Terminal** for these commands. Access it by clicking the command prompt icon (>_) in the top-right corner of the OpenShift Console.
+
+First, get the GitLab URL dynamically:
+
+[source,bash,role=execute]
 ----
-cd ~/workshop/etx_app_base_app
+# Get GitLab URL
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "GitLab URL: $GITLAB_URL"
 ----
 
-Or clone the ETX App Base application if it doesn't exist:
+Then clone the repository:
 
-[source,bash,role=execute,subs="attributes+"]
+[source,bash,role=execute]
 ----
 mkdir -p ~/workshop
 cd ~/workshop
-git clone {gitlab_url}/software-factory/etx_app_base_app.git
+git clone ${GITLAB_URL}/software-factory/etx_app_base_app.git
 cd etx_app_base_app
 ----
 
 
 NOTE: The repository name is `etx_app_base_app` and Kubernetes resources will be named `etx-app-base-app-*` for consistency.
+
+IMPORTANT: The repository does NOT include a `devfile.yaml`. You will create this file manually in the next lab step (xref:day2-lab1-devspaces.adoc[Dev Spaces Setup]).
 
 == Verify Cluster Access
 
@@ -154,4 +174,4 @@ oc project etx-app-dev
 
 == Next Steps
 
-Proceed to xref:day2-lab1-devspaces.adoc[Deploy Dev Spaces].
+Proceed to xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services].

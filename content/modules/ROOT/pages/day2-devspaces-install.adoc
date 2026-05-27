@@ -48,12 +48,6 @@ spec:
       template: <username>-devspaces
     storage:
       pvcStrategy: per-workspace # <5>
-  networking:
-    auth:
-      gateway:
-        configLabels:
-          app: che
-          component: che-gateway-config
 ----
 <1> Image puller pre-caches images on nodes to speed up workspace startup. Disable for small clusters; enable if startup time matters.
 <2> Points at the public Open VSX registry so developers can install any extension. The default embedded registry has a very limited set.
@@ -61,11 +55,17 @@ spec:
 <4> Required for nested containers (Podman-in-workspace). Must be `false`.
 <5> `per-workspace` gives each workspace its own PVC. This supports multiple workspaces per user without conflicts and provides clean isolation. Alternative: `per-user` shares a single PVC across all workspaces.
 
-To apply the configuration, run:
+Create the namespace for Dev Spaces:
 
 [source,bash,role=execute]
 ----
 oc create namespace openshift-devspaces
+----
+
+Apply the CheCluster configuration:
+
+[source,bash,role=execute]
+----
 oc apply -f - <<'EOF'
 apiVersion: org.eclipse.che/v2
 kind: CheCluster
@@ -107,31 +107,35 @@ spec:
       template: <username>-devspaces
     storage:
       pvcStrategy: per-workspace
-  networking:
-    auth:
-      gateway:
-        configLabels:
-          app: che
-          component: che-gateway-config
 EOF
 ----
 
-NOTE: The `openshift-devspaces` namespace is created for the `CheCluster` instance and Dev Spaces server components. The Dev Spaces operator itself was installed in `openshift-operators`.
+IMPORTANT: Dev Spaces on OpenShift uses OpenShift OAuth for authentication by default. The Dev Spaces operator is designed to integrate with OpenShift's built-in authentication system, not with external OIDC providers like Keycloak. Users will authenticate with their OpenShift credentials when accessing the Dev Spaces dashboard.
 
-Wait for the deployment to complete:
+Wait for the deployment to complete.
 
 [source,bash,role=execute]
 ----
-oc get checluster/devspaces -n openshift-devspaces -o jsonpath='{.status.chePhase}'
+oc get checluster -n openshift-devspaces
 ----
 
-The output should be `Active`.
-You can also watch the pods come up:
+You should see a resource named `devspaces`.
 
 [source,bash,role=execute]
 ----
 oc get pods -n openshift-devspaces -w
 ----
+
+Wait until all pods are in `Running` state with `READY` showing the expected number of containers (e.g., `1/1`, `4/4`).
+
+Once all pods are running, check the CheCluster status:
+
+[source,bash,role=execute]
+----
+oc get checluster devspaces -n openshift-devspaces -o jsonpath='{.status.chePhase}{"\n"}'
+----
+
+The output should be `Active`.
 
 == Access the Dashboard
 
@@ -139,18 +143,18 @@ Once the CheCluster is `Active`, get the dashboard URL:
 
 [source,bash,role=execute]
 ----
-oc get checluster/devspaces -n openshift-devspaces \
-  -o jsonpath='{.status.cheURL}'
+oc get checluster devspaces -n openshift-devspaces \
+  -o jsonpath='{.status.cheURL}{"\n"}'
 ----
 
 Open this URL in your browser.
-You will authenticate through OpenShift OAuth -- users log in with whatever identity provider is configured on the cluster.
+You will authenticate using OpenShift OAuth with your OpenShift credentials (e.g., `admin` / `<cluster-admin-password>`).
 
 You can also access Dev Spaces from the OpenShift Console:
 
 . Click the application launcher icon in the top right of the OpenShift Console.
 . Select *Red Hat OpenShift Dev Spaces*.
-. Log in with your OpenShift credentials.
+. You will be automatically authenticated with your current OpenShift session.
 
 == Appendix: Useful Configuration Commands
 
@@ -159,18 +163,18 @@ The following commands are reference commands for administrators. Do not run the
 [source,bash]
 ----
 # Change storage strategy
-oc patch checluster/devspaces -n openshift-devspaces \
+oc patch checluster devspaces -n openshift-devspaces \
   --type='merge' \
   -p '{"spec":{"devEnvironments":{"storage":{"pvcStrategy":"per-workspace"}}}}'
 
 # Change max workspaces per user
-oc patch checluster/devspaces -n openshift-devspaces \
+oc patch checluster devspaces -n openshift-devspaces \
   --type='merge' \
   -p '{"spec":{"devEnvironments":{"maxNumberOfWorkspacesPerUser":10}}}'
 
 # Read a specific setting
-oc get checluster/devspaces -n openshift-devspaces \
-  -o jsonpath='{.spec.devEnvironments.storage.pvcStrategy}'
+oc get checluster devspaces -n openshift-devspaces \
+  -o jsonpath='{.spec.devEnvironments.storage.pvcStrategy}{"\n"}'
 ----
 
 == Next Steps
