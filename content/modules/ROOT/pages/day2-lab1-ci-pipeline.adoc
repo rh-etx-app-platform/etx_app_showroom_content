@@ -542,9 +542,10 @@ IMPORTANT: The `root` user is the GitLab built-in administrator. The `platform-a
 **Option A - Direct URL (Recommended):**
 
 Open the admin URL directly (from the command above):
-[source,text]
+
+[source,text,subs="attributes+"]
 ----
-https://<gitlab-url>/admin/application_settings/network
+{gitlab_url}/admin/application_settings/network
 ----
 
 This takes you directly to the Network settings page.
@@ -594,7 +595,7 @@ The `platform-admin` user from Keycloak is not a GitLab administrator by default
 4. Click *Edit* → Check *Admin* → *Save changes*
 
 **Direct URL:** You can always access admin settings directly at:
-`https://<gitlab-url>/admin/application_settings/network`
+`{gitlab_url}/admin/application_settings/network`
 
 **Verification:** After saving, you should see a green checkmark or success message indicating "Allow requests to the local network from webhooks and integrations" is enabled.
 ====
@@ -609,7 +610,7 @@ NOTE: Configuring webhooks requires **Maintainer** or **Owner** role on the proj
 
 . Navigate to your project:
   * Click *Projects* → *Explore projects* → search for *etx_app_base_app*
-  * Or navigate directly: `<gitlab-url>/software-factory/etx_app_base_app`
+  * Or navigate directly: `{gitlab_url}/software-factory/etx_app_base_app`
 
 **Option B: Use platform-admin account**
 
@@ -714,7 +715,7 @@ Push a change to your repository and confirm the pipeline triggers:
 echo "# CI/CD test" >> README.md
 git add README.md
 git commit -m "Test webhook trigger"
-git push origin main
+git push origin feature/add-devfile
 ----
 
 Check for new pipeline runs:
