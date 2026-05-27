@@ -20,7 +20,7 @@ Verify from the CLI:
 
 [source,bash,role=execute]
 ----
-oc get csv -n openshift-operators | grep mta
+oc get csv -n openshift-mta | grep mta
 ----
 
 === Deploy the MTA Web Console
