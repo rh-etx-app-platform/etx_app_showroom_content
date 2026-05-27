@@ -3,24 +3,63 @@
 
 == Overview
 
-In this lab you will create a Dev Spaces workspace for the ETX App Base application, verify Git and AI assistant integration, and run Quarkus Dev Services with nested containers.
+In this lab you will create a Dev Spaces workspace for the ETX App Base application, configure it with a custom devfile, verify Git and AI assistant integration, and run Quarkus in development mode connected to external PostgreSQL and Kafka services deployed in the cluster.
 
-== Create a Devfile
+== Access Dev Spaces Dashboard
 
-We will create a new `devfile.yaml` file in the repository. This `devfile` configures the workspace with UBI, Maven caching, Quarkus endpoints, and the Continue AI assistant:
-
-Make sure you are in the ETX App Base repository before creating the file:
+Get the Dev Spaces dashboard URL:
 
 [source,bash,role=execute]
 ----
-cd ~/workshop/etx_app_base_app
-pwd
+oc get checluster devspaces -n openshift-devspaces \
+  -o jsonpath='{.status.cheURL}{"\n"}'
 ----
 
-Copy the following content into the `devfile.yaml` file:
+Open this URL in your browser and log in with your OpenShift credentials.
 
-[source,yaml]
+IMPORTANT: Dev Spaces on OpenShift uses OpenShift OAuth for authentication by design. Unlike other ETX workshop services (GitLab, Quay, Vault) that authenticate against the ETX Keycloak instance, Dev Spaces authenticates users through OpenShift's built-in OAuth system.
+
+== Step 1: Create Initial Workspace
+
+The `etx_app_base_app` repository does not include a devfile yet. You will create a temporary workspace to add the devfile to the repository.
+
+From the Dev Spaces dashboard:
+
+. Click btn:[Create Workspace]
+. Select *Import from Git*
+. Paste the repository URL:
++
+[source,text,subs="attributes+"]
 ----
+{gitlab_url}/software-factory/etx_app_base_app.git
+----
+. Click btn:[Create & Open]
+. If prompted to authorize with GitLab, follow the OAuth flow and approve access
+
+Dev Spaces will create a workspace using the Universal Developer Image (UDI) since there is no devfile in the repository yet.
+
+== Step 2: Configure Git
+
+Once the workspace opens, configure Git identity.
+
+Open a terminal from the main menu (hamburger icon in the top-left corner: menu:Terminal[New Terminal]).
+
+[source,bash,role=execute]
+----
+# Configure Git identity
+git config --global user.email "platform-developer@example.com"
+git config --global user.name "Platform Developer"
+----
+
+== Step 3: Create the Devfile
+
+Now create a `devfile.yaml` file that will configure your development environment.
+
+Create the devfile:
+
+[source,bash,role=execute]
+----
+cat > devfile.yaml <<'EOF'
 schemaVersion: 2.2.0
 metadata:
   name: etx-app-base-app
@@ -33,6 +72,17 @@ components:
           value: "0.0.0.0"
         - name: MAVEN_OPTS
           value: "-Dmaven.repo.local=/home/user/.m2/repository"
+        # External service connections
+        - name: POSTGRESQL_HOST
+          value: "parasol-db.etx-app-dev.svc.cluster.local"
+        - name: POSTGRESQL_DATABASE
+          value: "parasol"
+        - name: POSTGRESQL_USER
+          value: "parasol"
+        - name: POSTGRESQL_PASSWORD
+          value: "parasol"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092"
       memoryLimit: 5Gi
       cpuLimit: 2500m
       volumeMounts:
@@ -73,7 +123,7 @@ commands:
       workingDir: /home/user
       commandLine: |
         mkdir -p /home/user/.continue
-        cat > /home/user/.continue/config.yaml << 'INNEREOF'
+        cat > /home/user/.continue/config.yaml << EOF
         name: Continue Config
         version: 0.0.1
         models:
@@ -84,187 +134,372 @@ commands:
             apiBase: ${LLM_BASE_URL}
             roles:
               - chat
-        INNEREOF
+        EOF
       group:
         kind: build
 events:
   postStart:
     - init-continue
+EOF
 ----
 
-Commit and push the devfile, then restart your workspace so Dev Spaces picks up the new configuration.
+Verify the devfile was created:
 
-[source,bash]
+[source,bash,role=execute]
 ----
+ls -la devfile.yaml
+cat devfile.yaml | head -20
+----
+
+== Step 4: Commit and Push the Devfile
+
+Create a feature branch, commit the devfile, and push to GitLab:
+
+[source,bash,role=execute]
+----
+# Create and switch to feature branch
+git checkout -b feature/add-devfile
+
+# Add and commit the devfile
 git add devfile.yaml
-git commit -m "feat: add devfile with Continue AI assistant"
-git push origin main
+git commit -m "feat: add devfile for Dev Spaces configuration"
+
+# Push to GitLab
+git push origin feature/add-devfile
 ----
 
-If Git prompts for credentials, use the workshop GitLab user shown in the environment section.
+This follows xref:day1-branching-strategies.adoc[GitFlow best practices] by isolating changes in a feature branch.
 
-See xref:day2-devspaces-devfiles.adoc[Devfiles & Base Images] for a full explanation of each section.
+When you run `git push`, Dev Spaces will prompt you to authorize with GitLab:
 
-== Get the Dashboard URL
+. A notification appears asking you to authenticate
+. Click *Proceed* to open GitLab authorization
+. Grant Dev Spaces access to your repositories
+. Return to the IDE - the push will complete automatically
 
-[source,bash]
+== Step 5: Recreate Workspace from Devfile
+
+Now delete the temporary workspace and create a new one that will use your devfile.
+
+=== Delete the Temporary Workspace
+
+. Return to the Dev Spaces dashboard browser tab
+. Find your workspace in the list
+. Click the three dots (⋮) menu → *Delete Workspace*
+. Confirm deletion and wait until the workspace disappears
+
+=== Create Workspace from Devfile
+
+You can create a workspace using either a direct URL (faster) or the UI (manual).
+
+[tabs]
+====
+Direct URL (Recommended)::
++
+--
+Use a direct URL to create a workspace from a specific branch.
+
+Get the required URLs:
+
+[source,bash,role=execute]
 ----
-oc get checluster/devspaces -n openshift-devspaces \
-  -o jsonpath='{.status.cheURL}'
+# Get Dev Spaces URL
+DEVSPACES_URL="https://$(oc get checluster devspaces -n openshift-devspaces -o jsonpath='{.status.cheURL}' | sed 's|https://||')"
+
+# Get GitLab URL
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+
+# Construct the direct workspace URL
+echo "${DEVSPACES_URL}#${GITLAB_URL}/software-factory/etx_app_base_app/-/tree/feature/add-devfile"
 ----
 
-Open this URL in your browser and log in with your OpenShift credentials.
+Open the generated URL in your browser. Dev Spaces will:
 
-== Create the Lab Workspace
+. Automatically import the repository from the feature/add-devfile branch
+. Detect and use the devfile.yaml
+. Configure the workspace with all environment variables and settings
 
-Create the workspace from the Dev Spaces dashboard:
+This skips the manual "Create Workspace → Import from Git" flow.
+--
 
-. Click btn:[Create Workspace].
-. Go to *Import from Git*.
-. Paste the Git repository URL for the ETX App Base application:
+Manual UI::
++
+--
+Create a workspace through the Dev Spaces dashboard.
+
+. Click btn:[Create Workspace]
+. Select *Import from Git*
+. Paste the repository URL (use the actual GitLab URL from your cluster):
 +
 [source,text,subs="attributes+"]
 ----
-{gitlab_url}/software-factory/etx_app_base_app.git
+{gitlab_url}/software-factory/etx_app_base_app/-/tree/feature/add-devfile
 ----
-. Click btn:[Create & Open].
-. If Dev Spaces shows a trusted source prompt, confirm that you trust the repository authors and continue.
-. If prompted to authorize Dev Spaces with GitLab, follow the OAuth flow and approve the requested access.
+. Click btn:[Create & Open]
+--
+====
 
-NOTE: You can also launch the workspace directly with this URL:
+Dev Spaces will detect the devfile in the repository and use it to configure your workspace with:
 
-[source,text,subs="attributes"]
+* PostgreSQL and Kafka connection variables
+* Maven cache persistence
+* Quarkus development endpoints
+* Continue AI assistant initialization
+
+Wait for the workspace to fully start. This may take 2-3 minutes as the container image is pulled and configured.
+
+TIP: The direct URL method is faster and can be bookmarked for quick access. You can also specify different branches by changing `/tree/feature/add-devfile` to `/tree/<branch-name>`.
+
+== Verify Workspace Configuration
+
+Once the workspace opens, verify it was configured correctly with your devfile.
+
+NOTE: Dev Spaces automatically clones the repository when you create a workspace from a Git URL. The repository will be available in `/projects/etx_app_base_app`.
+
+=== Verify Repository Clone
+
+Open a terminal and verify the repository was cloned correctly.
+
+Or, you can also verify from a workspace terminal, opening from the burger menu on the top right of the IDE,
+then selecting menu:Terminal[New Terminal]:
+
+NOTE: The terminal opens in `/projects/etx_app_base_app` by default. If you've navigated elsewhere, use `cd /projects/etx_app_base_app` to return.
+
+[source,bash,role=execute]
 ----
-{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/main?devfilePath=/
-----
-
-To create a workspace from a different branch, replace `REPLACE_BRANCH_NAME` in this URL:
-
-[source,text,subs="attributes"]
-----
-{devspaces_url}/#{gitlab_url}/software-factory/etx_app_base_app/-/tree/REPLACE_BRANCH_NAME?devfilePath=/
-----
-
-Dev Spaces will clone the repository, read the `devfile.yaml` you just created, pull the container image, and open the VS Code IDE in your browser.
-
-NOTE: The first workspace creation may take a few minutes while the container image is pulled to the node.
-
-== Verify Git Integration
-
-Once the workspace opens:
-
-. Open the *Source Control* panel (Ctrl+Shift+G)
-. Confirm the repository is loaded and shows the correct branch
-. If prompted to authenticate with GitLab, follow the OAuth flow -- this is the integration configured in the xref:day2-devspaces-integrations.adoc[GitLab Integration] section
-
-You can also verify from a workspace terminal:
-
-[source,bash]
-----
-pwd
-git remote -v
+# Verify current branch and recent commits
 git branch --show-current
-git status
+git log --oneline -3
+ls -la devfile.yaml
 ----
 
-Test that you can push changes:
+You should see `feature/add-devfile` as the current branch and the `devfile.yaml` file in the repository root.
 
-. Create or edit a file (e.g. add a comment to `README.md`)
-. Stage, commit, and push the change from the Source Control panel
-. Verify the commit appears in GitLab
+=== Check Environment Variables
 
-Or use the terminal:
+Verify the environment variables from your devfile are present:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-git add README.md
-git commit -m "docs: verify Dev Spaces Git integration"
-git push origin main
-----
-
-== Verify the AI Code Assistant
-
-Open a terminal in the workspace from menu:Terminal[New Terminal] and confirm the LLM environment variables are set:
-
-[source,bash]
-----
-echo $LLM_API_KEY
-echo $LLM_BASE_URL
+echo "POSTGRESQL_HOST: $POSTGRESQL_HOST"
+echo "POSTGRESQL_DATABASE: $POSTGRESQL_DATABASE"
+echo "POSTGRESQL_USER: $POSTGRESQL_USER"
+echo "KAFKA_BOOTSTRAP_SERVERS: $KAFKA_BOOTSTRAP_SERVERS"
 ----
 
-Both should return values injected by the shared secret configured in the xref:day2-devspaces-integrations.adoc[Shared Secrets] section.
+You should see:
 
-Check that the Continue extension is configured:
+[source,text]
+----
+POSTGRESQL_HOST: parasol-db.etx-app-dev.svc.cluster.local
+POSTGRESQL_DATABASE: parasol
+POSTGRESQL_USER: parasol
+KAFKA_BOOTSTRAP_SERVERS: parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092
+----
 
-. Open the Continue panel in the sidebar (the Continue icon)
-. Send a test message such as "Hello, what model are you?"
-. Confirm you receive a response from the **qwen3-14b** model
+[IMPORTANT]
+====
+If these variables are **empty**, the workspace was not created with your devfile. This can happen if:
 
-If Continue does not appear, confirm that the extension is installed in the workspace and check that the `postStart` event ran successfully:
+* The devfile was not pushed to the feature/add-devfile branch in Step 4
+* The workspace was created before the devfile was pushed
 
-[source,bash]
+Go back to Step 5 and recreate the workspace after ensuring the devfile is in the repository.
+====
+
+=== Test Service Connectivity
+
+Verify network connectivity to PostgreSQL:
+
+[source,bash,role=execute]
+----
+timeout 3 bash -c "echo > /dev/tcp/$POSTGRESQL_HOST/5432" && echo "PostgreSQL connection successful" || echo "PostgreSQL connection failed"
+----
+
+Expected: `PostgreSQL connection successful`
+
+If you get connection errors, verify you completed xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services].
+
+== Configure Continue AI Assistant (Optional)
+
+NOTE: Setting up Continue is optional. Skip this section if you encounter issues or prefer to continue without AI assistance.
+
+=== Verify LLM Credentials
+
+Check if LLM credentials are available:
+
+[source,bash,role=execute]
+----
+echo "LLM_API_KEY: $LLM_API_KEY"
+echo "LLM_BASE_URL: $LLM_BASE_URL"
+----
+
+If empty, you need to configure the Continue credentials secret. See xref:day2-devspaces-integrations.adoc#_example_ai_code_assistant_continue_credentials[Continue Credentials Setup], then restart your workspace.
+
+=== Initialize Continue Configuration
+
+The devfile's `postStart` event should have created the Continue config file. Verify:
+
+[source,bash,role=execute]
 ----
 cat ~/.continue/config.yaml
 ----
 
-The file should contain the model configuration with your API key and base URL.
+If the file doesn't exist, create it manually:
 
-== Verify Nested Containers
-
-Confirm Podman is available inside the workspace:
-
-[source,bash]
+[source,bash,role=execute]
 ----
-podman version
-podman run --rm registry.access.redhat.com/ubi9-minimal:latest echo "Nested containers work"
+mkdir -p /home/user/.continue
+cat > /home/user/.continue/config.yaml << EOF
+name: Continue Config
+version: 0.0.1
+models:
+  - name: qwen3-14b
+    provider: vllm
+    model: qwen3-14b
+    apiKey: ${LLM_API_KEY}
+    apiBase: ${LLM_BASE_URL}
+    roles:
+      - chat
+EOF
+
+cat ~/.continue/config.yaml
 ----
 
-If this command fails with Docker or container runtime errors, stop and verify the `CheCluster` configuration includes `disableContainerRunCapabilities: false`. Ask the instructor before continuing, because Quarkus Dev Services depends on nested containers in this lab.
+=== Install Continue Extension
 
-Starting with Dev Spaces 3.25 on OpenShift 4.20+, nested containers work without special pod annotations or SCC configuration.
-See the https://docs.redhat.com/en/documentation/red_hat_openshift_dev_spaces/3.25/html/release_notes_and_known_issues/new-features[Dev Spaces 3.25 Release Notes^] for details.
+. Open Extensions view (Ctrl+Shift+X)
+. Search for "Continue"
+. Click *Install* on "Continue - Codestral, Claude, and more"
 
-When `disableContainerRunCapabilities: false` is set in the CheCluster CR, workspace pods get the capabilities needed to run Podman in rootless mode.
-Quarkus Dev Services uses Testcontainers under the hood, which calls Podman to start service containers (databases, message brokers, etc.).
+NOTE: If you see "error while fetching extensions", wait a moment and retry, or skip Continue setup.
 
-== Run Quarkus Dev Services
+=== Test Continue
 
-Open a terminal in the IDE and start Quarkus in dev mode:
+. Open the Continue panel (sidebar icon)
+. Send a message: `Hello, what model are you?`
+. You should receive a response from **qwen3-14b**
 
-[source,bash]
+Expected response:
+
+[source,text]
 ----
+I am Qwen, a large language model developed by Alibaba Cloud.
+How can I assist you today?
+----
+
+This confirms Continue is connected to the LLM endpoint and ready to use.
+
+TIP: Continue is optional. If you encounter issues, proceed without it.
+
+== Run Quarkus in Development Mode
+
+When you open a terminal in the workspace, you are automatically positioned in the project directory.
+
+Verify your current location and start Quarkus development mode:
+
+[source,bash,role=execute]
+----
+# Verify you're in the project directory
+pwd
+
+# Start Quarkus in development mode
 ./mvnw compile quarkus:dev
 ----
 
-Quarkus Dev Services will detect that the application needs a PostgreSQL database and automatically start one using Podman inside the workspace.
-You should see log output indicating the database container is starting:
+Expected output from `pwd`:
 
+[source,text]
 ----
-Dev Services for default datasource (postgresql) started
+/projects/etx_app_base_app
 ----
 
-The application will be available on port 8080.
-Click the endpoint notification in the IDE or find the URL in the *Endpoints* panel.
+Quarkus connects to the external PostgreSQL and Kafka services using the environment variables from your devfile.
+
+Wait for the application to start. You should see output similar to:
+
+[source,text]
+----
+Listening for transport dt_socket at address: 5005
+__  ____  __  _____   ___  __ ____  ______
+ --/ __ \/ / / / _ | / _ \/ //_/ / / / __/
+ -/ /_/ / /_/ / __ |/ , _/ ,< / /_/ /\ \
+--\___\_\____/_/ |_/_/|_/_/|_|\____/___/
+
+INFO  [io.sma.rea.mes.kafka] SRMSG18229: Configured topics for channel 'emails-in': [intake]
+INFO  [io.sma.rea.mes.kafka] SRMSG18258: Kafka producer kafka-producer-emails-out, connected to Kafka brokers 'parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092'
+INFO  [io.sma.rea.mes.kafka] SRMSG18257: Kafka consumer kafka-consumer-emails-in, connected to Kafka brokers 'parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092'
+INFO  [io.quarkus] parasol-reimagined 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.17.5) started in 7.298s. Listening on: http://0.0.0.0:8080
+INFO  [io.quarkus] Profile dev activated. Live Coding activated.
+
+--
+Tests paused
+Press [e] to edit command line args, [r] to resume testing, [h] for more options>
+----
+
+Key indicators of successful startup:
+
+* **Debug port listening**: `Listening for transport dt_socket at address: 5005`
+* **Kafka connected**: Messages showing connection to `parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092`
+* **Application started**: `Listening on: http://0.0.0.0:8080`
+* **Live Coding activated**: Hot reload is enabled
+
+=== Access the Application
+
+When Quarkus starts, a **popup notification** appears in the bottom-right corner with a button to open the application endpoint.
+
+Click *Open in New Tab* or *Open in Preview* to access the running application.
+
+TIP: If you miss the popup, press `Ctrl+C` to stop Quarkus, then run `./mvnw compile quarkus:dev` again to restart and see the notification.
+
+The endpoint URL follows this structure:
+
+[source,text,subs="attributes+"]
+----
+https://<username>-<project-name>-quarkus-dev.apps.<cluster-domain>/
+----
+
+For example:
+
+[source,text]
+----
+https://admin-etx-app-base-app-quarkus-dev.apps.cluster-grsml.dynamic2.redhatworkshops.io/
+----
+
+You can also find the URL in the *Endpoints* panel (usually in the bottom-left sidebar).
+
+=== External Services Configuration
+
+Your application connects to:
+
+* **PostgreSQL**: `parasol-db.etx-app-dev.svc.cluster.local:5432`
+  - Database: `parasol`
+  - Credentials: `parasol/parasol`
+
+* **Kafka**: `parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092`
+  - Topic: `intake`
+
+These are shared services across all development workspaces, deployed in xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services].
 
 == Workspace Lifecycle
 
-Some useful operations:
+Useful operations from the Dev Spaces dashboard:
 
-*Stop a workspace* (preserves state on the PVC):
+**Stop workspace** (preserves files on PVC):
 
-* From the dashboard, click the stop icon next to your workspace
-* The workspace pod is deleted, but the PVC retains your files
+* Click three dots (⋮) → *Stop Workspace*
+* Pod is deleted, PVC is retained
 
-*Restart a workspace*:
+**Start workspace**:
 
-* Click the workspace name in the dashboard to restart it
-* Your source code, Maven cache, and other volume-mounted data persist
+* Click three dots (⋮) → *Start in background*
+* Your files, Maven cache, and Git state persist
 
-*Delete a workspace*:
+**Delete workspace**:
 
-* From the dashboard, select the workspace and click btn:[Delete]
-* This removes the workspace pod and its PVC
+* Click three dots (⋮) → *Delete Workspace*
+* Removes pod and PVC
 
 == Next Steps
 
-Proceed to xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services].
+Proceed to xref:day2-lab1-ci-pipeline.adoc[CI Pipeline].

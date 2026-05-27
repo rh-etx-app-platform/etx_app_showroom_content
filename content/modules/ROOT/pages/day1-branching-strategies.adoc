@@ -25,11 +25,12 @@ The Web Terminal includes the required CLI tools and avoids local workstation pr
 
 First, verify you can access GitLab through your browser.
 
-Open GitLab:
+Get the GitLab URL and open it in your browser:
 
-[source,text,subs="attributes+"]
+[source,bash]
 ----
-{gitlab_url}
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "Open this URL in your browser: $GITLAB_URL"
 ----
 
 .Login Process
@@ -54,13 +55,24 @@ After login, you should see the GitLab interface with the **software-factory** g
 
 === Step 2: Clone the Workshop Repository
 
-Now clone the ETX App Base application repository using Git CLI:
+Now clone the ETX App Base application repository using Git CLI.
 
-[source,bash,role=execute,subs="attributes+"]
+First, get the GitLab URL:
+
+[source,bash]
+----
+# Get GitLab URL dynamically
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "GitLab URL: $GITLAB_URL"
+----
+
+Then clone the repository:
+
+[source,bash,role=execute]
 ----
 mkdir -p ~/workshop
 cd ~/workshop
-git clone {gitlab_url}/software-factory/etx_app_base_app.git
+git clone ${GITLAB_URL}/software-factory/etx_app_base_app.git
 cd etx_app_base_app
 ----
 
@@ -68,12 +80,7 @@ cd etx_app_base_app
 ====
 **Authentication for Git CLI:**
 
-When prompted for credentials during `git clone`:
-
-* Username: `{user}`
-* Password: `{password}`
-
-Or use a personal access token from GitLab:
+When prompted for credentials during `git clone`, use your assigned workshop credentials or create a personal access token from GitLab:
 Settings → Access Tokens → Create token with `read_repository` scope
 ====
 
@@ -118,15 +125,15 @@ If any of these commands fail, verify:
 
 If this is your first time using Git on this system:
 
-[source,bash,role=execute,subs="attributes+"]
+[source,bash,role=execute]
 ----
-git config user.name "{user}"
-git config user.email "{user}@redhat.com"
+git config user.name "Platform Developer"
+git config user.email "platform-developer@example.com"
 ----
 
-NOTE: These commands configure Git only for the current repository. Use `git config --global` only on a workstation or bastion environment that you own and intend to reuse.
+NOTE: These commands configure Git only for the current repository. Use `git config --global` only on a workstation or bastion environment that you own and intend to reuse. Replace the name and email with your actual identity.
 
-✅ **Validation Complete** - You're ready to work with branches.
+**Validation Complete** - You're ready to work with branches.
 
 == Branching Models
 
@@ -316,13 +323,13 @@ Example: `feature/add-authentication`, `fix/login-bug`
 
 Make a simple change to the README:
 
-[source,bash,role=execute]
+[source,bash,role=execute,subs="attributes+"]
 ----
 # Add your name to the README
-cat >> README.md << 'EOF'
+cat >> README.md << EOF
 
 ## Workshop Participant
-- Name: Your Name
+- Name: PUT_YOUR_NAME_HERE
 - Date: $(date +%Y-%m-%d)
 EOF
 
@@ -330,6 +337,8 @@ EOF
 git status
 git diff README.md
 ----
+
+TIP: Replace PUT_YOUR_NAME_HERE with your name.
 
 Stage and commit your changes:
 
@@ -384,11 +393,11 @@ To {gitlab_url}/software-factory/etx_app_base_app
 
 === Exercise 4: Verify in GitLab UI
 
-1. Open GitLab in your browser:
+1. Get the GitLab URL and open it in your browser:
 +
-[source,text,subs="attributes+"]
+[source,bash,role=execute]
 ----
-{gitlab_url}
+echo "Open this URL in your browser: $GITLAB_URL"
 ----
 
 2. Login with Keycloak (if not already logged in)

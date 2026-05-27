@@ -16,7 +16,7 @@ image::devspaces-operator-installed.png[Dev Spaces Operator installed]
 
 Verify from the CLI:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get csv -n openshift-operators | grep devspaces
 ----
@@ -30,7 +30,7 @@ devspacesoperator.v3.27.1           Red Hat OpenShift Dev Spaces   3.27.1    dev
 
 The DevWorkspace Operator is installed automatically as a dependency.
 
-NOTE: The operator runs from `openshift-operators`. The `openshift-devspaces` namespace is created later for the `CheCluster` instance and Dev Spaces server components.
+NOTE: The operator runs from `openshift-operators`. The `openshift-devspaces` namespace will be created in the next step for the `CheCluster` instance and Dev Spaces server components.
 
 image::devspaces-operator-list.png[Dev Spaces Operators Installed]
 

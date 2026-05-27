@@ -323,8 +323,6 @@ spec:
           workspace: shared-workspace
 ----
 
-NOTE: Replace `{gitlab_url}` with your actual GitLab URL before applying.
-
 Apply the pipeline:
 
 [source,bash,role=execute]
@@ -334,9 +332,17 @@ oc apply -f etx-app-promotion-pipeline.yaml
 
 == Test the Promotion Pipeline
 
+First, get the GitLab URL dynamically:
+
+[source,bash,role=execute]
+----
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "GitLab URL: $GITLAB_URL"
+----
+
 === Get a Valid Image Tag
 
-First, find a recent image tag from your dev environment:
+Find a recent image tag from your dev environment:
 
 [source,bash,role=execute]
 ----
@@ -349,18 +355,42 @@ Pick one of the commit SHA tags from the output.
 
 === Run the Promotion Pipeline
 
-Trigger the promotion pipeline manually:
+Trigger the promotion pipeline manually.
 
-[source,bash,role=execute,subs="attributes+"]
+First, get an actual commit SHA from the images built by the CI pipeline:
+
+[source,bash,role=execute]
 ----
-# Replace <COMMIT_SHA> with an actual image tag from above
-tkn pipeline start etx-app-promotion \
-  --param source-image-tag=<COMMIT_SHA> \
-  --param dest-image-tag=stable \
-  --param gitops-repo-url={gitlab_url}/software-factory/etx-app-gitops.git \
-  --workspace name=shared-workspace,claimName=promotion-workspace-pvc \
-  --serviceaccount pipeline \
-  --showlog
+oc get images -n etx-app-dev | grep etx-app-base-app
+----
+
+Then create a PipelineRun (replace `<COMMIT_SHA>` with an actual image tag from above):
+
+[source,bash,role=execute]
+----
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: etx-app-promotion-
+  namespace: etx-app-dev
+spec:
+  pipelineRef:
+    name: etx-app-promotion
+  params:
+    - name: source-image-tag
+      value: <COMMIT_SHA>
+    - name: dest-image-tag
+      value: stable
+    - name: gitops-repo-url
+      value: ${GITLAB_URL}/software-factory/etx-app-gitops.git
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: promotion-workspace-pvc
+  taskRunTemplate:
+    serviceAccountName: pipeline
+EOF
 ----
 
 Watch the pipeline logs. You should see:
@@ -386,7 +416,7 @@ Check the Argo CD application status:
 
 [source,bash,role=execute]
 ----
-oc get application etx-app-stage -n etx-app-dev -o jsonpath='{.status.sync.status}'
+oc get application etx-app-stage -n etx-app-dev -o jsonpath='{.status.sync.status}{"\n"}'
 ----
 
 The output should be `Synced`.
@@ -475,22 +505,38 @@ Run the promotion pipeline with a previous image tag:
 
 [source,bash,role=execute]
 ----
-tkn pipeline start etx-app-promotion \
-  --param source-image-tag=<PREVIOUS_SHA> \
-  --param dest-image-tag=stable \
-  --workspace name=shared-workspace,claimName=promotion-workspace-pvc \
-  --serviceaccount pipeline
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: etx-app-promotion-
+  namespace: etx-app-dev
+spec:
+  pipelineRef:
+    name: etx-app-promotion
+  params:
+    - name: source-image-tag
+      value: <PREVIOUS_SHA>
+    - name: dest-image-tag
+      value: stable
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: promotion-workspace-pvc
+  taskRunTemplate:
+    serviceAccountName: pipeline
+EOF
 ----
 
 == Summary
 
 You have completed the Promotion Pipeline exercise. You now have:
 
-* ✅ Automated image promotion from internal registry to Quay
-* ✅ GitOps-based staging deployments
-* ✅ Secure credential management via Vault
-* ✅ Multi-cluster deployment capability
-* ✅ Rollback capability through Git history
+* Automated image promotion from internal registry to Quay
+* GitOps-based staging deployments
+* Secure credential management via Vault
+* Multi-cluster deployment capability
+* Rollback capability through Git history
 
 == Key Takeaways
 
