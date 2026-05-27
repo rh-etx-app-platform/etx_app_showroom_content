@@ -14,7 +14,7 @@ NOTE: HashiCorp Vault is already deployed as part of the infrastructure bootstra
 HashiCorp Vault provides centralized secrets management for the platform.
 It has been pre-deployed by the infrastructure bootstrap process and is ready to use.
 
-* **URL:** {vault_url}
+* **URL:** {vault_url}[^]
 * **Authentication Method:** OIDC
   - `platform-admin` / `openshift` (administrator access)
   - `platform-developer` / `openshift` (developer access)
@@ -29,7 +29,7 @@ The Vault instance is already configured with:
 
 Your Tekton pipelines can authenticate to Vault using their ServiceAccount tokens to retrieve registry credentials at runtime.
 
-TIP: Access the Vault UI at {vault_url} and log in with the OIDC method to explore the pre-configured secrets. If prompted for a role, leave it blank or use the default.
+TIP: Access the Vault UI at {vault_url}[^] and log in with the OIDC method to explore the pre-configured secrets. If prompted for a role, leave it blank or use the default.
 
 == Install OpenShift Pipelines (Tekton)
 
@@ -105,7 +105,7 @@ Starting with AMQ Streams 3.x, Kafka clusters use **KafkaNodePools** to manage b
 A `KafkaNodePool` defines a group of Kafka nodes with specific roles (controller, broker, or both) and their storage configuration.
 This deployment uses a single node pool with combined controller and broker roles, running in **KRaft mode** (without ZooKeeper).
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: kafka.strimzi.io/v1
@@ -187,7 +187,7 @@ This returns `parasol-kafka-kafka-bootstrap:9092` which will be used to connect 
 
 Create the topics required by the ETX App Base application:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: kafka.strimzi.io/v1
@@ -219,7 +219,7 @@ Deploy PostgreSQL using the Red Hat certified container image for application da
 
 === Create PostgreSQL Deployment
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc apply -f - <<'EOF'
 apiVersion: v1
@@ -450,7 +450,7 @@ NOTE: The `sampler.type: always_on` configuration ensures all traces are capture
 
 To instrument a deployment, add the following annotation to its pod template:
 
-[source,yaml,role=execute]
+[source,yaml]
 ----
 metadata:
   annotations:

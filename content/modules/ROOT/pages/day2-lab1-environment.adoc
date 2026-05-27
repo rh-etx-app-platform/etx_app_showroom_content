@@ -4,7 +4,7 @@
 == Overview
 
 This workshop provides a pre-configured OpenShift environment with foundational infrastructure services.
-You will deploy application platform services (DevSpaces, Tekton, Argo CD) and build a complete CI/CD pipeline.
+You will deploy application platform services (Dev Spaces, Tekton, Argo CD) and build a complete CI/CD pipeline.
 
 == Pre-Deployed Infrastructure
 
@@ -14,7 +14,7 @@ The following services are already installed and configured:
 
 Centralized SSO/OIDC provider for GitLab, Quay, and other services.
 
-* **URL:** {keycloak_url}
+* **URL:** {keycloak_url}[^]
 * **Realm:** `etx-lab`
 * **Available Users:**
   - `platform-admin` / `openshift` (administrator access)
@@ -27,7 +27,7 @@ TIP: Use these credentials to log into GitLab and Quay via the OIDC/OAuth button
 
 Source control and Git repository hosting.
 
-* **URL:** {gitlab_url}
+* **URL:** {gitlab_url}[^]
 * **Authentication:**
   - Keycloak OIDC (click "ETX Lab SSO") - Use Keycloak users for regular development
   - Standard login - Use `root` user for GitLab administration
@@ -43,7 +43,7 @@ NOTE: The `root` user has GitLab administrator privileges. Keycloak users (`plat
 
 Enterprise container registry for storing and distributing images.
 
-* **URL:** {quay_url}
+* **URL:** {quay_url}[^]
 * **Authentication:** Keycloak OIDC or local account
 * **Purpose:** External image registry for production-grade workflows
 
@@ -70,8 +70,8 @@ Two OpenShift clusters are available for application promotion:
 
 === Primary Cluster (Development)
 
-* **API:** {openshift_api_url}
-* **Console:** {openshift_console_url}
+* **API:** {openshift_api_url}[^]
+* **Console:** {openshift_console_url}[^]
 * **Apps Domain:** `*.{openshift_cluster_ingress_domain}`
 * **Admin User:** `{user}`
 * **Admin Password:** `{password}`
@@ -79,8 +79,8 @@ Two OpenShift clusters are available for application promotion:
 
 === Secondary Cluster (Staging/Production)
 
-* **API:** https://api.cluster-{guid2}.{workshop_base_domain}:6443
-* **Console:** https://console-openshift-console.apps.cluster-{guid2}.{workshop_base_domain}
+* **API:** https://api.cluster-{guid2}.{workshop_base_domain}:6443[^]
+* **Console:** https://console-openshift-console.apps.cluster-{guid2}.{workshop_base_domain}[^]
 * **Apps Domain:** `*.apps.cluster-{guid2}.{workshop_base_domain}`
 * **Admin User:** `{user}`
 * **Admin Password:** `{password}`
@@ -121,7 +121,7 @@ IMPORTANT: Supporting services (PostgreSQL and Kafka) must be deployed BEFORE se
 
 == Accessing GitLab with Keycloak
 
-. Open {gitlab_url}
+. Open {gitlab_url}[^]
 . Click btn:[ETX Lab SSO]
 . You will be redirected to Keycloak
 . Log in with one of the provided users (e.g., `platform-developer` / `openshift`)

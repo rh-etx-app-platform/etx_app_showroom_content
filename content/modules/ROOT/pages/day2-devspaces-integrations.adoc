@@ -63,13 +63,11 @@ oc label secret gitlab-oauth-config \
 echo "GitLab OAuth secret created successfully"
 ----
 
-WARNING: Replace `GITLAB_APPLICATION_ID` and `GITLAB_APPLICATION_SECRET` with the values from the GitLab OAuth application before running the command.
-
 === Register GitLab in the CheCluster
 
 Add the `gitServices` section to your CheCluster CR:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Get the GitLab URL dynamically from the cluster
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
@@ -124,7 +122,7 @@ If you already have an API key, you can use it by following these steps:
 
 Then create the secret:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 LLM_API_KEY="REPLACE_API_KEY"
 

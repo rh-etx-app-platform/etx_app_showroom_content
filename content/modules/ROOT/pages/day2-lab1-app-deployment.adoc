@@ -353,7 +353,7 @@ metadata:
   labels:
     app: etx-app-base-app
   annotations:
-    instrumentation.opentelemetry.io/inject-java: "true" # <1>
+    instrumentation.opentelemetry.io/inject-java: "true" # # <1>
 spec:
   replicas: 1
   selector:
@@ -364,7 +364,7 @@ spec:
       labels:
         app: etx-app-base-app
       annotations:
-        instrumentation.opentelemetry.io/inject-java: "true" # <1>
+        instrumentation.opentelemetry.io/inject-java: "true" # # <1>
     spec:
       containers:
         - name: etx-app-base-app

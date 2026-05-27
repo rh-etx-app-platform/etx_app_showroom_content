@@ -64,7 +64,7 @@ oc create namespace openshift-devspaces
 
 Apply the CheCluster configuration:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc apply -f - <<'EOF'
 apiVersion: org.eclipse.che/v2
@@ -134,7 +134,7 @@ Wait until all pods are in `Running` state with `READY` showing the expected num
 
 Once all pods are running, check the CheCluster status:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get checluster devspaces -n openshift-devspaces -o jsonpath='{.status.chePhase}{"\n"}'
 ----
