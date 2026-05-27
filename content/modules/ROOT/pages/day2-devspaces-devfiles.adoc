@@ -183,6 +183,17 @@ components:
           value: "0.0.0.0"
         - name: MAVEN_OPTS
           value: "-Dmaven.repo.local=/home/user/.m2/repository"
+        # External service connection (from Supporting Services lab)
+        - name: POSTGRESQL_HOST # <1>
+          value: "parasol-db.etx-app-dev.svc.cluster.local"
+        - name: POSTGRESQL_DATABASE # <2>
+          value: "parasol"
+        - name: POSTGRESQL_USER # <3>
+          value: "parasol"
+        - name: POSTGRESQL_PASSWORD # <4>
+          value: "parasol"
+        - name: KAFKA_BOOTSTRAP_SERVERS # <5>
+          value: "parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092"
       memoryLimit: 5Gi
       cpuLimit: 2500m
       volumeMounts:
@@ -226,7 +237,7 @@ commands:
       workingDir: /home/user
       commandLine: |
         mkdir -p /home/user/.continue
-        cat > /home/user/.continue/config.yaml << 'INNEREOF'
+        cat > /home/user/.continue/config.yaml << EOF
         name: Continue Config
         version: 0.0.1
         models:
@@ -237,15 +248,22 @@ commands:
             apiBase: ${LLM_BASE_URL}
             roles:
               - chat
-        INNEREOF
+        EOF
       group:
         kind: build
 events:
   postStart:
     - init-continue
 ----
+<1> PostgreSQL hostname - fully qualified service name from Supporting Services lab
+<2> PostgreSQL database name (matches the database created in Supporting Services)
+<3> PostgreSQL username (matches the secret in Supporting Services)
+<4> PostgreSQL password (matches the secret in Supporting Services)
+<5> Kafka bootstrap servers - fully qualified service name from Supporting Services lab
 
-This example includes a `init-continue` command that reads `LLM_API_KEY` and `LLM_BASE_URL`
+NOTE: These environment variables point to external PostgreSQL and Kafka services deployed in xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services]. Dev Services (Testcontainers) are **disabled** to use shared cluster services instead.
+
+This example also includes a `init-continue` command that reads `LLM_API_KEY` and `LLM_BASE_URL`
 from the environment variables injected by the shared secret created in the developer user namespace.
 
 == Next Steps

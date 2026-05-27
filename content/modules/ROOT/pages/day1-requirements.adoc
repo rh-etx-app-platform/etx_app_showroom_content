@@ -35,14 +35,17 @@ Order a https://catalog.demo.redhat.com/catalog/babylon-catalog-prod/order/publi
 | OpenShift Worker Count
 | 3
 
-| Create Users on Cluster
-| 5
+| Worker CPU
+| 16
 
-| Create users on cluster?
-| Disabled
+| Worker memory
+| 32Gi
+
+| Create Users on Cluster
+| Unchecked
 
 | Enable OpenShift Lightspeed
-| Disabled
+| Unchecked
 |===
 
 IMPORTANT: Order your cluster *before* the lab begins -- provisioning can take up to 60 minutes.
@@ -63,7 +66,7 @@ Once provisioning is complete you will receive an email with your cluster creden
 
 Verify your OpenShift cluster is accessible:
 
-[source,bash,subs="attributes"]
+[source,bash,role=execute,subs="attributes"]
 ----
 oc login -u admin --server={openshift_api_url}
 oc whoami
@@ -79,9 +82,13 @@ git --version
 
 Confirm you can authenticate to the Git server:
 
-[source,bash,subs="attributes"]
+[source,bash]
 ----
-git clone {gitlab_url}/software-factory/etx_app_base_app.git
+# Get GitLab URL dynamically
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+
+# Clone the repository
+git clone ${GITLAB_URL}/software-factory/etx_app_base_app.git
 ----
 
 == Next Steps

@@ -10,7 +10,7 @@ The modernized application will then be integrated into the CI pipeline built in
 
 === Install via OperatorHub
 
-. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Migration Toolkit for Applications*
 . Click btn:[Install]
 . Accept the defaults and click btn:[Install]
@@ -18,48 +18,45 @@ The modernized application will then be integrated into the CI pipeline built in
 
 Verify from the CLI:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get csv -n openshift-operators | grep mta
+oc get csv -n openshift-mta | grep mta
 ----
 
 === Deploy the MTA Web Console
 
 Create a Tackle CR to deploy the MTA web console:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tackle.konveyor.io/v1alpha1
 kind: Tackle
-metadata:
+metadata:  
   name: mta
   namespace: openshift-mta
 spec: {}
-----
-
-Apply it:
-
-[source,bash]
-----
-oc create namespace openshift-mta
-oc apply -f mta-tackle.yaml
+EOF
 ----
 
 Wait for the pods to be ready:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n openshift-mta -w
 ----
 
 Get the MTA console route:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get route -n openshift-mta
+oc get route -n openshift-mta -o jsonpath='{range .items[*]}https://{.spec.host}{"\n"}{end}'
 ----
 
-Open the URL in your browser.
+Open the URL in your browser and login with the MTA credentials:
+
+* Username: `admin`
+* Password: `Passw0rd!`
 
 == Analyze the Application
 
@@ -107,7 +104,7 @@ Common findings when migrating to Quarkus:
 
 You can also run analysis from the command line inside your Dev Spaces workspace:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 mta-cli analyze \
   --input /projects/parasol-legacy \
@@ -126,7 +123,7 @@ Work through the mandatory issues first:
 
 Update `pom.xml` to use Quarkus BOM and extensions:
 
-[source,xml]
+[source,xml,role=execute]
 ----
 <dependencyManagement>
   <dependencies>
@@ -164,28 +161,46 @@ Move configuration from XML files to `application.properties`:
 
 [source,properties]
 ----
-# Database configuration
+quarkus.http.port=8080
+
+# Disable Dev Services (use external services from Supporting Services lab)
+%dev.quarkus.datasource.devservices.enabled=false
+%dev.quarkus.kafka.devservices.enabled=false
+
+# Development configuration (connects to external services in cluster)
+%dev.quarkus.datasource.db-kind=postgresql
+%dev.quarkus.datasource.username=${POSTGRESQL_USER:parasol}
+%dev.quarkus.datasource.password=${POSTGRESQL_PASSWORD:parasol}
+%dev.quarkus.datasource.jdbc.url=jdbc:postgresql://${POSTGRESQL_HOST:parasol-db.etx-app-dev.svc.cluster.local}:5432/${POSTGRESQL_DATABASE:parasol}
+%dev.kafka.bootstrap.servers=${KAFKA_BOOTSTRAP_SERVERS:parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092}
+
+# Production configuration
 quarkus.datasource.db-kind=postgresql
-quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/parasol
-quarkus.datasource.username=${DB_USER:parasol}
-quarkus.datasource.password=${DB_PASSWORD:parasol}
+%prod.quarkus.datasource.username=${POSTGRESQL_USER}
+%prod.quarkus.datasource.password=${POSTGRESQL_PASSWORD}
+%prod.quarkus.datasource.jdbc.url=jdbc:postgresql://${POSTGRESQL_HOST:parasol-db}:5432/${POSTGRESQL_DATABASE:parasol}
+%prod.kafka.bootstrap.servers=${KAFKA_BOOTSTRAP_SERVERS:parasol-kafka-kafka-bootstrap:9092}
 
 # Hibernate
 quarkus.hibernate-orm.database.generation=update
 ----
 
+IMPORTANT: Use the `%dev.` prefix for development-only settings and `%prod.` prefix for production-only settings. Dev Services are **disabled** -- both development and production connect to external PostgreSQL and Kafka services deployed in xref:day2-lab1-supporting-services.adoc[Deploy Supporting Services]. The DevSpaces devfile provides these environment variables automatically.
+
+WARNING: The PostgreSQL database deployed in the Supporting Services lab is shared across workspaces. The `update` mode shown above safely updates the schema without dropping existing tables. If you use `drop-and-create` instead, it will **delete and recreate the entire database schema on every application startup**, which may affect other workspaces or applications using the same database. Only use `drop-and-create` for isolated testing environments or deploy a separate database instance for applications that need destructive schema regeneration.
+
 === Validate the Build
 
 Build and test the modernized application in your Dev Spaces workspace:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 ./mvnw clean package -DskipTests=false
 ----
 
 Start the application in dev mode to verify it runs:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 ./mvnw compile quarkus:dev
 ----
@@ -198,10 +213,10 @@ Push the modernized application into the CI pipeline from Lab 1:
 
 . Commit and push the modernized source code to GitLab:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 git add .
-git commit -m "Modernize application to Quarkus"
+git commit -m "feat: modernize application to Quarkus"
 git push
 ----
 
@@ -209,7 +224,7 @@ git push
 
 . Monitor the pipeline run:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 tkn pipelinerun logs -f -n <your_namespace>
 ----
@@ -222,18 +237,18 @@ tkn pipelinerun logs -f -n <your_namespace>
 
 . Confirm Argo CD syncs the updated image:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get application parasol-dev -n openshift-gitops \
+oc get application etx-app-dev -n etx-app-dev \
   -o jsonpath='{.status.sync.status}'
 ----
 
 . Verify the modernized application is running:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n etx-app-dev
-oc get route parasol-insurance -n etx-app-dev -o jsonpath='{.spec.host}'
+oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}'
 ----
 
 Open the route URL to confirm the modernized application is accessible and functional.
