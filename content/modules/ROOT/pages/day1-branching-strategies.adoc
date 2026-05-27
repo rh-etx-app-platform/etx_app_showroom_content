@@ -323,13 +323,13 @@ Example: `feature/add-authentication`, `fix/login-bug`
 
 Make a simple change to the README:
 
-[source,bash,role=execute]
+[source,bash,role=execute,subs="attributes+"]
 ----
 # Add your name to the README
-cat >> README.md << 'EOF'
+cat >> README.md << EOF
 
 ## Workshop Participant
-- Name: Your Name
+- Name: PUT_YOUR_NAME_HERE
 - Date: $(date +%Y-%m-%d)
 EOF
 
@@ -337,6 +337,8 @@ EOF
 git status
 git diff README.md
 ----
+
+TIP: Replace PUT_YOUR_NAME_HERE with your name.
 
 Stage and commit your changes:
 
@@ -393,9 +395,8 @@ To {gitlab_url}/software-factory/etx_app_base_app
 
 1. Get the GitLab URL and open it in your browser:
 +
-[source,bash]
+[source,bash,role=execute]
 ----
-GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
 echo "Open this URL in your browser: $GITLAB_URL"
 ----
 
