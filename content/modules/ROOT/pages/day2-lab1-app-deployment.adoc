@@ -311,7 +311,7 @@ git clone ${GITLAB_URL}/software-factory/etx-app-gitops.git
 cd etx-app-gitops
 ----
 
-Create the following directory structure:
+We will create the following directory structure in the GitOps repository:
 
 ----
 etx-app-gitops/
@@ -333,18 +333,22 @@ etx-app-gitops/
 
 Create `environments/dev/namespace.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+mkdir -p environments/dev
+cat > environments/dev/namespace.yaml <<'EOF'
 apiVersion: v1
 kind: Namespace
 metadata:
   name: etx-app-dev
+EOF
 ----
 
 Create `environments/dev/deployment.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/dev/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -378,14 +382,16 @@ spec:
             limits:
               cpu: "1"
               memory: 1Gi
+EOF
 ----
 <1> Enables OpenTelemetry auto-instrumentation. The Instrumentation CR created in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section will inject the Java agent automatically.
 <2> The CI pipeline updates this image tag after a successful build.
 
 Create `environments/dev/service.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/dev/service.yaml <<'EOF'
 apiVersion: v1
 kind: Service
 metadata:
@@ -397,12 +403,14 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
+EOF
 ----
 
 Create `environments/dev/route.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/dev/route.yaml <<'EOF'
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
@@ -416,6 +424,7 @@ spec:
     targetPort: 8080
   tls:
     termination: edge
+EOF
 ----
 
 Commit and push the dev environment:
@@ -423,7 +432,7 @@ Commit and push the dev environment:
 [source,bash,role=execute]
 ----
 git add environments/dev/
-git commit -m "Add dev environment manifests"
+git commit -m "feat: add dev environment manifests"
 git push origin main
 ----
 
@@ -658,7 +667,7 @@ Create stage environment manifests in your GitOps repository:
 
 [source,bash,role=execute]
 ----
-cd etx-app-gitops
+cd ~/workshop/etx-app-gitops
 mkdir -p environments/stage
 ----
 
@@ -671,12 +680,14 @@ cp environments/dev/*.yaml environments/stage/
 
 Update `environments/stage/namespace.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/stage/namespace.yaml <<'EOF'
 apiVersion: v1
 kind: Namespace
 metadata:
   name: etx-app-staging
+EOF
 ----
 
 Update `environments/stage/deployment.yaml` to use the `etx-app-staging` namespace and Quay registry.
@@ -770,7 +781,7 @@ Commit and push:
 [source,bash,role=execute]
 ----
 git add environments/stage/
-git commit -m "Add stage environment manifests"
+git commit -m "feat: add stage environment manifests"
 git push origin main
 ----
 

@@ -450,7 +450,7 @@ NOTE: The `sampler.type: always_on` configuration ensures all traces are capture
 
 To instrument a deployment, add the following annotation to its pod template:
 
-[source,yaml]
+[source,yaml,role=execute]
 ----
 metadata:
   annotations:

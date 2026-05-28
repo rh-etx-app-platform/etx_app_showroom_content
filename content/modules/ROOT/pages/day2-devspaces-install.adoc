@@ -114,16 +114,12 @@ IMPORTANT: Dev Spaces on OpenShift uses OpenShift OAuth for authentication by de
 
 Wait for the deployment to complete.
 
-First, verify the CheCluster resource was created:
-
 [source,bash,role=execute]
 ----
 oc get checluster -n openshift-devspaces
 ----
 
 You should see a resource named `devspaces`.
-
-Watch the pods come up:
 
 [source,bash,role=execute]
 ----

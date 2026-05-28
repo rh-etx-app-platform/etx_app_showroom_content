@@ -37,8 +37,6 @@ WARNING: Replace `GITLAB_APPLICATION_ID` and `GITLAB_APPLICATION_SECRET` with th
 
 [source,bash,role=execute]
 ----
-GITLAB_APPLICATION_ID="REPLACE_APPLICATION_ID"
-GITLAB_APPLICATION_SECRET="REPLACE_APPLICATION_SECRET"
 
 # Get the GitLab URL dynamically from the cluster
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
@@ -124,7 +122,6 @@ Then create the secret:
 
 [source,bash,role=execute]
 ----
-LLM_API_KEY="REPLACE_API_KEY"
 
 oc create secret generic continue-llm-credentials \
   -n openshift-devspaces \
