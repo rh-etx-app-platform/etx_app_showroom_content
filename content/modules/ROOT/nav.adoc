@@ -1,8 +1,7 @@
-* xref:index.adoc[What is Showroom?]
-* xref:cluster-access.adoc[🔑 Cluster Access & Credentials]
+* xref:index.adoc[Workshop Introduction]
+* xref:environment-access.adoc[Environment Access]
 
 .Day 1: Lab Setup & Git Foundations
-* xref:day1-requirements.adoc[Requirements & Environment Setup]
 * xref:day1-branching-strategies.adoc[Branching Strategies]
 
 .Day 2: Software Factory & Application Lifecycle
@@ -35,22 +34,4 @@
 * xref:day3-lab3-tas.adoc[Trusted Artifact Signer (TAS)]
 * xref:day3-lab3-tpa.adoc[Trusted Profile Analyzer (TPA)]
 * xref:day3-lab3-tssc-pipeline.adoc[TSSC Pipeline Exercise]
-
-.Content Developer Guide
-* xref:quick-start.adoc[Quick Start]
-* xref:content-repo.adoc[Creating a Content Repository]
-* xref:agnosticv-config.adoc[AgnosticV Configuration]
-* xref:ui-config.adoc[UI Configuration]
-* xref:user-data.adoc[User Data and Variables]
-* xref:attribute-example.adoc[Attribute Injection Example]
-* xref:ocp4-role-reference.adoc[OCP4 Role Reference]
-* xref:vm-role-reference.adoc[VM Role Reference]
-
-.Showroom Developer Guide
-* xref:architecture.adoc[Architecture]
-* xref:deployer.adoc[Showroom Deployer]
-* xref:images.adoc[Showroom Images]
-* xref:nookbag.adoc[Nookbag UI]
-* xref:ocp-integration.adoc[OCP Integration]
-* xref:contributing.adoc[Contributing]
  
