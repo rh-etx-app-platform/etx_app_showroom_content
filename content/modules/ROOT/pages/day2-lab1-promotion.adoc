@@ -125,19 +125,19 @@ spec:
         SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 
         VAULT_TOKEN=$(curl -s --request POST \
-          "${VAULT_ADDR}/v1/auth/kubernetes/login" \
-          --data "{\"role\":\"pipeline\",\"jwt\":\"${SA_TOKEN}\"}" \
+          "$\{VAULT_ADDR}/v1/auth/kubernetes/login" \
+          --data "{\"role\":\"pipeline\",\"jwt\":\"$\{SA_TOKEN}\"}" \
           | jq -r '.auth.client_token')
 
         # Fetch Quay credentials
-        CREDS=$(curl -s --header "X-Vault-Token: ${VAULT_TOKEN}" \
-          "${VAULT_ADDR}/v1/secret/data/registry/quay")
+        CREDS=$(curl -s --header "X-Vault-Token: $\{VAULT_TOKEN}" \
+          "$\{VAULT_ADDR}/v1/secret/data/registry/quay")
 
-        echo "${CREDS}" | jq -r '.data.data.server' \
+        echo "$\{CREDS}" | jq -r '.data.data.server' \
           | tr -d '\n' > $(results.quay-server.path)
-        echo "${CREDS}" | jq -r '.data.data.username' \
+        echo "$\{CREDS}" | jq -r '.data.data.username' \
           | tr -d '\n' > $(results.quay-username.path)
-        echo "${CREDS}" | jq -r '.data.data.password' \
+        echo "$\{CREDS}" | jq -r '.data.data.password' \
           | tr -d '\n' > $(results.quay-password.path)
 EOF
 ----

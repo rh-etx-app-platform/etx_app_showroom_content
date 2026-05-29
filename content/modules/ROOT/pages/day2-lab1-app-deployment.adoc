@@ -120,7 +120,7 @@ spec:
   extraConfig:
     oidc.config: |
       name: ETX Keycloak
-      issuer: https://etx-sso.apps.${CLUSTER_DOMAIN}/realms/etx-lab
+      issuer: https://etx-sso.apps.$\{CLUSTER_DOMAIN}/realms/etx-lab
       clientID: argocd
       clientSecret: \$argocd-oidc-secret:clientSecret
       requestedScopes:
@@ -128,7 +128,7 @@ spec:
       requestedIDTokenClaims:
         groups:
           essential: true
-      logoutURL: https://etx-sso.apps.${CLUSTER_DOMAIN}/realms/etx-lab/protocol/openid-connect/logout
+      logoutURL: https://etx-sso.apps.$\{CLUSTER_DOMAIN}/realms/etx-lab/protocol/openid-connect/logout
   repo:
     resources:
       limits:
