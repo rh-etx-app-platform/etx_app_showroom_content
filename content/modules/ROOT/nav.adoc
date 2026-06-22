@@ -1,4 +1,5 @@
 * xref:index.adoc[What is Showroom?]
+* xref:cluster-access.adoc[🔑 Cluster Access & Credentials]
 
 .Day 1: Lab Setup & Git Foundations
 * xref:day1-requirements.adoc[Requirements & Environment Setup]
