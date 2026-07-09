@@ -17,15 +17,24 @@ asciidoc:
     bastion_ssh_password: password
     ssh_user: lab-user
     openshift_cluster_ingress_domain: apps.cluster-{guid}.{workshop_base_domain}
+    openshift_cluster_guid: '{guid}'
     openshift_console_url: https://console-openshift-console.{openshift_cluster_ingress_domain}
     openshift_api_url: https://api.cluster-{guid}.{workshop_base_domain}:6443
     ocp_version: "4.21"
     user: platform-admin
     password: openshift
     gitlab_url: https://gitlab.{openshift_cluster_ingress_domain}
+    gitlab_root_user: root
+    gitlab_root_password: openshift
     keycloak_url: https://etx-sso.{openshift_cluster_ingress_domain}
+    keycloak_realm: etx-lab
+    keycloak_admin_user: admin
+    keycloak_admin_password: openshift
     quay_url: https://quay.{openshift_cluster_ingress_domain}
     quay_registry_url: quay-registry-quay.{openshift_cluster_ingress_domain}
+    quay_admin_user: quayadmin
+    quay_admin_password: openshift
     vault_url: https://vault.{openshift_cluster_ingress_domain}
+    argocd_etx_url: https://etx-gitops-server-etx-gitops.{openshift_cluster_ingress_domain}
     etx_gitops_url: https://etx-gitops-server-etx-gitops.{openshift_cluster_ingress_domain}
     devspaces_url: https://devspaces.{openshift_cluster_ingress_domain}
