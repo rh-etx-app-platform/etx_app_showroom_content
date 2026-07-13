@@ -439,7 +439,7 @@ Grant Argo CD permission to manage resources in the `etx-app-dev` namespace:
 [source,bash,role=execute]
 ----
 oc adm policy add-role-to-user admin \
-  system:serviceaccount:etx-app-dev:argocd-application-controller \
+  system:serviceaccount:etx-app-dev:argocd-argocd-application-controller \
   -n etx-app-dev
 ----
 
