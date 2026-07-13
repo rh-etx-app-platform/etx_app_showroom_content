@@ -100,7 +100,7 @@ Mount options:
 
 This example creates a secret that injects LLM API credentials as environment variables into every workspace. These can be provided to an extension such as Roo, Cline, or Continue to enable LLM-assisted coding.
 
-First, obtain an API key from the https://litellm-prod-frontend.apps.maas.redhatworkshops.io/home[Red Hat Demo Platform MaaS^].
+First, obtain an API key from the https://maas-rhdp-frontend.apps.maas.redhatworkshops.io/login[Red Hat Demo Platform MaaS^].
 Log in with your SSO credentials. If you do not have access to this service, ask the instructor for the workshop-provided LLM endpoint and API key.
 
 If you don't have an API key, you can create one by following these steps:
@@ -126,7 +126,7 @@ Then create the secret:
 oc create secret generic continue-llm-credentials \
   -n openshift-devspaces \
   --from-literal=LLM_API_KEY="$LLM_API_KEY" \
-  --from-literal=LLM_BASE_URL="https://litellm-prod.apps.maas.redhatworkshops.io"
+  --from-literal=LLM_BASE_URL="https://maas-rhdp.apps.maas.redhatworkshops.io/v1"
 
 oc annotate secret continue-llm-credentials \
   -n openshift-devspaces \
@@ -140,7 +140,7 @@ oc label secret continue-llm-credentials \
 echo "LLM credentials secret created successfully"
 ----
 
-WARNING: Replace `REPLACE_API_KEY` with your actual API key from the MaaS platform before running the command.
+WARNING: Replace or set `LLM_API_KEY` with your actual API key from the MaaS platform before running the command.
 
 Every new workspace will now have `LLM_API_KEY` and `LLM_BASE_URL` available as environment variables.
 The devfile's `postStart` command can use these to configure the Continue extension automatically (see xref:day2-devspaces-devfiles.adoc[Devfiles]).

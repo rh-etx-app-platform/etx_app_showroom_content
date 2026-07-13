@@ -370,7 +370,7 @@ cat ~/.continue/config.yaml
 
 . Open Extensions view (Ctrl+Shift+X)
 . Search for "Continue"
-. Click *Install* on "Continue - Codestral, Claude, and more"
+. Click *Install* on "Continue - open-source AI code agent"
 
 NOTE: If you see "error while fetching extensions", wait a moment and retry, or skip Continue setup.
 
