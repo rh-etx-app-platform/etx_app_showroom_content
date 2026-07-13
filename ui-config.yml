@@ -2,7 +2,7 @@
 type: showroom
 
 # Set the left column width to 30%
-default_width: 30
+default_width: 40
 # Persist the URL state so browser refresh doesn't reset the UI
 persist_url_state: true
 
@@ -15,7 +15,8 @@ tabs:
     url: 'https://console-openshift-console.${DOMAIN}'
 
   - name: Terminal
-    type: terminal
+    port: 443
+    path: /terminal
 
   - name: Developer Hub
     url: 'https://backstage-rhdh-setup-rhdh.${DOMAIN}'
