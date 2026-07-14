@@ -66,7 +66,7 @@ Open the URL in your browser and login with the MTA credentials:
 . Click btn:[Create new]
 . Fill in the application details:
   * *Name*: `parasol-legacy`
-  * *Source repository*: Your GitLab repository URL for the legacy application
+  * *Source repository*: `{gitlab_url}/software-factory/etx_app_base_app.git`
   * *Branch*: `main`
 . Click btn:[Create]
 
