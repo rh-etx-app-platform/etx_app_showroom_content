@@ -303,6 +303,9 @@ echo "GitLab URL: $GITLAB_URL"
 ----
 +
 . Create a new project: *etx-app-gitops* in the software-factory group
++
+IMPORTANT: Make sure the Visibility Level is set to *Public*
+
 . Clone it locally:
 +
 [source,bash,role=execute]
