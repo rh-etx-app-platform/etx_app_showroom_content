@@ -140,7 +140,7 @@ First, get the GitLab URL dynamically:
 [source,bash,role=execute]
 ----
 # Get GitLab URL
-GITLAB_URL="https://$(oc get route -n etx-gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
 echo "GitLab URL: $GITLAB_URL"
 ----
 
