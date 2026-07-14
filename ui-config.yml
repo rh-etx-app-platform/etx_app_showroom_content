@@ -15,8 +15,7 @@ tabs:
     url: 'https://console-openshift-console.${DOMAIN}'
 
   - name: Terminal
-    path: /wetty
-    port: 443
+    type: terminal
 
   - name: Developer Hub
     url: 'https://backstage-rhdh-setup-rhdh.${DOMAIN}'

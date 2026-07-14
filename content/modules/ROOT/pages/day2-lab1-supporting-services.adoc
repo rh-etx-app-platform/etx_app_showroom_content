@@ -3,115 +3,33 @@
 
 == Overview
 
-Deploy and configure the platform services required by the CI/CD pipeline and application observability: HashiCorp Vault for secrets management, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
+Deploy and configure the platform services required by the application and CI/CD pipeline: PostgreSQL database for application data persistence, AMQ Streams (Kafka) for messaging, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
 
-== Deploy HashiCorp Vault
+These services will be shared across your development workflow in Dev Spaces and production deployments.
 
-Vault provides centralized secrets management.
-The pipeline will retrieve container registry credentials from Vault at runtime instead of storing them in Kubernetes Secrets.
+NOTE: HashiCorp Vault is already deployed as part of the infrastructure bootstrap and does not require student installation.
 
-=== Install Vault via Helm
+== HashiCorp Vault (Pre-Deployed)
 
-Add the HashiCorp Helm repository and install Vault in standalone mode:
+HashiCorp Vault provides centralized secrets management for the platform.
+It has been pre-deployed by the infrastructure bootstrap process and is ready to use.
 
-[source,bash]
-----
-helm repo add hashicorp https://helm.releases.hashicorp.com
-helm repo update
-----
+* **URL:** {vault_url}[^]
+* **Authentication Method:** OIDC
+  - `platform-admin` / `openshift` (administrator access)
+  - `platform-developer` / `openshift` (developer access)
+* **Purpose:** CI/CD pipeline credentials and application secrets
 
-Create a namespace and install:
+The Vault instance is already configured with:
 
-[source,bash]
-----
-oc new-project vault
+* KV v2 secrets engine enabled at `secret/`
+* Kubernetes authentication method for pipeline ServiceAccounts
+* Registry credentials stored at `secret/registry`
+* RBAC policies for pipeline access
 
-helm install vault hashicorp/vault \
-  --namespace vault \
-  --set "global.openshift=true" \
-  --set "server.dev.enabled=true" \  # <1>
-  --set "injector.enabled=false"
-----
-<1> Dev mode runs Vault unsealed with an in-memory backend. This is suitable for labs only -- never use dev mode in production.
+Your Tekton pipelines can authenticate to Vault using their ServiceAccount tokens to retrieve registry credentials at runtime.
 
-Wait for the pod to be ready:
-
-[source,bash]
-----
-oc get pods -n vault -w
-----
-
-Press Ctrl+C when the `vault-0` pod shows `1/1 Ready`.
-
-=== Configure Vault
-
-Exec into the Vault pod to configure secrets and authentication:
-
-[source,bash]
-----
-oc exec -it vault-0 -n vault -- /bin/sh
-----
-
-Enable the KV v2 secrets engine and store registry credentials:
-
-[source,bash]
-----
-vault secrets enable -path=secret kv-v2
-
-# Store internal registry credentials (for dev environment)
-vault kv put secret/registry \
-  username=unused \
-  password=unused \
-  server=image-registry.openshift-image-registry.svc:5000
-
-# Optionally, store Quay credentials (for stage/prod)
-# vault kv put secret/quay \
-#   username=<your_quay_username> \
-#   password=<your_quay_password> \
-#   server=quay-registry-quay.apps.cluster-cgd7r.dynamic.redhatworkshops.io
-----
-
-NOTE: The OpenShift internal registry uses ServiceAccount tokens for authentication, so username/password are not used. The Tekton pipeline will authenticate using its ServiceAccount automatically.
-
-=== Configure Kubernetes Authentication
-
-Enable the Kubernetes auth method so that pipeline ServiceAccounts can authenticate to Vault:
-
-[source,bash]
-----
-vault auth enable kubernetes
-
-vault write auth/kubernetes/config \
-  kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443"
-
-vault policy write pipeline-read - <<EOF
-path "secret/data/registry" {
-  capabilities = ["read"]
-}
-path "secret/data/quay" {
-  capabilities = ["read"]
-}
-EOF
-
-vault write auth/kubernetes/role/pipeline \
-  bound_service_account_names=pipeline \
-  bound_service_account_namespaces=parasol-dev \
-  policies=pipeline-read \
-  ttl=1h
-----
-
-Type `exit` to leave the Vault pod.
-
-=== Verify Vault
-
-Confirm you can read the secret from outside the pod:
-
-[source,bash]
-----
-oc exec vault-0 -n vault -- vault kv get secret/registry
-----
-
-You should see the stored credentials.
+TIP: Access the Vault UI at {vault_url}[^] and log in with the OIDC method to explore the pre-configured secrets. If prompted for a role, leave it blank or use the default.
 
 == Install OpenShift Pipelines (Tekton)
 
@@ -119,19 +37,20 @@ OpenShift Pipelines provides the Tekton-based CI engine used to build, test, and
 
 === Install via OperatorHub
 
-. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Open {openshift_console_url}[^] with an admin user.
+. In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Red Hat OpenShift Pipelines*
 . Click btn:[Install]
 . Accept the defaults:
   * **Update channel:** latest
   * **Installation mode:** All namespaces
-  * **Installed Namespace:** openshift-operators
+  * **Installed Namespace:** `openshift-operators`
 . Click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
 Verify from the CLI:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get csv -n openshift-operators | grep pipelines
 ----
@@ -142,21 +61,289 @@ You should see the Pipelines operator listed with phase `Succeeded`.
 
 Confirm the Tekton controller pods are running:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get pods -n openshift-pipelines
 ----
 
 You should see pods for `tekton-pipelines-controller`, `tekton-triggers-controller`, and related components.
 
-Verify the `tkn` CLI is available in your Dev Spaces workspace:
+== Install AMQ Streams (Apache Kafka)
 
-[source,bash]
+AMQ Streams provides Apache Kafka on OpenShift. The ETX App Base application uses Kafka for messaging between services.
+
+=== Install via OperatorHub
+
+. Open {openshift_console_url}[^] with an admin user.
+. In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
+. Search for *Streams for Apache Kafka*
++
+WARNING: Do **NOT** install the "Streams for Apache Kafka Proxy" operator. Only install "Streams for Apache Kafka" (AMQ Streams).
++
+. Click btn:[Install]
+. Accept the defaults:
+  * **Update channel:** stable
+  * **Installation mode:** All namespaces
+  * **Installed Namespace:** `openshift-operators`
+. Click btn:[Install]
+. Wait for the operator to reach the `Succeeded` phase
+
+Verify from the CLI:
+
+[source,bash,role=execute]
 ----
-tkn version
+oc get csv -n openshift-operators | grep amqstreams
 ----
 
-NOTE: The `tkn` CLI is included in the Universal Developer Image (UDI).
+You should see the AMQ Streams operator listed with phase `Succeeded`.
+
+=== Deploy Kafka Cluster
+
+Now that the operator is installed, deploy a Kafka cluster in your application namespace.
+
+Starting with AMQ Streams 3.x, Kafka clusters use **KafkaNodePools** to manage broker nodes.
+A `KafkaNodePool` defines a group of Kafka nodes with specific roles (controller, broker, or both) and their storage configuration.
+This deployment uses a single node pool with combined controller and broker roles, running in **KRaft mode** (without ZooKeeper).
+
+[source,bash,role=execute,subs="attributes"]
+----
+oc apply -f - <<'EOF'
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: kafka
+  namespace: etx-app-dev
+  labels:
+    strimzi.io/cluster: parasol-kafka
+spec:
+  replicas: 1
+  roles:
+    - controller
+    - broker
+  storage:
+    type: ephemeral
+---
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: parasol-kafka
+  namespace: etx-app-dev
+  annotations:
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
+spec:
+  kafka:
+    version: 4.2.0
+    metadataVersion: 4.2-IV0
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+EOF
+----
+
+Wait for the Kafka cluster to be ready:
+
+[source,bash,role=execute]
+----
+oc wait kafka/parasol-kafka --for=condition=Ready --timeout=300s -n etx-app-dev
+----
+
+Verify the Kafka pods are running:
+
+[source,bash,role=execute]
+----
+oc get pods -l strimzi.io/cluster=parasol-kafka -n etx-app-dev
+----
+
+You should see:
+- `parasol-kafka-kafka-0` -- Kafka broker (running in KRaft mode with controller + broker roles)
+- `parasol-kafka-entity-operator-*` -- Topic and User operators
+
+Get the Kafka bootstrap server:
+
+[source,bash,role=execute]
+----
+oc get service parasol-kafka-kafka-bootstrap -n etx-app-dev -o jsonpath='{.metadata.name}:{.spec.ports[0].port}{"\n"}'
+----
+
+This returns `parasol-kafka-kafka-bootstrap:9092` which will be used to connect to Kafka from your application.
+
+=== Create Kafka Topics
+
+Create the topics required by the ETX App Base application:
+
+[source,bash,role=execute,subs="attributes"]
+----
+oc apply -f - <<'EOF'
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: intake
+  namespace: etx-app-dev
+  labels:
+    strimzi.io/cluster: parasol-kafka
+spec:
+  partitions: 1
+  replicas: 1
+  config:
+    retention.ms: 604800000
+    segment.bytes: 1073741824
+EOF
+----
+
+Verify the topic was created:
+
+[source,bash,role=execute]
+----
+oc get kafkatopic -n etx-app-dev
+----
+
+== Deploy PostgreSQL Database
+
+Deploy PostgreSQL using the Red Hat certified container image for application data persistence.
+
+=== Create PostgreSQL Deployment
+
+[source,bash,role=execute,subs="attributes"]
+----
+oc apply -f - <<'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: parasol-db-secret
+  namespace: etx-app-dev
+type: Opaque
+stringData:
+  database-name: parasol
+  database-user: parasol
+  database-password: parasol
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: parasol-db
+  namespace: etx-app-dev
+spec:
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: 5432
+  selector:
+    app: parasol-db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: parasol-db
+  namespace: etx-app-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: parasol-db
+  template:
+    metadata:
+      labels:
+        app: parasol-db
+    spec:
+      containers:
+        - name: postgresql
+          image: registry.redhat.io/rhel9/postgresql-16:latest
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRESQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-user
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-password
+            - name: POSTGRESQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-name
+          volumeMounts:
+            - name: postgresql-data
+              mountPath: /var/lib/pgsql/data
+          livenessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+                - --live
+            initialDelaySeconds: 120
+            timeoutSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: 500m
+            requests:
+              memory: 256Mi
+              cpu: 100m
+      volumes:
+        - name: postgresql-data
+          emptyDir: {}
+EOF
+----
+
+IMPORTANT: This Deployment uses `emptyDir` for storage, which means data is lost when the pod restarts. For production, use a `PersistentVolumeClaim` backed by persistent storage.
+
+Wait for PostgreSQL to be ready:
+
+[source,bash,role=execute]
+----
+oc rollout status deployment/parasol-db -n etx-app-dev
+----
+
+Verify the PostgreSQL pod is running:
+
+[source,bash,role=execute]
+----
+oc get pods -l app=parasol-db -n etx-app-dev
+----
+
+Test the database connection:
+
+[source,bash,role=execute]
+----
+oc run postgresql-test --rm -it --restart=Never \
+  --image=registry.redhat.io/rhel9/postgresql-16:latest \
+  --env PGPASSWORD=$(oc get secret -n etx-app-dev parasol-db-secret -o jsonpath='{.data.database-password}' | base64 -d) \
+  -n etx-app-dev -- \
+  psql -h parasol-db \
+  -U $(oc get secret -n etx-app-dev parasol-db-secret -o jsonpath='{.data.database-user}' | base64 -d) \
+  -d $(oc get secret -n etx-app-dev parasol-db-secret -o jsonpath='{.data.database-name}' | base64 -d) \
+  -c '\conninfo'
+----
+
+You should see connection information confirming PostgreSQL is accessible.
+
+NOTE: The database credentials are stored in the `parasol-db-secret` Secret. Your application will use these same credentials to connect.
 
 == Install the OpenTelemetry Operator
 
@@ -164,19 +351,20 @@ The OpenTelemetry Operator manages the deployment of OpenTelemetry Collectors fo
 
 === Install via OperatorHub
 
-. In the OpenShift Web Console, go to menu:Operators[OperatorHub]
+. Open {openshift_console_url}[^] with an admin user.
+. In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Red Hat build of OpenTelemetry*
 . Click btn:[Install]
 . Accept the defaults:
   * **Update channel:** stable
   * **Installation mode:** All namespaces
-  * **Installed Namespace:** openshift-operators
+  * **Installed Namespace:** `openshift-opentelemetry-operator`
 . Click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
 Verify from the CLI:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get csv -n openshift-operators | grep opentelemetry
 ----
@@ -188,13 +376,14 @@ You should see the OpenTelemetry operator listed with phase `Succeeded`.
 Create a collector instance in your application namespace.
 This collector will receive traces from instrumented applications and export them to the console for demonstration purposes:
 
-[source,yaml]
+[source,bash,role=execute,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: otel-collector
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   mode: deployment
   config:
@@ -207,66 +396,61 @@ spec:
             endpoint: 0.0.0.0:4318
     processors:
       batch: {}
+      probabilistic_sampler:
+        sampling_percentage: 100.0
     exporters:
-      logging:
-        loglevel: debug # <1>
+      debug:
+        verbosity: detailed
     service:
       pipelines:
         traces:
           receivers: [otlp]
-          processors: [batch]
-          exporters: [logging] # <2>
+          processors: [probabilistic_sampler, batch]
+          exporters: [debug]
+EOF
 ----
-<1> Set log level to debug to see trace details
-<2> Export traces to stdout (visible in collector pod logs)
 
-TIP: For production, replace the `logging` exporter with a real tracing backend like Tempo, Jaeger, or a cloud provider's tracing service.
+NOTE: `verbosity: detailed` prints full trace details to stdout (visible in collector pod logs). The `logging` exporter was removed in Collector v0.111+; use `debug` instead.
 
-Apply it:
-
-[source,bash]
-----
-oc apply -f otel-collector.yaml
-----
+TIP: For production, replace the `debug` exporter with a real tracing backend like Tempo, Jaeger, or a cloud provider's tracing service.
 
 Verify the collector pod is running:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get pods -l app.kubernetes.io/name=otel-collector-collector -n parasol-dev
+oc get pods -l app.kubernetes.io/name=otel-collector-collector -n etx-app-dev
 ----
 
 === Enable Auto-Instrumentation
 
 Create an `Instrumentation` resource to enable automatic trace injection for Java applications:
 
-[source,yaml]
+[source,bash,role=execute,subs="attributes"]
 ----
+oc apply -f - <<'EOF'
 apiVersion: opentelemetry.io/v1alpha1
 kind: Instrumentation
 metadata:
   name: java-instrumentation
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   exporter:
     endpoint: http://otel-collector-collector:4317
   propagators:
     - tracecontext
     - baggage
+  sampler:
+    type: always_on
   java:
     image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:latest
+EOF
 ----
 
-Apply it:
-
-[source,bash]
-----
-oc apply -f java-instrumentation.yaml
-----
+NOTE: The `sampler.type: always_on` configuration ensures all traces are captured, which is appropriate for development and lab environments. In production, you might use `parentbased_traceidratio` to sample a percentage of traces.
 
 To instrument a deployment, add the following annotation to its pod template:
 
-[source,yaml]
+[source,yaml,role=execute]
 ----
 metadata:
   annotations:
@@ -277,12 +461,20 @@ This will be used when deploying the application in xref:day2-lab1-app-deploymen
 
 == Summary
 
-You now have the following services deployed:
+You now have the following services deployed and ready:
 
-* ✅ **Vault** -- secrets management with Kubernetes authentication for pipeline access
-* ✅ **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
-* ✅ **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing
+* **Vault** (pre-deployed) -- secrets management with Kubernetes authentication for pipeline access
+* **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
+* **AMQ Streams Kafka Cluster** -- `parasol-kafka-kafka-bootstrap:9092` with `intake` topic
+* **PostgreSQL Database** -- `parasol-db:5432` with database `parasol`
+* **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing
+
+Your application can now connect to these services:
+
+* **Kafka bootstrap server:** `parasol-kafka-kafka-bootstrap:9092`
+* **PostgreSQL host:** `parasol-db:5432`
+* **Database credentials:** Available in `parasol-db-secret` Secret
 
 == Next Steps
 
-Proceed to xref:day2-lab1-ci-pipeline.adoc[CI Pipeline] to build the application pipeline.
+Proceed to xref:day2-lab1-devspaces.adoc[Dev Spaces & IDE Setup] to create your development workspace and connect to these services.

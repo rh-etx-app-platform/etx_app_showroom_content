@@ -1,4 +1,5 @@
 * xref:index.adoc[What is Showroom?]
+* xref:cluster-access.adoc[🔑 Cluster Access & Credentials]
 
 .Day 1: Lab Setup & Git Foundations
 * xref:day1-requirements.adoc[Requirements & Environment Setup]
@@ -12,13 +13,14 @@
 * xref:day2-devhub-overview.adoc[Developer Hub]
 ** Lab 1: Software Factory
 * xref:day2-lab1-environment.adoc[Environment Overview]
+* xref:day2-lab1-supporting-services.adoc[Supporting Services]
 * xref:day2-cluster-setup.adoc[Deploy Dev Spaces Operator]
 * xref:day2-devspaces-install.adoc[Configure Dev Spaces]
 * xref:day2-devspaces-integrations.adoc[GitLab Integration]
 * xref:day2-lab1-devspaces.adoc[Dev Spaces Workspace]
-* xref:day2-lab1-supporting-services.adoc[Supporting Services]
 * xref:day2-lab1-ci-pipeline.adoc[CI Pipeline]
 * xref:day2-lab1-app-deployment.adoc[Application Deployment]
+* xref:day2-lab1-promotion.adoc[Promotion Pipeline]
 ** Lab 2: Application Modernization
 * xref:day2-lab2-1-intro.adoc[Lab Scenario]
 * xref:day2-lab2-2-mta.adoc[Application Modernization (MTA)]

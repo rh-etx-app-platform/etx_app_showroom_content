@@ -6,31 +6,74 @@
 Deploy your own Argo CD instance to manage application deployments using a GitOps workflow.
 The CI pipeline from the previous section pushes container images; Argo CD watches a GitOps repository and syncs Kubernetes manifests to the cluster.
 
-IMPORTANT: You will deploy your **own** Argo CD instance in the `parasol-dev` namespace. The pre-deployed OpenShift GitOps operator in `openshift-gitops` is used for infrastructure automation only and is separate from your application deployment workflows.
+IMPORTANT: You will deploy your **own** Argo CD instance in the `etx-app-dev` namespace. The pre-deployed OpenShift GitOps operator in `openshift-gitops` is used for infrastructure automation only and is separate from your application deployment workflows.
 
 == Install OpenShift GitOps Operator
 
 The OpenShift GitOps operator is already installed cluster-wide from the infrastructure setup.
 Verify it's available:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc get csv -n openshift-operators | grep gitops
 ----
 
 You should see `openshift-gitops-operator` with phase `Succeeded`.
 
+== Configure Keycloak OIDC for Argo CD
+
+The ETX platform uses a shared Keycloak OIDC client (`argocd`) for all ArgoCD instances. This provides centralized authentication with the same credentials across GitLab, Quay, Vault, and ArgoCD.
+
+=== Create ArgoCD OIDC Secret
+
+The OIDC client `argocd` already exists in Keycloak realm `etx-lab`. Create a secret with the shared credentials:
+
+[source,bash,role=execute]
+----
+# Get Keycloak URL (etx-sso route)
+KEYCLOAK_URL="https://etx-sso.apps.$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
+
+# Use the shared argocd client secret from etx-gitops
+CLIENT_SECRET="abJIhC36Q7DPscCUNNu27QKSdF9euOpIr16e7VvM"
+
+oc create secret generic argocd-oidc-secret -n etx-app-dev \
+  --from-literal=clientSecret=${CLIENT_SECRET}
+
+# Add labels to help ArgoCD operator recognize the secret
+oc label secret argocd-oidc-secret -n etx-app-dev \
+  app.kubernetes.io/name=argocd-oidc-secret \
+  app.kubernetes.io/part-of=argocd
+
+echo "Keycloak issuer: ${KEYCLOAK_URL}/realms/etx-lab"
+----
+
+IMPORTANT: The ArgoCD OIDC client is shared across all ArgoCD instances in the ETX platform. Do not create a new client in Keycloak. Use the existing `argocd` client with the provided secret.
+
 == Deploy Your Argo CD Instance
 
-Create an Argo CD instance in your namespace for managing application deployments:
+Create an Argo CD instance in your namespace for managing application deployments.
 
-[source,yaml]
+First, get the cluster domain dynamically:
+
+[source,bash,role=execute]
 ----
+# Get cluster domain from existing Keycloak route
+CLUSTER_DOMAIN="$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
+echo "Cluster domain: ${CLUSTER_DOMAIN}"
+----
+
+Then create the ArgoCD instance with OIDC configuration:
+
+[source,bash,role=execute,subs="attributes+"]
+----
+CLUSTER_DOMAIN="$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
+
+cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1beta1
 kind: ArgoCD
 metadata:
   name: argocd
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   server:
     autoscale:
@@ -40,6 +83,7 @@ spec:
         enabled: false
     ingress:
       enabled: false
+    insecure: true
     resources:
       limits:
         cpu: 500m
@@ -67,23 +111,24 @@ spec:
     route:
       enabled: false
   initialSSHKnownHosts: {}
-  sso:
-    provider: dex
-    dex:
-      openShiftOAuth: true
-      resources:
-        limits:
-          cpu: 500m
-          memory: 256Mi
-        requests:
-          cpu: 250m
-          memory: 128Mi
   rbac:
     defaultPolicy: 'role:readonly'
     policy: |
-      g, system:cluster-admins, role:admin
-      g, cluster-admins, role:admin
-    scopes: '[groups]'
+      g, platform-admin, role:admin
+      g, platform-developer, role:admin
+    scopes: '[groups, preferred_username]'
+  extraConfig:
+    oidc.config: |
+      name: ETX Keycloak
+      issuer: https://etx-sso.apps.$\{CLUSTER_DOMAIN}/realms/etx-lab
+      clientID: argocd
+      clientSecret: \$argocd-oidc-secret:clientSecret
+      requestedScopes:
+        - openid
+      requestedIDTokenClaims:
+        groups:
+          essential: true
+      logoutURL: https://etx-sso.apps.$\{CLUSTER_DOMAIN}/realms/etx-lab/protocol/openid-connect/logout
   repo:
     resources:
       limits:
@@ -118,66 +163,158 @@ spec:
       requests:
         cpu: 250m
         memory: 128Mi
+EOF
 ----
 
-Apply the ArgoCD CR:
+Expected output:
 
-[source,bash]
+[source,text]
 ----
-oc apply -f argocd.yaml
+argocd.argoproj.io/argocd created
 ----
+
+IMPORTANT: The `server.insecure: true` setting configures Argo CD to serve HTTP traffic internally while the OpenShift route handles TLS termination. This is required to prevent redirect loops (`ERR_TOO_MANY_REDIRECTS`) when using edge TLS termination.
+
+NOTE: The ArgoCD CR includes `extraConfig` with OIDC configuration for ETX Keycloak integration. This provides centralized authentication using the same credentials as GitLab, Quay, and Vault. The argocd-oidc-secret created earlier is referenced automatically.
 
 Wait for Argo CD to be ready (this may take 3-5 minutes):
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get pods -n parasol-dev -w
+oc get pods -n etx-app-dev -w
 ----
 
 Press Ctrl+C when you see all `argocd-*` pods showing `1/1 Ready`.
 
+== Verify Route Creation
+
+The ArgoCD operator should automatically create a route. Verify it exists:
+
+[source,bash,role=execute]
+----
+oc get route argocd-server -n etx-app-dev
+----
+
+If the route doesn't exist, create it manually:
+
+[source,bash,role=execute]
+----
+oc create route edge argocd-server \
+  --service=argocd-server \
+  --port=http \
+  --insecure-policy=Redirect \
+  -n etx-app-dev
+----
+
 == Access the Argo CD Dashboard
 
-Get the Argo CD route:
+Get the Argo CD dashboard URL:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get route argocd-server -n parasol-dev -o jsonpath='{.spec.host}'
+echo "https://$(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}')"
 ----
+
+You can log into Argo CD using either the admin account or Keycloak SSO.
+
+=== Option 1: ETX Keycloak SSO (Recommended)
+
+. Open the Argo CD URL in your browser
+. You'll be automatically redirected to ETX Keycloak login page
+. Log in with your ETX credentials:
+  * `platform-admin` / `openshift` (admin access)
+  * `platform-developer` / `openshift` (admin access)
+. After successful authentication, you'll be redirected back to the Argo CD dashboard
+
+NOTE: The OIDC integration provides automatic redirect to Keycloak for a streamlined login experience. No need to click a separate login button.
+
+=== Option 2: Admin Account
 
 Get the default admin password:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get secret argocd-cluster -n parasol-dev \
-  -o jsonpath='{.data.admin\.password}' | base64 -d
+oc get secret argocd-cluster -n etx-app-dev \
+  -o jsonpath='{.data.admin\.password}' | base64 -d && echo
 ----
 
-Open the Argo CD URL in your browser and log in with:
+Open the Argo CD URL and log in with:
 * Username: `admin`
 * Password: (from above command)
 
-Alternatively, use OpenShift OAuth by clicking *LOG IN VIA OPENSHIFT*.
+NOTE: Using Keycloak SSO is recommended as it provides centralized authentication with the same credentials used for GitLab, Quay, and Vault.
+
+=== Troubleshooting: ERR_TOO_MANY_REDIRECTS
+
+If you get `ERR_TOO_MANY_REDIRECTS` when accessing the Argo CD dashboard:
+
+**Cause:** The Argo CD server is not configured for insecure mode behind a TLS-terminating proxy.
+
+**Solution:**
+
+1. Update the ArgoCD CR to add `server.insecure: true`:
++
+[source,bash,role=execute]
+----
+oc patch argocd argocd -n etx-app-dev --type=merge -p '{"spec":{"server":{"insecure":true}}}'
+----
+
+2. Wait for the argocd-server pod to restart (this happens automatically):
++
+[source,bash,role=execute]
+----
+oc get pods -n etx-app-dev -l app.kubernetes.io/name=argocd-server -w
+----
++
+Press Ctrl+C when you see the new pod showing `1/1 Running`.
+
+3. Verify the configuration was applied:
++
+[source,bash,role=execute]
+----
+oc get argocd argocd -n etx-app-dev -o jsonpath='{.spec.server.insecure}{"\n"}'
+----
++
+Should output: `true`
+
+4. Clear your browser cache or use incognito/private mode to avoid cached redirects
+
+5. Try accessing the dashboard again:
++
+[source,bash,role=execute]
+----
+echo "https://$(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}')"
+----
+
+TIP: If you still see the error after following these steps, try a different browser or clear all site data for the ArgoCD URL. The browser may have cached the redirect loop.
 
 == Prepare the GitOps Repository
 
 Create a GitOps repository in GitLab with the following structure.
 This repository holds the Kubernetes manifests that Argo CD will sync:
 
-. Log into GitLab: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io
-. Create a new project: *parasol-gitops*
+. Log into GitLab (get the URL first):
++
+[source,bash,role=execute]
+----
+# Get GitLab URL
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "GitLab URL: $GITLAB_URL"
+----
++
+. Create a new project: *etx-app-gitops* in the software-factory group
 . Clone it locally:
-
-[source,bash]
++
+[source,bash,role=execute]
 ----
-git clone http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-gitops.git
-cd parasol-gitops
+git clone ${GITLAB_URL}/software-factory/etx-app-gitops.git
+cd etx-app-gitops
 ----
 
-Create the following directory structure:
+We will create the following directory structure in the GitOps repository:
 
 ----
-parasol-gitops/
+etx-app-gitops/
 ├── environments/
 │   ├── dev/
 │   │   ├── namespace.yaml
@@ -196,42 +333,46 @@ parasol-gitops/
 
 Create `environments/dev/namespace.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+mkdir -p environments/dev
+cat > environments/dev/namespace.yaml <<'EOF'
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: parasol-dev
+  name: etx-app-dev
+EOF
 ----
 
 Create `environments/dev/deployment.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/dev/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: parasol-insurance
-  namespace: parasol-dev
+  name: etx-app-base-app
+  namespace: etx-app-dev
   labels:
-    app: parasol-insurance
+    app: etx-app-base-app
   annotations:
-    instrumentation.opentelemetry.io/inject-java: "true" # <1>
+    instrumentation.opentelemetry.io/inject-java: "true" # # <1>
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: parasol-insurance
+      app: etx-app-base-app
   template:
     metadata:
       labels:
-        app: parasol-insurance
+        app: etx-app-base-app
       annotations:
-        instrumentation.opentelemetry.io/inject-java: "true" # <1>
+        instrumentation.opentelemetry.io/inject-java: "true" # # <1>
     spec:
       containers:
-        - name: parasol-insurance
-          image: image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance:latest # <2>
+        - name: etx-app-base-app
+          image: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:latest # <2>
           ports:
             - containerPort: 8080
           resources:
@@ -241,119 +382,131 @@ spec:
             limits:
               cpu: "1"
               memory: 1Gi
+EOF
 ----
 <1> Enables OpenTelemetry auto-instrumentation. The Instrumentation CR created in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section will inject the Java agent automatically.
 <2> The CI pipeline updates this image tag after a successful build.
 
 Create `environments/dev/service.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/dev/service.yaml <<'EOF'
 apiVersion: v1
 kind: Service
 metadata:
-  name: parasol-insurance
-  namespace: parasol-dev
+  name: etx-app-base-app
+  namespace: etx-app-dev
 spec:
   selector:
-    app: parasol-insurance
+    app: etx-app-base-app
   ports:
     - port: 8080
       targetPort: 8080
+EOF
 ----
 
 Create `environments/dev/route.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/dev/route.yaml <<'EOF'
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: parasol-insurance
-  namespace: parasol-dev
+  name: etx-app-base-app
+  namespace: etx-app-dev
 spec:
   to:
     kind: Service
-    name: parasol-insurance
+    name: etx-app-base-app
   port:
     targetPort: 8080
   tls:
     termination: edge
+EOF
 ----
 
 Commit and push the dev environment:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 git add environments/dev/
-git commit -m "Add dev environment manifests"
+git commit -m "feat: add dev environment manifests"
 git push origin main
 ----
 
 == Create the Argo CD Application
 
-Grant Argo CD permission to manage resources in the `parasol-dev` namespace:
+Grant Argo CD permission to manage resources in the `etx-app-dev` namespace:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc adm policy add-role-to-user admin \
-  system:serviceaccount:parasol-dev:argocd-application-controller \
-  -n parasol-dev
+  system:serviceaccount:etx-app-dev:argocd-application-controller \
+  -n etx-app-dev
 ----
 
-Create an Argo CD Application that watches the `dev` environment:
+Create an Argo CD Application that watches the `dev` environment.
 
-[source,yaml]
+First, get the GitLab URL:
+
+[source,bash,role=execute]
 ----
+# Get GitLab URL dynamically
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "Using GitLab URL: $GITLAB_URL"
+----
+
+Then create the Application:
+
+[source,bash,role=execute]
+----
+oc apply -f - <<EOF
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: parasol-dev
-  namespace: parasol-dev
+  name: etx-app-dev
+  namespace: etx-app-dev
 spec:
   project: default
   source:
-    repoURL: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-gitops.git
+    repoURL: ${GITLAB_URL}/software-factory/etx-app-gitops.git
     targetRevision: main
     path: environments/dev
   destination:
     server: https://kubernetes.default.svc
-    namespace: parasol-dev
+    namespace: etx-app-dev
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=false # <1>
+      - CreateNamespace=false
+EOF
 ----
-<1> Namespace already exists, so don't create it
 
-Apply it:
-
-[source,bash]
-----
-oc apply -f parasol-dev-app.yaml
-----
+NOTE: `CreateNamespace=false` because the namespace already exists.
 
 == Verify the Deployment
 
 Check that Argo CD has synced the application:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 # Argo CD application status
-oc get application parasol-dev -n parasol-dev \
-  -o jsonpath='{.status.sync.status}'
+oc get application etx-app-dev -n etx-app-dev \
+  -o jsonpath='{.status.sync.status}{"\n"}'
 ----
 
 The output should be `Synced`.
 
 Verify the application is running:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get pods -n parasol-dev -l app=parasol-insurance
-oc get route parasol-insurance -n parasol-dev -o jsonpath='{.spec.host}'
+oc get pods -n etx-app-dev -l app=etx-app-base-app
+oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}{"\n"}'
 ----
 
 Open the route URL in your browser to confirm the application is accessible.
@@ -362,19 +515,19 @@ Open the route URL in your browser to confirm the application is accessible.
 
 Check that the Java agent was injected into the application pod:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get pod -n parasol-dev -l app=parasol-insurance \
-  -o jsonpath='{.items[0].spec.initContainers[*].name}'
+oc get pod -n etx-app-dev -l app=etx-app-base-app \
+  -o jsonpath='{.items[0].spec.initContainers[*].name}{"\n"}'
 ----
 
 You should see an `opentelemetry-auto-instrumentation` init container.
 
 Verify traces are being collected by checking the OTEL collector logs:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc logs -n parasol-dev -l app.kubernetes.io/name=otel-collector-collector --tail=50
+oc logs -n etx-app-dev -l app.kubernetes.io/name=otel-collector-collector --tail=50
 ----
 
 You should see trace data in the logs.
@@ -384,13 +537,14 @@ You should see trace data in the logs.
 The CI pipeline needs to update the image tag in the GitOps repository after a successful build.
 Add a final task to the pipeline that commits the new image tag:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+oc apply -f - <<'EOF'
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: update-gitops-repo
-  namespace: parasol-dev
+  namespace: etx-app-dev
 spec:
   params:
     - name: gitops-repo-url
@@ -404,31 +558,41 @@ spec:
     - name: source
   steps:
     - name: update-image
-      image: quay.io/devfile/universal-developer-image:ubi9-latest
+      image: registry.access.redhat.com/ubi9/ubi:latest
       script: |
         #!/bin/bash
         set -e
+
+        # Install git
+        dnf install -y git && dnf clean all
+
         git clone $(params.gitops-repo-url) /tmp/gitops
         cd /tmp/gitops/environments/$(params.environment)
 
         # Update the image tag in the deployment manifest
-        sed -i "s|image:.*parasol-insurance:.*|image: image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance:$(params.image-tag)|" deployment.yaml
+        sed -i "s|image:.*etx-app-base-app:.*|image: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:$(params.image-tag)|" deployment.yaml
 
         git config user.email "pipeline@openshift.local"
         git config user.name "Tekton Pipeline"
         git add .
-        git commit -m "Update parasol-insurance image to $(params.image-tag)"
+        git commit -m "Update etx-app-base-app image to $(params.image-tag)"
         git push
+EOF
 ----
 
-Apply the task:
+Update the pipeline to include this task at the end.
 
-[source,bash]
+Add the `update-gitops` task to the pipeline spec. Get the GitLab URL first, then update the pipeline:
+
+[source,bash,role=execute]
 ----
-oc apply -f update-gitops-task.yaml
+# Get GitLab URL dynamically
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+
+# Add to your pipeline YAML under spec.tasks
 ----
 
-Update the pipeline to include this task at the end:
+Example task definition to add:
 
 [source,yaml]
 ----
@@ -438,7 +602,7 @@ Update the pipeline to include this task at the end:
         name: update-gitops-repo
       params:
         - name: gitops-repo-url
-          value: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-gitops.git
+          value: ${GITLAB_URL}/software-factory/etx-app-gitops.git
         - name: image-tag
           value: $(params.git-revision)
         - name: environment
@@ -448,129 +612,124 @@ Update the pipeline to include this task at the end:
           workspace: shared-workspace
 ----
 
+NOTE: Use shell variable expansion `${GITLAB_URL}` when creating the pipeline with a heredoc, or replace with the actual URL when editing the YAML file.
+
 When the pipeline pushes the updated manifest, Argo CD detects the change and automatically syncs the new image to the cluster.
 
 == Multi-Cluster Promotion to Stage
 
-Now configure promotion to the staging environment on the secondary cluster.
+IMPORTANT: The secondary cluster for staging has been pre-configured as part of the bootstrap process. Argo CD already has the necessary credentials to deploy to the staging cluster.
 
-=== Add Secondary Cluster to Argo CD
+=== Verify Secondary Cluster Configuration
 
-Get the secondary cluster API endpoint and token:
+Check that Argo CD can see the secondary cluster.
 
-[source,bash]
+**Option 1: Using oc commands** (Recommended)
+
+[source,bash,role=execute]
 ----
-# Get secondary cluster API URL
-SECONDARY_API="https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443"
+# List cluster secrets in Argo CD
+oc get secret -n etx-app-dev -l argocd.argoproj.io/secret-type=cluster
 
-# Login to secondary cluster
-oc login $SECONDARY_API -u admin -p G6VpeK3U6n8LpyhC
-
-# Create service account for Argo CD
-oc create serviceaccount argocd-manager -n kube-system
-
-# Grant cluster-admin (for lab purposes only)
-oc create clusterrolebinding argocd-manager-binding \
-  --clusterrole=cluster-admin \
-  --serviceaccount=kube-system:argocd-manager
-
-# Get the service account token
-SA_TOKEN=$(oc create token argocd-manager -n kube-system --duration=8760h)
-
-# Switch back to primary cluster
-oc login https://api.cluster-cgd7r.dynamic.redhatworkshops.io:6443 -u admin -p r0rDrvTWeTAbVk7L
+# View cluster details
+oc get secret -n etx-app-dev -l argocd.argoproj.io/secret-type=cluster -o json | \
+  jq -r '.items[] | .metadata.name + " - " + (.data.name | @base64d)'
 ----
 
-Add the secondary cluster to Argo CD:
+You should see secrets for:
+- In-cluster (local/primary cluster)
+- Secondary staging cluster (pre-configured by bootstrap)
 
-[source,bash]
+**Option 2: Using argocd CLI**
+
+If you have the argocd CLI installed:
+
+[source,bash,role=execute]
 ----
-# Create secret with cluster credentials
-cat <<EOF | oc apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: cluster-d4f7p
-  namespace: parasol-dev
-  labels:
-    argocd.argoproj.io/secret-type: cluster
-type: Opaque
-stringData:
-  name: cluster-d4f7p
-  server: https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443
-  config: |
-    {
-      "bearerToken": "${SA_TOKEN}",
-      "tlsClientConfig": {
-        "insecure": true
-      }
-    }
-EOF
+# Login to Argo CD
+argocd login $(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}') \
+  --insecure --username admin \
+  --password $(oc get secret argocd-cluster -n etx-app-dev -o jsonpath='{.data.admin\.password}' | base64 -d)
+
+# List clusters
+argocd cluster list
 ----
 
-Verify the cluster was added:
+You should see two clusters:
+- `https://kubernetes.default.svc` (local/primary cluster)
+- Secondary staging cluster (pre-configured by bootstrap)
 
-[source,bash]
-----
-# In the Argo CD UI, go to Settings → Clusters
-# You should see cluster-d4f7p listed
-----
+NOTE: The bootstrap automation created the necessary ServiceAccount on the staging cluster and added it to Argo CD. For details on this configuration, see https://github.com/rh-etx-app-platform/etx_app_platform_bootstrap/issues/8
 
 === Create Stage Environment Manifests
 
 Create stage environment manifests in your GitOps repository:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-cd parasol-gitops
+cd ~/workshop/etx-app-gitops
 mkdir -p environments/stage
 ----
 
 Copy the dev manifests as a template:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 cp environments/dev/*.yaml environments/stage/
 ----
 
 Update `environments/stage/namespace.yaml`:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat > environments/stage/namespace.yaml <<'EOF'
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: parasol-staging
+  name: etx-app-staging
+EOF
 ----
 
-Update `environments/stage/deployment.yaml` to use the `parasol-staging` namespace:
+Update `environments/stage/deployment.yaml` to use the `etx-app-staging` namespace and Quay registry.
 
-[source,yaml]
+First, get the Quay URL:
+
+[source,bash,role=execute]
 ----
+# Get Quay URL dynamically
+QUAY_URL=$(oc get route -n quay -l app=quay -o jsonpath='{.items[0].spec.host}')
+echo "Using Quay URL: $QUAY_URL"
+----
+
+Then create the deployment manifest:
+
+[source,bash,role=execute]
+----
+cat > environments/stage/deployment.yaml <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: parasol-insurance
-  namespace: parasol-staging # <1>
+  name: etx-app-base-app
+  namespace: etx-app-staging
   labels:
-    app: parasol-insurance
+    app: etx-app-base-app
   annotations:
     instrumentation.opentelemetry.io/inject-java: "true"
 spec:
-  replicas: 2 # <2>
+  replicas: 2
   selector:
     matchLabels:
-      app: parasol-insurance
+      app: etx-app-base-app
   template:
     metadata:
       labels:
-        app: parasol-insurance
+        app: etx-app-base-app
       annotations:
         instrumentation.opentelemetry.io/inject-java: "true"
     spec:
       containers:
-        - name: parasol-insurance
-          image: quay-registry-quay.apps.cluster-cgd7r.dynamic.redhatworkshops.io/parasol/parasol-insurance:stable # <3>
+        - name: etx-app-base-app
+          image: ${QUAY_URL}/etx-app/etx-app-base-app:stable
           ports:
             - containerPort: 8080
           resources:
@@ -580,115 +739,200 @@ spec:
             limits:
               cpu: "2"
               memory: 2Gi
+EOF
 ----
-<1> Update namespace to parasol-staging
-<2> Increase replicas for higher availability
-<3> Use Quay registry for cross-cluster image distribution
 
-Update `environments/stage/service.yaml` and `environments/stage/route.yaml` to use `parasol-staging` namespace.
+Key differences from dev:
+
+* **Namespace**: `etx-app-staging` instead of `etx-app-dev`
+* **Replicas**: Increased to 2 for higher availability
+* **Image**: Uses Quay registry for cross-cluster image distribution instead of internal registry
+
+Update `environments/stage/service.yaml` to use `etx-app-staging` namespace:
+
+[source,bash,role=execute]
+----
+sed -i 's/namespace: etx-app-dev/namespace: etx-app-staging/' environments/stage/service.yaml
+----
+
+Update `environments/stage/route.yaml` to use `etx-app-staging` namespace:
+
+[source,bash,role=execute]
+----
+sed -i 's/namespace: etx-app-dev/namespace: etx-app-staging/' environments/stage/route.yaml
+----
+
+Update `environments/stage/namespace.yaml`:
+
+[source,bash,role=execute]
+----
+sed -i 's/name: etx-app-dev/name: etx-app-staging/' environments/stage/namespace.yaml
+----
+
+Verify the changes:
+
+[source,bash,role=execute]
+----
+grep namespace environments/stage/*.yaml
+----
 
 Commit and push:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 git add environments/stage/
-git commit -m "Add stage environment manifests"
+git commit -m "feat: add stage environment manifests"
 git push origin main
 ----
 
 === Create Stage Application
 
-Create an Argo CD Application for the staging environment on the secondary cluster:
+Create an Argo CD Application for the staging environment on the secondary cluster.
 
-[source,yaml]
+First, get the GitLab URL and the secondary cluster server URL:
+
+[source,bash,role=execute]
 ----
+# Get GitLab URL
+GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+echo "Using GitLab URL: $GITLAB_URL"
+
+# Get the staging cluster server URL from Argo CD Secret
+STAGING_CLUSTER=$(oc get secret -n etx-app-dev -l argocd.argoproj.io/secret-type=cluster -o json | \
+  jq -r '.items[] | select(.metadata.annotations."cluster-name" | contains("cluster2") or contains("staging") or contains("secondary")) | .data.server' | \
+  base64 -d)
+
+# If not found in secrets, try using argocd CLI
+if [ -z "$STAGING_CLUSTER" ]; then
+  # Login to Argo CD
+  argocd login $(oc get route argocd-server -n etx-app-dev -o jsonpath='{.spec.host}') \
+    --insecure --username admin \
+    --password $(oc get secret argocd-cluster -n etx-app-dev -o jsonpath='{.data.admin\.password}' | base64 -d)
+
+  # Get cluster URL
+  STAGING_CLUSTER=$(argocd cluster list -o json | jq -r '.[] | select(.name != "in-cluster") | .server')
+fi
+
+echo "Staging cluster: ${STAGING_CLUSTER}"
+----
+
+Then create the Application:
+
+[source,bash,role=execute]
+----
+oc apply -f - <<EOF
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: parasol-stage
-  namespace: parasol-dev
+  name: etx-app-stage
+  namespace: etx-app-dev
 spec:
   project: default
   source:
-    repoURL: http://gitlab.apps.cluster-cgd7r.dynamic.redhatworkshops.io/student/parasol-gitops.git
+    repoURL: ${GITLAB_URL}/software-factory/etx-app-gitops.git
     targetRevision: main
     path: environments/stage
   destination:
-    server: https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443 # <1>
-    namespace: parasol-staging
+    server: ${STAGING_CLUSTER}
+    namespace: etx-app-staging
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+EOF
 ----
-<1> Points to the secondary cluster
 
-Apply it:
-
-[source,bash]
-----
-oc apply -f parasol-stage-app.yaml
-----
+NOTE: The staging cluster destination points to the secondary cluster that was pre-configured by the bootstrap automation.
 
 === Verify Stage Deployment
 
 Check the stage application status:
 
-[source,bash]
+[source,bash,role=execute]
 ----
-oc get application parasol-stage -n parasol-dev \
-  -o jsonpath='{.status.sync.status}'
-----
-
-Verify the deployment on the secondary cluster:
-
-[source,bash]
-----
-# Login to secondary cluster
-oc login https://api.cluster-d4f7p.dynamic.redhatworkshops.io:6443 -u admin -p G6VpeK3U6n8LpyhC
-
-# Check pods
-oc get pods -n parasol-staging
-
-# Get route
-oc get route parasol-insurance -n parasol-staging -o jsonpath='{.spec.host}'
+oc get application etx-app-stage -n etx-app-dev \
+  -o jsonpath='{.status.sync.status}{"\n"}'
 ----
 
-Open the staging route URL in your browser to confirm the application is accessible on the secondary cluster.
+The output should be `Synced`.
 
-== Promotion Workflow
+View the application in Argo CD UI:
 
-To promote an image from dev to stage:
+. Open the Argo CD dashboard
+. You should see two applications:
+  * `etx-app-dev` - Running on primary cluster
+  * `etx-app-stage` - Running on secondary (staging) cluster
+. Click on `etx-app-stage` to view its deployment status
+
+NOTE: Since Argo CD is managing the staging cluster remotely, you can view the application status through the Argo CD UI without needing to login to the secondary cluster directly.
+
+== Promotion Workflow Overview
+
+The promotion workflow from dev to staging follows these steps:
 
 . CI pipeline builds and pushes image to internal registry with commit SHA tag
-. CI pipeline tags the same image in Quay with a `stable` tag:
-+
-[source,bash]
+. Image is promoted to Quay registry with a `stable` tag (covered in xref:day2-lab1-promotion.adoc[Promotion Pipeline])
+. GitOps repository `environments/stage/deployment.yaml` is updated with new image tag
+. Argo CD detects the change and automatically syncs to the secondary cluster
+
+This GitOps approach ensures:
+
+* **Version control** - All deployment changes are tracked in Git
+* **Auditability** - Full history of what was deployed when
+* **Rollback capability** - Revert to previous commit to rollback
+* **Multi-cluster consistency** - Same manifests can deploy to multiple clusters
+
+== Quick Verification
+
+Verify the complete deployment:
+
+[source,bash,role=execute]
 ----
-# Example: retag and push to Quay
-skopeo copy \
-  docker://image-registry.openshift-image-registry.svc:5000/parasol-dev/parasol-insurance:abc123 \
-  docker://quay-registry-quay.apps.cluster-cgd7r.dynamic.redhatworkshops.io/parasol/parasol-insurance:stable
+# Check Argo CD application status
+oc get application etx-app-dev -n etx-app-dev -o jsonpath='{.status.sync.status}: {.status.health.status}{"\n"}'
+
+# Check application pods
+oc get pods -n etx-app-dev -l app=etx-app-base-app
+
+# Check application health endpoint
+curl http://$(oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}')/q/health
+
+# Check OpenTelemetry injection
+oc get pod -n etx-app-dev -l app=etx-app-base-app \
+  -o jsonpath='{.items[0].spec.initContainers[*].name}{"\n"}'
 ----
-+
-. Update `environments/stage/deployment.yaml` image tag to `stable`
-. Push to GitOps repository
-. Argo CD automatically syncs to secondary cluster
+
+Expected output should show: `Synced: Healthy` for Argo CD, `Running` pods, and `opentelemetry-auto-instrumentation` init container.
+
+[TIP]
+====
+**Common Issues:**
+
+* **ImagePullBackOff:** Image not in registry - run CI pipeline first
+* **CrashLoopBackOff:** Check pod logs - often missing Kafka or DB connection
+* **Argo CD Out of Sync:** Click "Sync" in Argo CD UI or check GitOps repo for errors
+* **Health check failing:** Verify all dependencies (DB, Kafka) are running
+====
 
 == Summary
 
-You have completed Lab 1. Your application now has:
+You have completed the Application Deployment exercise. Your application now has:
 
-* ✅ A fully automated CI pipeline triggered by GitLab webhooks
-* ✅ Registry credentials managed securely by Vault
-* ✅ Container images stored in the OpenShift internal registry
-* ✅ Your own Argo CD instance for GitOps deployments
-* ✅ Automated sync with self-healing enabled
-* ✅ OpenTelemetry auto-instrumentation for distributed tracing
-* ✅ Multi-cluster promotion workflow (dev → stage)
+* Your own Argo CD instance for GitOps deployments
+* GitOps repository structure (dev and stage environments)
+* Automated sync with self-healing enabled
+* OpenTelemetry auto-instrumentation for distributed tracing
+* Integration between CI pipeline and GitOps repository
+* Multi-cluster deployment capability (dev → stage)
 
-== Next Steps
+== What's Next
 
-Proceed to xref:day2-lab2-mta.adoc[Lab 2: Application Modernization (MTA)].
+The current setup deploys to dev automatically when the CI pipeline completes. To promote images from dev to staging, you need a promotion pipeline.
+
+Proceed to xref:day2-lab1-promotion.adoc[Promotion Pipeline] to learn how to:
+
+* Copy images from internal registry to Quay
+* Update GitOps repository for staging environment
+* Trigger automatic deployment to the secondary cluster via Argo CD

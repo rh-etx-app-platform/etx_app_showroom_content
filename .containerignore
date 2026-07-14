@@ -1,0 +1,15 @@
+# Exclude generated output
+www/
+node_modules/
+
+# Exclude version control
+.git/
+.github/
+
+# Exclude documentation
+README-DOCKER.md
+examples/
+
+# Exclude IDE files
+.vscode/
+.idea/

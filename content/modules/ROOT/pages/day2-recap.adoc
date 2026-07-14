@@ -7,22 +7,19 @@ Over the course of Day 2, you assembled a complete Software Factory on OpenShift
 
 === Lab 1: Software Factory
 
-* *Dev Spaces* -- Cloud-based IDE with Git integration and AI Code Assistant
-* *Supporting Services* -- HashiCorp Vault for secrets, Tekton for CI, OpenTelemetry for observability
-* *CI Pipeline* -- Automated build, test, and push triggered by Git webhooks
-* *GitOps Deployment* -- Argo CD managing multi-environment application delivery
+* *Dev Spaces* -- Cloud-based IDE with Git integration and AI Code Assistant.
+* *Supporting Services* -- HashiCorp Vault for secrets, OpenShift Pipelines (Tekton) for CI, OpenTelemetry for observability.
+* *CI Pipeline* -- Automated build, test, and push triggered by Git webhooks.
+* *GitOps Deployment* -- OpenShift GitOps (Argo CD) managing multi-environment application delivery.
 
 === Lab 2: Application Modernization
 
-* *MTA Analysis* -- Identified migration paths for a legacy Java application
-* *Red Hat Runtime* -- Adopted a supported runtime for the modernized application
-* *Pipeline Integration* -- Brought the modernized application into the existing CI/CD workflow
-
-=== Developer Hub
-
-* *Install and configure* -- Red Hat Developer Hub Operator, `app-config` ConfigMap, and `Backstage` custom resource in the `setup-rhdh` namespace
-* *Golden Path Templates* -- Standardized project creation (see xref:day2-lab2-dh2-golden-paths.adoc[Developer Hub: templates and integrations])
-* *Self-Service Portal* -- Unified developer experience across all tools
+* *Migration Toolkit for Applications (MTA) Analysis* -- Identified migration paths for a legacy Java application.
+* *Red Hat Runtime* -- Adopted a supported runtime for the modernized application.
+* *Pipeline Integration* -- Brought the modernized application into the existing CI/CD workflow.
+* *Internal Developer Portal installation* -- Red Hat Developer Hub Operator, `app-config` ConfigMap, and `Backstage` custom resource in the `setup-rhdh` namespace.
+* *Golden Path Templates* -- Standardized project creation.
+* *Self-Service Portal* -- Unified developer experience across all tools.
 
 == Looking Ahead to Day 3
 

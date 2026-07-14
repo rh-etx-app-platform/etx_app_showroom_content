@@ -1,0 +1,209 @@
+= Cluster Access & Credentials
+:navtitle: Cluster Access & Credentials
+
+== Environment Information
+
+Your ETX Lab environment has been provisioned with the following components.
+All credentials and URLs are available in this section for quick reference throughout the labs.
+
+[IMPORTANT]
+====
+This information is also available programmatically via the ConfigMap `etx-lab-provision-data` in the `openshift-gitops` namespace:
+
+[source,bash]
+----
+oc get configmap etx-lab-provision-data -n openshift-gitops -o yaml
+----
+====
+
+== OpenShift Cluster
+
+Access your OpenShift cluster using the credentials below:
+
+[cols="1,3",options="header"]
+|===
+| Item | Value
+
+| Console URL
+| {openshift_console_url}[OpenShift Web Console,window="_blank"]
+
+| API URL
+| `{openshift_api_url}`
+
+| Cluster Domain
+| `{openshift_cluster_ingress_domain}`
+
+| Cluster GUID
+| `{openshift_cluster_guid}`
+|===
+
+=== CLI Login
+
+To log in via the CLI, use:
+
+[source,bash,role=execute,subs="attributes"]
+----
+oc login --server={openshift_api_url}
+----
+
+== ArgoCD (ETX GitOps)
+
+The ETX GitOps ArgoCD instance is your primary GitOps control plane for application deployments.
+
+[cols="1,3",options="header"]
+|===
+| Item | Value
+
+| ArgoCD URL
+| {argocd_etx_url}[ETX GitOps Server,window="_blank"]
+
+| Purpose
+| ETX GitOps admin plane for student application deployments
+|===
+
+[NOTE]
+====
+The bootstrap control plane runs in `openshift-gitops` namespace and manages the infrastructure layer.
+The student-facing ArgoCD instance runs in `etx-gitops` namespace.
+====
+
+== Keycloak SSO
+
+Red Hat Build of Keycloak provides Single Sign-On (SSO) for all platform services.
+
+[cols="1,3",options="header"]
+|===
+| Item | Value
+
+| Keycloak URL
+| {keycloak_url}[Keycloak SSO,window="_blank"]
+
+| Realm
+| `{keycloak_realm}`
+
+| Admin Username
+| `{keycloak_admin_user}`
+
+| Admin Password
+| `{keycloak_admin_password}`
+|===
+
+=== Student Users
+
+The following users are provisioned in the `{keycloak_realm}` realm for workshop exercises:
+
+[source,yaml]
+----
+- platform-admin     (password: openshift)
+- platform-user      (password: openshift)
+- platform-developer (password: openshift)
+----
+
+These users are configured with OIDC clients for GitLab, Quay, ArgoCD, and Vault integration.
+
+== GitLab
+
+[cols="1,3",options="header"]
+|===
+| Item | Value
+
+| GitLab URL
+| {gitlab_url}[GitLab,window="_blank"]
+
+| Root Username
+| `{gitlab_root_user}`
+
+| Root Password
+| `{gitlab_root_password}`
+|===
+
+== Quay Registry
+
+[cols="1,3",options="header"]
+|===
+| Item | Value
+
+| Quay URL
+| {quay_url}[Quay Registry,window="_blank"]
+
+| Admin Username
+| `{quay_admin_user}`
+
+| Admin Password
+| `{quay_admin_password}`
+|===
+
+== HashiCorp Vault
+
+[cols="1,3",options="header"]
+|===
+| Item | Value
+
+| Vault URL
+| {vault_url}[Vault,window="_blank"]
+
+| Authentication
+| Keycloak OIDC or Kubernetes auth
+|===
+
+[NOTE]
+====
+Vault integrates with Keycloak SSO. Use the student users listed above to authenticate via OIDC.
+====
+
+== Infrastructure Components
+
+The following infrastructure components have been deployed as part of the bootstrap:
+
+* ✅ OpenShift GitOps (bootstrap control plane in `openshift-gitops`)
+* ✅ ETX GitOps (admin plane in `etx-gitops`)
+* ✅ Red Hat Build of Keycloak Operator
+* ✅ Keycloak SSO Instance with `{keycloak_realm}` realm
+* ✅ GitLab Community Edition (if enabled)
+* ✅ Red Hat Quay Registry (if enabled)
+* ✅ HashiCorp Vault (if enabled)
+* ✅ Web Terminal Operator
+
+== Accessing ConfigMap Data
+
+The provision data is stored in a ConfigMap labeled with `demo.redhat.com/infra: "true"` for automated discovery by RHDP components.
+
+To view all provision data:
+
+[source,bash,role=execute]
+----
+oc get configmap etx-lab-provision-data -n openshift-gitops -o yaml
+----
+
+To extract a specific value:
+
+[source,bash,role=execute,subs="attributes"]
+----
+# Get Keycloak URL
+oc get configmap etx-lab-provision-data -n openshift-gitops \
+  -o jsonpath='{.data.keycloak_url}'
+
+# Get ArgoCD URL
+oc get configmap etx-lab-provision-data -n openshift-gitops \
+  -o jsonpath='{.data.argocd_url}'
+----
+
+== Workshop Metadata
+
+[cols="1,3",options="header"]
+|===
+| Item | Value
+
+| Workshop Name
+| ETX Lab - Day 1 & 2
+
+| Workshop Version
+| 1.0.0
+
+| Bootstrap Repository
+| https://github.com/rhpds/service-enablement-app-platform-factory-gitops[service-enablement-app-platform-factory-gitops,window="_blank"]
+|===
+
+== Next Steps
+
+With your environment credentials in hand, proceed to xref:day1-requirements.adoc[Requirements & Environment Setup] to verify your cluster access.
