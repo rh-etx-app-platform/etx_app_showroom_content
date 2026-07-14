@@ -9,7 +9,7 @@ Use the Migration Toolkit for Applications (MTA) to analyze a legacy Java applic
 
 . Open the Red Hat Model-as-a-Service portal in a new browser tab:
 +
-link:https://litellm-prod-frontend.apps.maas.redhatworkshops.io/[Red Hat MaaS Portal^]
+link:https://maas-rhdp-frontend.apps.maas.redhatworkshops.io/[Red Hat MaaS Portal^]
 
 . Sign in with your Red Hat credentials
 +
@@ -56,7 +56,7 @@ Create a secret for the MTA API key:
 [source,yaml]
 ----
 oc create secret generic kai-api-keys -n openshift-mta \
- --from-literal=OPENAI_API_BASE='https://litellm-prod.apps.maas.redhatworkshops.io/v1' \
+ --from-literal=OPENAI_API_BASE='https://maas-rhdp.apps.maas.redhatworkshops.io/v1' \
  --from-literal=OPENAI_API_KEY='<YOUR_MTA_API_KEY>'
 ----
 
@@ -85,7 +85,7 @@ spec:
   kai_solution_server_enabled: true
   kai_llm_provider: openai
   kai_llm_model: granite-3-2-8b-instruct
-  kai_llm_baseurl: "https://litellm-prod.apps.maas.redhatworkshops.io/v1"
+  kai_llm_baseurl: "https://maas-rhdp.apps.maas.redhatworkshops.io/v1"
   kai_solution_server_container_limits_cpu: "1"
   kai_solution_server_container_limits_memory: "2Gi"
   kai_solution_server_container_requests_cpu: "500m"
