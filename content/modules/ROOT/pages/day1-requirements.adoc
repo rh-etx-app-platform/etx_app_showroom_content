@@ -85,7 +85,7 @@ Confirm you can authenticate to the Git server:
 [source,bash]
 ----
 # Get GitLab URL dynamically
-GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
+GITLAB_URL="https://$(oc get route -n etx-gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
 
 # Clone the repository
 git clone ${GITLAB_URL}/software-factory/etx_app_base_app.git
