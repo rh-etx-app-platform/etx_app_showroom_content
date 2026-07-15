@@ -11,12 +11,27 @@ view_switcher:
   default_mode: split
 
 tabs:
-  - name: OCP Console
+  - name: OpenShift Console
     url: 'https://console-openshift-console.${DOMAIN}'
 
   - name: Terminal
     port: 443
     path: /terminal
 
+  - name: Keycloak
+    url: 'https://etx-sso.${DOMAIN}'
+
+  - name: Argo CD
+    url: 'https://argocd-server-etx-app-dev.${DOMAIN}'
+
+  - name: GitLab
+    url: 'https://gitlab.${DOMAIN}'
+
+  - name: Quay
+    url: 'https://quay.${DOMAIN}'
+
   - name: Developer Hub
     url: 'https://backstage-rhdh-setup-rhdh.${DOMAIN}'
+
+  - name: Vault
+    url: 'https://vault.${DOMAIN}'
