@@ -256,82 +256,91 @@ Do not replace the whole file—merge the new section with what is already there
 
 Update the ConfigMap and wait for the pod to restart.
 
-== Configure OpenShift OAuth Authentication
+== Configure Keycloak OAuth Authentication
 
-Replace guest authentication with OpenShift OAuth for production-like access.
-
-=== Create an OAuth Client
-
-[source,bash,role=execute,subs="attributes+"]
-----
-oc create -f - <<EOF
-apiVersion: oauth.openshift.io/v1
-kind: OAuthClient
-metadata:
-  name: rhdh-oauth-client
-grantMethod: auto
-redirectURIs:
-  - https://backstage-rhdh-setup-rhdh.{openshift_cluster_ingress_domain}/api/auth/oidc/handler/frame
-secret: GENERATE_A_RANDOM_SECRET
-EOF
-----
-
-TIP: You can generate a random secret value using the following command:
-[source,bash,role=execute,subs="attributes+"]
-----
-node -p 'require("crypto").randomBytes(24).toString("base64")'
-----
+Replace guest authentication with Keycloak OAuth for production-like access.
 
 === Create the Auth Secret
 
 [source,bash,role=execute,subs="attributes+"]
 ----
 oc create secret generic rhdh-auth-secret -n setup-rhdh \
-  --from-literal=AUTH_OIDC_CLIENT_ID=rhdh-oauth-client \
-  --from-literal=AUTH_OIDC_CLIENT_SECRET=GENERATE_A_RANDOM_SECRET \
-  --from-literal=AUTH_OIDC_METADATA_URL=https://oauth-openshift.{openshift_cluster_ingress_domain}/.well-known/openid-configuration
+  --from-literal=KEYCLOAK_REALM=etx-lab \
+  --from-literal=KEYCLOAK_CLIENT_ID=rhdh \
+  --from-literal=KEYCLOAK_CLIENT_SECRET=changeme \
+  --from-literal=KEYCLOAK_BASE_URL=https://etx-sso.{openshift_cluster_ingress_domain}
 ----
 
 === Update app-config
 
-Replace the guest auth block with OIDC:
+* Replace the guest auth block with OIDC
+* Update the catalog provide to sync the Keycloak users. 
+
+WARNING: Do not replace the catalog key or you will overwrite your template location from before.  Just add the `providers` section
 
 [source,yaml]
 ----
     signInPage: oidc
     auth:
-      session:
-        secret: MY_SESSION_SECRET
       environment: production
       providers:
         oidc:
           production:
-            clientId: ${AUTH_OIDC_CLIENT_ID}
-            clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
-            metadataUrl: ${AUTH_OIDC_METADATA_URL}
+            clientId: ${KEYCLOAK_CLIENT_ID}
+            clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+            metadataUrl: ${KEYCLOAK_BASE_URL}realms/${KEYCLOAK_REALM}/.well-known/openid-configuration
             prompt: auto
+    catalog:
+      providers:
+        keycloakOrg:
+          default:
+            baseUrl: ${KEYCLOAK_BASE_URL}
+            clientId: ${KEYCLOAK_CLIENT_ID}
+            clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+            realm: ${KEYCLOAK_REALM}
+            loginRealm: ${KEYCLOAK_REALM}
+            schedule:
+              frequency: { minutes: 5 }
 ----
 
-TIP: You can replace `MY_SESSION_SECRET` with a random value using the following command:
+NOTE: The schedule frequency would be set to something higher in production (12 hours) and is set low for demo purposes.  Other options like `userQuerySize` or `groupQuerySize` are also good to set.  More information found in the documentation https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html/authentication_in_red_hat_developer_hub/import-users-and-groups-from-your-identity-provider_authentication-in-rhdh#import-users-and-groups-from-rhbk_import-users-and-groups-from-your-identity-provider[here]
 
-[source,bash,role=execute,subs="attributes+"]
-----
-node -p 'require("crypto").randomBytes(24).toString("base64")'
-----
 
 Click **Save** and wait for the Backstage pod to restart.
 
-`signInPage: oidc` shows the OpenShift sign-in flow on the login page.
-The `${AUTH_OIDC_*}` placeholders are resolved from the Secret mounted on the `Backstage` CR in the next step.
+`signInPage: oidc` shows the Keycloak sign-in flow on the login page.
+The `${KEYCLOAK_*}` placeholders are resolved from the Secret mounted on the `Backstage` CR in the next step.
 
-=== Mount the Secret in the Backstage CR
+=== Create Dynamic Plugins ConfigMap
+Create a dynamic plugins ConfigMap to enable the Keycloak Org sync plugin
 
-Mount `rhdh-auth-secret` on the `Backstage` custom resource so the OIDC client ID, secret, and metadata URL are available to `app-config` as environment variables.
+[source,bash,role=execute,subs="attributes+"]
+----
+oc create -f - <<EOF
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+  namespace: setup-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/backstage-community-plugin-catalog-backend-module-keycloak-dynamic'
+        disabled: false
+EOF
+----
+
+=== Update the Backstage CR
+
+* Mount `rhdh-auth-secret` on the `Backstage` custom resource so the OIDC client ID, secret, and metadata URL are available to `app-config` as environment variables.
+* Add the dynamic-plugins-rhdh ConfigMap so we can enable the keycloak Org sync
 
 . Open {openshift_console_url}[^] and switch to the *setup-rhdh* project.
 . Go to **Ecosystem** → **Installed Operators**.
-. Select *Red Hat Developer Hub*.
-. Open the **Backstage** tab.
+. Select *Red Hat Developer Hub Operator*.
+. Open the **Red Hat Developer Hub** tab.
 . Click the *rhdh* instance created.
 . Click **Actions** → *Edit Backstage* and switch to **YAML view**.
 . Under `spec.application`, add the `extraEnvs` block below.
@@ -342,20 +351,22 @@ Mount `rhdh-auth-secret` on the `Backstage` custom resource so the OIDC client I
     extraEnvs:
       secrets:
         - name: rhdh-auth-secret
+    application:
+      dynamicPluginsConfigMapName: dynamic-plugins-rhdh
 ----
 +
 . Click **Save**.
 
 The Red Hat Developer Hub Operator reconciles the CR and restarts the Backstage pod.
 
-=== Verify OpenShift sign-in
+=== Verify Keycloak sign-in
 
 . Wait until the Backstage pod in *setup-rhdh* is `Running`.
 . Open the Developer Hub route URL from the first step in this section.
 . On the login page, choose *OIDC*.
-. Sign in with your OpenShift credentials (for example `{user}` / `{password}`).
+. Sign in with your Keycloak credentials (for example `{user}` / `{password}`).
 +
-You should land on the Developer Hub home page authenticated as your OpenShift user, not as Guest.
+You should land on the Developer Hub home page authenticated as your Keycloak user, not as Guest.
 
 IMPORTANT: The signed-in user must exist in the Software Catalog (or be mapped via your org setup) to use some catalog features. For template creation in this lab, guest access is no longer available after this change.
 
