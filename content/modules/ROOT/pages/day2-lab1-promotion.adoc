@@ -544,4 +544,4 @@ You have completed the Promotion Pipeline exercise. You now have:
 
 == Next Steps
 
-Proceed to xref:day2-lab2-mta.adoc[Lab 2: Application Modernization (MTA)] to learn how to modernize legacy Java applications.
+Proceed to xref:day2-lab2-1-intro.adoc[Lab 2: Introduction] to learn how to modernize legacy Java applications.

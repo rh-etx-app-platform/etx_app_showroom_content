@@ -22,7 +22,9 @@
 * xref:day2-lab1-app-deployment.adoc[Application Deployment]
 * xref:day2-lab1-promotion.adoc[Promotion Pipeline]
 ** Lab 2: Application Modernization
-* xref:day2-lab2-mta.adoc[Application Modernization (MTA)]
+* xref:day2-lab2-1-intro.adoc[Lab Scenario]
+* xref:day2-lab2-2-mta.adoc[Application Modernization (MTA)]
+* xref:day2-lab2-3-lightspeed.adoc[Migrate Application with Developer Lightspeed]
 * xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub]
 * xref:day2-lab2-dh2-golden-paths.adoc[Developer Hub: templates and integrations]
 * xref:day2-recap.adoc[Day 2 Recap]
@@ -51,3 +53,4 @@
 * xref:nookbag.adoc[Nookbag UI]
 * xref:ocp-integration.adoc[OCP Integration]
 * xref:contributing.adoc[Contributing]
+ 

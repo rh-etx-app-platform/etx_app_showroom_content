@@ -1,0 +1,180 @@
+= Lab 2: Migrate Application with Developer Lightspeed
+:navtitle: Migrate Application with Developer Lightspeed
+
+== Overview
+
+Red Hat Developer Lightspeed brings generative AI capabilities directly into your development environment, helping you understand migration patterns, generate code snippets, and receive context-aware recommendations as you modernize the Coolstore application.
+
+In the previous lab, you analyzed Coolstore in the MTA web console. In this module, you configure the Migration Toolkit for Applications extension in OpenShift Dev Spaces, connect it to the MTA Hub, and use Agent Mode to apply AI-assisted migration changes from EAP 7 to EAP 8.
+
+== Learning objectives
+
+By the end of this module, you'll be able to:
+
+* Install and configure the Migration Toolkit for Applications extension in OpenShift Dev Spaces
+* Connect the MTA extension to the MTA Hub deployed in the previous lab
+* Create an analysis profile and run Agent Mode analysis on the Coolstore application
+* Apply AI-assisted code changes with Developer Lightspeed to migrate from EAP 7 to EAP 8
+
+== Install the MTA extension in Dev Spaces
+
+The Coolstore application needs to be migrated from EAP 7 to EAP 8.
+You'll start by installing the MTA extension in your Dev Spaces workspace to bring migration analysis and AI-assisted remediation directly into the IDE.
+
+=== Access your Dev Spaces workspace
+
+. Open the OpenShift Dev Spaces console:
++
+[source,role="execute",subs="attributes+"]
+----
+https://devspaces.{openshift_cluster_ingress_domain}
+----
+
+. Log in with your OpenShift credentials if prompted
+
+. Open your existing `coolstore` workspace
++
+If you don't have a workspace yet, create one from the GitLab repository: {gitlab_url}/mta-apps/coolstore.git
+
+=== Install the Language Support for Java extension
+
+. From the lower-left corner, select the **Settings (gear) icon**, and then choose **Extensions** to open the Extensions Marketplace.
++
+image::mta-extension.png[align="center"]
+. In the Extensions search bar, search for **Language Support for Java\(TM)** and install the extension.
++
+image::mta-extension-java.png[align="center"]
+
+=== Switch Java Language Server to Standard Mode
+. From the Status Bar, click the Java Language Server icon.
++
+image::java-language-standard.png[align="center"]
+
+. Once you click, the code will be compiled and the status should show "Java: Ready"
+
+=== Install the MTA extension
+
+. From the lower-left corner, select the **Settings (gear) icon**, and then choose **Extensions** to open the Extensions Marketplace.
++
+image::mta-extension.png[align="center"]
+. In the Extensions search bar, search for **Migration Toolkit for Applications (MTA)** and install the extension.
++
+image::mta-extension-search.png[align="center"]
+[NOTE]
+====
+You may see 2 Migration Toolkit for Applications extensions.  Ensure it is the one listed above in the screen shot with the new logo.
+====
+
+. Once the installation is complete, verify that the **MTA extension icon** appears in the left-hand Activity Bar. Select this icon to open the MTA analysis view.
++
+image::installed-mta.png[align="center"]
+
+. You should see the MTA Analysis view with options to:
++
+* Open Analysis Panel
+* Manage Profiles
++
+image::mta-welcome.png[align="center"]
+
+=== Configure the MTA Extension
+
+. Open the Analysis Panel by clicking btn:[Open Analysis Panel]
++
+image::mta-analysis-panel.png[align="center"]
+
+. From the top-right corner of the Visual Studio Code window, select the **Settings** option to access the MTA configuration panel.
++
+image::mta-settings-view.png[align="center"]
+
+. Click btn:[Configure Hub Settings] under *Hub Configuration*
++
+image::mta-hub-configure.png[align="center"]
+
+. In the settings screen, fill in the details:
++
+* **Enable Hub**: Checked
+* **Hub URL**: `https://mta-openshift-mta.{openshift_cluster_ingress_domain}`
+* **Insecure connection**: Checked
+* **Enable authentication**: Checked
+* **Username**: `{user}`
+* **Password**: `{password}`
+* **Solution Server**: Enabled
+* **Profile Sync**: Enabled
+
+. Click btn:[Save]
++
+image::mta-hub-configure-complete.png[align="center"]
+
+. Close **MTA Hub Configuration** tab and open the **MTA Analysis Panel** tab.
+
+. If you see the message "No profiles found", click link:[Manage Profiles] to create a new profile.
++
+* Click btn:[New Profile]
+* Fill in the details:
++
+* **Profile Name**: `coolstore`
+* **Target Technologies**: Select `eap8`
+* **Source Technologies**: Select `eap7`
+* **Use Default Rules**: Checked
++
+image::mta-profile-save.png[align="center"]
+
+=== Analyze the Application
+
+. Return to the **MTA Analysis View**, confirm that **Agent Mode** is enabled, and select **Start** to activate the newly created profile.
++
+image::mta-enable-agent.png[align="center"]
+
+. Select **Run Analysis** to begin the application analysis. MTA, in combination with Developer Lightspeed and the configured GenAI model, analyzes the entire source codebase. Wait until the analysis reaches **100% completion**.
+
+. Review the analysis results, which highlight reported issues and provide guided recommendations for migrating the application from EAP 7 to EAP 8.
++
+image::mta-analysis-results.png[align="center"]
+
+. Click through the analysis results and review the recommendations for migrating the application from EAP 7 to EAP 8.
+
+. Select the `javax groupId has been replaced by jakarta.platform` reported issue and follow the accompanying Arcade video, which demonstrates how Developer Lightspeed proposes code changes directly within the source files.
++
+++++
+<!--ARCADE EMBED START--><div style="position: relative; padding-bottom: calc(56.25% + 41px); height: 0px; width: 100%;"><iframe src="https://demo.arcade.software/t3XzB4yORwqLdF8wDzpZ?embed&embed_mobile=tab&embed_desktop=inline&show_copy_link=true" title="MTA with Developer Lightspeed" frameborder="0" loading="lazy" webkitallowfullscreen mozallowfullscreen allowfullscreen allow="clipboard-write" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; color-scheme: light;" ></iframe></div><!--ARCADE EMBED END-->
+++++
++
+. As suggestions appear, accept or reject each change. Developer Lightspeed refines its recommendations based on your selections and may propose additional updates as needed.
++
+[NOTE]
+====
+Applying recommended changes can introduce additional impacts in other parts of the codebase. By using the **Agent Mode** option, Developer Lightspeed is able to identify and suggest these follow-on changes. Without **Agent Mode** enabled, such dependent updates may not be detected or reflected.
+====
+
+. Repeat the analysis process and observe how the total number of reported issues decreases as the first issue is resolved, and note how the analysis results are updated accordingly to reflect the applied changes.
+
+. Go to the terminal and run the following:
+
+[source,bash]
+----
+./mvn clean package
+----
+
+. Verify the code compiles successfully
++
+[NOTE]
+====
+There could be AI-introduced errors in the `pom.xml` file. A separate repository has been created that contains the fully migrated code. You may refer to the following migrated repository for comparison and verification, or to correct your implementation if required. {gitlab_url}/mta-apps/coolstore-migrated.git
+====
+
+. The accepted solutions are captured in the **Solution Server** of the MTA Hub and will be used to generate code changes for future applications. This is a powerful feature that allows you to reuse the same solutions for multiple applications.
+
+. Once the analysis is complete, all issues are resolved, and `./mvn clean package` succeeds, you have completed the migration exercise for this lab.
+
+== Summary
+
+You have:
+
+* Installed the MTA extension in your Dev Spaces workspace
+* Configured the MTA extension to use the MTA Hub
+* Created a new profile for the Coolstore application
+* Analyzed the Coolstore application using the MTA extension
+* Migrated the Coolstore application to EAP 8 and verified the build
+
+== Next Steps
+Proceed to xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub].
