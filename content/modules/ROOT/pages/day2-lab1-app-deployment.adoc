@@ -31,10 +31,10 @@ The OIDC client `argocd` already exists in Keycloak realm `etx-lab`. Create a se
 [source,bash,role=execute]
 ----
 # Get Keycloak URL (etx-sso route)
-KEYCLOAK_URL="https://etx-sso.apps.$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
+KEYCLOAK_URL="https://etx-sso.apps.$(oc get route -n etx-keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/etx-sso\.apps\.//')"
 
 # Use the shared argocd client secret from etx-gitops
-CLIENT_SECRET="abJIhC36Q7DPscCUNNu27QKSdF9euOpIr16e7VvM"
+CLIENT_SECRET="changeme"
 
 oc create secret generic argocd-oidc-secret -n etx-app-dev \
   --from-literal=clientSecret=${CLIENT_SECRET}
@@ -58,7 +58,7 @@ First, get the cluster domain dynamically:
 [source,bash,role=execute]
 ----
 # Get cluster domain from existing Keycloak route
-CLUSTER_DOMAIN="$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
+CLUSTER_DOMAIN="$(oc get route -n etx-keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/etx-sso\.apps\.//')"
 echo "Cluster domain: ${CLUSTER_DOMAIN}"
 ----
 
@@ -66,7 +66,7 @@ Then create the ArgoCD instance with OIDC configuration:
 
 [source,bash,role=execute,subs="attributes+"]
 ----
-CLUSTER_DOMAIN="$(oc get route -n keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/sso\.apps\.//')"
+CLUSTER_DOMAIN="$(oc get route -n etx-keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/etx-sso\.apps\.//')"
 
 cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1beta1
@@ -303,6 +303,9 @@ echo "GitLab URL: $GITLAB_URL"
 ----
 +
 . Create a new project: *etx-app-gitops* in the software-factory group
++
+IMPORTANT: Make sure the Visibility Level is set to *Public*
+
 . Clone it locally:
 +
 [source,bash,role=execute]
@@ -317,12 +320,10 @@ We will create the following directory structure in the GitOps repository:
 etx-app-gitops/
 ├── environments/
 │   ├── dev/
-│   │   ├── namespace.yaml
 │   │   ├── deployment.yaml
 │   │   ├── service.yaml
 │   │   └── route.yaml
 │   └── stage/
-│       ├── namespace.yaml
 │       ├── deployment.yaml
 │       ├── service.yaml
 │       └── route.yaml
@@ -330,19 +331,6 @@ etx-app-gitops/
 ----
 
 === Dev Environment Manifests
-
-Create `environments/dev/namespace.yaml`:
-
-[source,bash,role=execute]
-----
-mkdir -p environments/dev
-cat > environments/dev/namespace.yaml <<'EOF'
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: etx-app-dev
-EOF
-----
 
 Create `environments/dev/deployment.yaml`:
 
@@ -372,7 +360,7 @@ spec:
     spec:
       containers:
         - name: etx-app-base-app
-          image: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:latest # <2>
+          image: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:main # # <2>
           ports:
             - containerPort: 8080
           resources:
@@ -382,6 +370,17 @@ spec:
             limits:
               cpu: "1"
               memory: 1Gi
+          env:
+            - name: POSTGRESQL_HOST
+              value: "parasol-db.etx-app-dev.svc.cluster.local"
+            - name: POSTGRESQL_DATABASE
+              value: "parasol"
+            - name: POSTGRESQL_USER
+              value: "parasol"
+            - name: POSTGRESQL_PASSWORD
+              value: "parasol"
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092"
 EOF
 ----
 <1> Enables OpenTelemetry auto-instrumentation. The Instrumentation CR created in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section will inject the Java agent automatically.
@@ -443,7 +442,7 @@ Grant Argo CD permission to manage resources in the `etx-app-dev` namespace:
 [source,bash,role=execute]
 ----
 oc adm policy add-role-to-user admin \
-  system:serviceaccount:etx-app-dev:argocd-application-controller \
+  system:serviceaccount:etx-app-dev:argocd-argocd-application-controller \
   -n etx-app-dev
 ----
 
