@@ -262,18 +262,23 @@ Replace guest authentication with Keycloak OAuth for production-like access.
 
 === Create the Auth Secret
 
+RHDH will need to sign/encrypt the session cookie used during the OIDC flow.  We need to generate and define a session secret.  It can be any string but for real use it should be high entropy, e.g. ~32 random bytes
+
 [source,bash,role=execute,subs="attributes+"]
 ----
+export SESSION_SECRET=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+
 oc create secret generic rhdh-auth-secret -n setup-rhdh \
   --from-literal=KEYCLOAK_REALM=etx-lab \
   --from-literal=KEYCLOAK_CLIENT_ID=rhdh \
   --from-literal=KEYCLOAK_CLIENT_SECRET=etx-lab-workshop-gitlab-secret \
-  --from-literal=KEYCLOAK_BASE_URL=https://etx-sso.{openshift_cluster_ingress_domain}
+  --from-literal=KEYCLOAK_BASE_URL=https://etx-sso.{openshift_cluster_ingress_domain} \
+  --from-literal=SESSION_SECRET=${SESSION_SECRET}
 ----
 
 === Update app-config
 
-* Replace the guest auth block with OIDC
+* Replace the guest auth block with OIDC and the session secret from above
 * Update the catalog provide to sync the Keycloak users. 
 
 WARNING: Do not replace the catalog key or you will overwrite your template location from before.  Just add the `providers` section
@@ -283,6 +288,8 @@ WARNING: Do not replace the catalog key or you will overwrite your template loca
     signInPage: oidc
     auth:
       environment: production
+      session:
+        secret: ${SESSION_SECRET}
       providers:
         oidc:
           production:
@@ -343,7 +350,7 @@ EOF
 . Open the **Red Hat Developer Hub** tab.
 . Click the *rhdh* instance created.
 . Click **Actions** → *Edit Backstage* and switch to **YAML view**.
-. Under `spec.application`, add the `extraEnvs` block below.
+. Under `spec.application`, add the `extraEnvs` & `dynamicPluginsConfigMapName` blocks below.
   Keep the existing `appConfig` and `route` sections from the initial deployment.
 +
 [source,yaml]
@@ -351,8 +358,7 @@ EOF
     extraEnvs:
       secrets:
         - name: rhdh-auth-secret
-    application:
-      dynamicPluginsConfigMapName: dynamic-plugins-rhdh
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
 ----
 +
 . Click **Save**.
