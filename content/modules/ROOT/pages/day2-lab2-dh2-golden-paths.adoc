@@ -391,7 +391,7 @@ RHDH will need to sign/encrypt the session cookie used during the OIDC flow.  We
 export SESSION_SECRET=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
 
 oc create secret generic rhdh-auth-secret -n setup-rhdh \
-  --from-literal=KEYCLOAK_REALM=etx-lab \
+  --from-literal=KEYCLOAK_RHDH_REALM={keycloak_realm} \
   --from-literal=KEYCLOAK_CLIENT_ID=rhdh \
   --from-literal=KEYCLOAK_CLIENT_SECRET=etx-lab-workshop-gitlab-secret \
   --from-literal=KEYCLOAK_BASE_URL=https://etx-sso.{openshift_cluster_ingress_domain} \
@@ -419,7 +419,7 @@ WARNING: Do not replace the catalog key or you will overwrite your template loca
           production:
             clientId: ${KEYCLOAK_CLIENT_ID}
             clientSecret: ${KEYCLOAK_CLIENT_SECRET}
-            metadataUrl: ${KEYCLOAK_BASE_URL}/realms/pass:[${KEYCLOAK_REALM}]/.well-known/openid-configuration
+            metadataUrl: ${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_RHDH_REALM}/.well-known/openid-configuration
             prompt: auto
     catalog:
       providers:
@@ -428,8 +428,8 @@ WARNING: Do not replace the catalog key or you will overwrite your template loca
             baseUrl: ${KEYCLOAK_BASE_URL}
             clientId: ${KEYCLOAK_CLIENT_ID}
             clientSecret: ${KEYCLOAK_CLIENT_SECRET}
-            realm: pass:[${KEYCLOAK_REALM}]
-            loginRealm: pass:[${KEYCLOAK_REALM}]
+            realm: ${KEYCLOAK_RHDH_REALM}
+            loginRealm: ${KEYCLOAK_RHDH_REALM}
             schedule:
               frequency: { minutes: 5 }
     integrations:
