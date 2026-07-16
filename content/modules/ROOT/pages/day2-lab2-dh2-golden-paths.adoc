@@ -207,7 +207,7 @@ metadata:
     che.eclipse.org/che-server: {devspaces_url}
     app.openshift.io/vcs-uri: ${{values.repoCloneUrl}}
   links:
-    - url: {devspace_url}/#${{values.repoCloneUrl}}
+    - url: {devspaces_url}/#${{values.repoCloneUrl}}
       title: OpenShift DevSpaces
 spec:
   type: service
