@@ -75,8 +75,9 @@ cd golden-path-quarkus
 
 Create `template.yaml` in your Git repository:
 
-[source,yaml,subs="attributes+"]
+[source,bash,role=execute,subs="attributes+"]
 ----
+cat << 'EOF' > template.yaml
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
@@ -109,6 +110,26 @@ spec:
           title: Owner
           type: string
           ui:field: OwnerPicker
+        port:
+          title: Port
+          type: number
+          default: 8080
+          description: Override the port exposed for the application
+        groupId:
+          title: Group ID
+          type: string
+          default: io.janus
+          description: Maven Group ID eg (io.janus)
+        artifactId:
+          title: Artifact ID
+          type: string
+          default: quarkusapp
+          description: Maven Artifact ID
+        javaPackageName:
+          title: Java Package Namespace
+          type: string
+          default: io/janus/quarkusapp
+          description: Name for the Java Package (ensure to use the / character as this is used for folder structure) should match Group ID and Artifact ID
 
     - title: Repository
       required:
@@ -120,7 +141,9 @@ spec:
           ui:field: RepoUrlPicker
           ui:options:
             allowedHosts:
-              - {gitlab_url}
+              - gitlab.{openshift_cluster_ingress_domain}
+            allowedOwners:
+              - software-factory
   steps:
     - id: fetch-skeleton
       name: Fetch Skeleton
@@ -131,14 +154,21 @@ spec:
           name: ${{ parameters.name }}
           description: ${{ parameters.description }}
           owner: ${{ parameters.owner }}
+          applicationType: api
+          port: ${{ parameters.port }}
+          groupId: ${{ parameters.groupId }}
+          artifactId: ${{ parameters.artifactId }}
+          javaPackageName: ${{ parameters.javaPackageName }}
 
     - id: publish
       name: Publish to GitLab
       action: publish:gitlab
       input:
         repoUrl: ${{ parameters.repoUrl }}
-        description: ${{ parameters.description }}
+        settings:
+          description: ${{ parameters.description }}
         defaultBranch: main
+        repoVisibility: public
 
     - id: register
       name: Register in Catalog
@@ -154,14 +184,30 @@ spec:
       - title: Open in Catalog
         icon: catalog
         entityRef: ${{ steps['register'].output.entityRef }}
+EOF
+----
+
+=== Create the Skeleton
+
+The skeleton is a template application, in this case Quarkus this is used to give the developer a head start.  It is intended to allow for setting up company standards, etc.  It could include CI/CD pipelines as well but that is outside the scope of this lab and will be showcased in the TSSC labs later.
+
+Run the following to create a sample skeleton:
+
+[source,bash,role=execute]
+----
+curl -L \
+  "https://codeload.github.com/redhat-gpte-devopsautomation/software-templates/tar.gz/main" \
+  | tar -xz --strip-components=3 \
+    software-templates-main/scaffolder-templates/quarkus-backend-template/skeleton
 ----
 
 === Create the Catalog Entity
 
 Add `catalog-info.yaml` to the skeleton directory:
 
-[source,yaml]
+[source,bash,role=execute]
 ----
+cat << 'EOF' > skeleton/catalog-info.yaml
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
@@ -175,6 +221,7 @@ spec:
   type: service
   lifecycle: production
   owner: ${{ values.owner }}
+EOF
 ----
 
 Commit and push the template repository:
@@ -215,6 +262,30 @@ The Red Hat Developer Hub Operator rolls out the change and restarts the applica
 When the pod is `Running` again, open Developer Hub and confirm the template appears under menu:Create[Templates].
 
 image::rhdh-quarkus-golden-path-template.png[Quarkus Golden Path template in Red Hat Developer Hub,link=self,window=blank,width=700]
+
+=== Setup GitLab Integration
+
+Create a Person Access Token from GitLab to be used in RHDH.  In production you would use a service account but for the purposes of this lab we can use a PAT.
+
+. Log into GitLab:
++
+[source,text,subs="attributes+"]
+----
+{gitlab_url}
+----
++
+. Navigate to your User settings
+. Click the Access - Personal access tokens 
+. Click `Add new token`
+. Give it a name and select the `api` scope and click Generate Token
+. You will see a Green box that says `Your token`, copy that token and run the following replacing `{YOUR_PAT_HERE}` with the PAT you copied:
++
+[source,bash,role=execute]
+----
+export GITLAB_PAT={YOUR_PAT_HERE}
+----
+
+NOTE: We will use the `GITLAB_PATH` environment variable in a later step when we setup the RHDH auth secret
 
 == Integrate with Dev Spaces
 
@@ -273,13 +344,15 @@ oc create secret generic rhdh-auth-secret -n setup-rhdh \
   --from-literal=KEYCLOAK_CLIENT_ID=rhdh \
   --from-literal=KEYCLOAK_CLIENT_SECRET=etx-lab-workshop-gitlab-secret \
   --from-literal=KEYCLOAK_BASE_URL=https://etx-sso.{openshift_cluster_ingress_domain} \
-  --from-literal=SESSION_SECRET=${SESSION_SECRET}
+  --from-literal=SESSION_SECRET=${SESSION_SECRET} \
+  --from-literal=GITLAB_TOKEN=${GITLAB_PAT}
 ----
 
 === Update app-config
 
 * Replace the guest auth block with OIDC and the session secret from above
 * Update the catalog provide to sync the Keycloak users. 
+* Include the gitlab integration
 
 WARNING: Do not replace the catalog key or you will overwrite your template location from before.  Just add the `providers` section
 
@@ -308,6 +381,12 @@ WARNING: Do not replace the catalog key or you will overwrite your template loca
             loginRealm: ${KEYCLOAK_REALM}
             schedule:
               frequency: { minutes: 5 }
+    integrations:
+      gitlab:
+        - host: gitlab.{openshift_cluster_ingress_domain}
+          token: ${GITLAB_TOKEN}
+          apiBaseUrl: {gitlab_url}/api/v4
+          baseUrl: {gitlab_url}
 ----
 
 NOTE: The schedule frequency would be set to something higher in production (12 hours) and is set low for demo purposes.  Other options like `userQuerySize` or `groupQuerySize` are also good to set.  More information found in the documentation https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html/authentication_in_red_hat_developer_hub/import-users-and-groups-from-your-identity-provider_authentication-in-rhdh#import-users-and-groups-from-rhbk_import-users-and-groups-from-your-identity-provider[here]
@@ -319,7 +398,7 @@ Click **Save** and wait for the Backstage pod to restart.
 The `${KEYCLOAK_*}` placeholders are resolved from the Secret mounted on the `Backstage` CR in the next step.
 
 === Create Dynamic Plugins ConfigMap
-Create a dynamic plugins ConfigMap to enable the Keycloak Org sync plugin
+Create a dynamic plugins ConfigMap to enable the Keycloak Org sync plugin and the gitlab scaffolder plugin for our template
 
 [source,bash,role=execute,subs="attributes+"]
 ----
@@ -335,6 +414,8 @@ data:
       - dynamic-plugins.default.yaml
     plugins:
       - package: './dynamic-plugins/dist/backstage-community-plugin-catalog-backend-module-keycloak-dynamic'
+        disabled: false
+      - package: './dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-gitlab-dynamic'
         disabled: false
 EOF
 ----
