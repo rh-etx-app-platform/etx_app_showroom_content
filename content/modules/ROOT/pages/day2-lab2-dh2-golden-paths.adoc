@@ -208,7 +208,7 @@ metadata:
     app.openshift.io/vcs-uri: ${{values.repoCloneUrl}}
   links:
     - url: {devspaces_url}/#${{values.repoCloneUrl}}
-      title: OpenShift DevSpaces
+      title: OpenShift Dev Spaces
 spec:
   type: service
   lifecycle: production
@@ -524,8 +524,8 @@ IMPORTANT: The signed-in user must exist in the Software Catalog (or be mapped v
 
 Developer Hub now provides:
 
-* *Golden Path templates* that scaffold complete projects with CI/CD, GitOps, and Dev Spaces pre-configured
-* *Software Catalog* with component metadata, ownership, and links to pipelines and deployments
+* *Golden Path templates* that scaffold complete projects with Dev Spaces pre-configured
+* *Software Catalog* with component metadata, ownership, and links to Dev Spaces
 * *Dev Spaces integration* for one-click workspace creation from catalog components
 * *OpenShift OAuth* for enterprise authentication
 
