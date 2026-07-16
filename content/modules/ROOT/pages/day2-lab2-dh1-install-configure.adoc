@@ -146,6 +146,8 @@ backstage-rhdh-xxxxxxxx-xx    1/1     Running   0          2m
 backstage-psql-rhdh-xx        1/1     Running   0          3m
 ----
 
+NOTE: It is normal for the `backstage-rhdh-xxxxxxxx-xx` pod to take a few minutes to start/restart
+
 Check the custom resource and route:
 
 [source,role="execute"]
