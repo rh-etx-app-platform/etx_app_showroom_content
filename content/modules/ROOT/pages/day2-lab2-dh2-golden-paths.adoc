@@ -267,7 +267,7 @@ Replace guest authentication with Keycloak OAuth for production-like access.
 oc create secret generic rhdh-auth-secret -n setup-rhdh \
   --from-literal=KEYCLOAK_REALM=etx-lab \
   --from-literal=KEYCLOAK_CLIENT_ID=rhdh \
-  --from-literal=KEYCLOAK_CLIENT_SECRET=changeme \
+  --from-literal=KEYCLOAK_CLIENT_SECRET=etx-lab-workshop-gitlab-secret \
   --from-literal=KEYCLOAK_BASE_URL=https://etx-sso.{openshift_cluster_ingress_domain}
 ----
 
