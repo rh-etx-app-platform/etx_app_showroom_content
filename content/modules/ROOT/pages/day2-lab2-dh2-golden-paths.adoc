@@ -22,7 +22,7 @@ Templates are defined using YAML, but are rendered as a rich form in the Red Hat
 
 == Register a Golden Path Template
 
-Golden Path templates provide a self-service way for developers to create new projects that follow organizational standards.
+Golden Path templates provide a self-service way for developers to create new projects that follow organizational standards.  They can contain just about anything needed include pipelines, gitops manifests, etc.
 
 === Template Structure
 
@@ -36,18 +36,6 @@ golden-path-quarkus/
     ├── pom.xml             # Quarkus project with dependencies
     ├── src/                # Application source code
     ├── catalog-info.yaml   # Backstage catalog entity
-    ├── tekton/             # Pipeline definitions
-    │   ├── pipeline.yaml
-    │   └── trigger.yaml
-    └── gitops/             # Argo CD manifests
-        ├── dev/
-        │   ├── deployment.yaml
-        │   ├── service.yaml
-        │   └── route.yaml
-        └── stage/
-            ├── deployment.yaml
-            ├── service.yaml
-            └── route.yaml
 ----
 
 === Create the Template Definition
@@ -159,6 +147,7 @@ spec:
           groupId: ${{ parameters.groupId }}
           artifactId: ${{ parameters.artifactId }}
           javaPackageName: ${{ parameters.javaPackageName }}
+          repoCloneUrl: https://${{ (parameters.repoUrl | parseRepoUrl).host }}/${{ (parameters.repoUrl | parseRepoUrl).owner }}/${{ (parameters.repoUrl | parseRepoUrl).repo }}.git
 
     - id: publish
       name: Publish to GitLab
@@ -187,11 +176,9 @@ spec:
 EOF
 ----
 
-=== Create the Skeleton
+=== Copy the Skeleton
 
-The skeleton is a template application, in this case Quarkus this is used to give the developer a head start.  It is intended to allow for setting up company standards, etc.  It could include CI/CD pipelines as well but that is outside the scope of this lab and will be showcased in the TSSC labs later.
-
-Run the following to create a sample skeleton:
+We have a preconfigured skeleton folder.  To use it run the following:
 
 [source,bash,role=execute]
 ----
@@ -205,7 +192,7 @@ curl -L \
 
 Add `catalog-info.yaml` to the skeleton directory:
 
-[source,bash,role=execute]
+[source,bash,role=execute,subs="attributes+"]
 ----
 cat << 'EOF' > skeleton/catalog-info.yaml
 apiVersion: backstage.io/v1alpha1
@@ -217,10 +204,114 @@ metadata:
     backstage.io/techdocs-ref: dir:.
     argocd/app-name: ${{ values.name }}-dev
     janus-idp.io/tekton: ${{ values.name }}
+    che.eclipse.org/che-server: {devspaces_url}
+    app.openshift.io/vcs-uri: ${{values.repoCloneUrl}}
+  links:
+    - url: {devspace_url}/#${{values.repoCloneUrl}}
+      title: OpenShift DevSpaces
 spec:
   type: service
   lifecycle: production
   owner: ${{ values.owner }}
+EOF
+----
+
+=== Create the Dev File
+
+Add `devfile.yaml` to the skeleton directory:
+
+[source,bash,role=execute,subs="attributes+"]
+----
+cat << 'EOF' > skeleton/devfile.yaml
+schemaVersion: 2.2.0
+metadata:
+  name: ${{ values.name }}
+  version: 1.0.0
+  displayName: Quarkus Java Application
+  description: Development environment for standard and native Quarkus Java apps.
+  tags:
+    - Java
+    - Quarkus
+  projectType: Quarkus
+  language: Java
+
+components:
+  # Main development container toolset
+  - name: tools
+    container:
+      image: registry.redhat.io/devspaces/udi-rhel9:latest
+      memoryLimit: 2Gi
+      memoryRequest: 512Mi
+      cpuLimit: '2'
+      cpuRequest: '500m'
+      mountSources: true
+      env:
+        - name: QUARKUS_HTTP_HOST
+          value: 0.0.0.0
+      endpoints:
+        - name: http
+          targetPort: ${{ values.port }}
+          exposure: public
+          protocol: http
+        - name: dev-ui
+          targetPort: ${{ values.port }}
+          path: /q/dev-ui
+          exposure: public
+          protocol: http
+        - name: debug
+          targetPort: 5005
+          exposure: none
+          protocol: tcp
+      volumeMounts:
+        - name: m2-cache
+          path: /home/user/.m2
+
+  # Persistent local cache volume for Maven dependencies
+  - name: m2-cache
+    volume:
+      size: 3Gi
+
+commands:
+  # 1. Start Quarkus Live-Coding Dev Mode
+  - id: dev
+    exec:
+      label: "Start Quarkus Dev Mode"
+      component: tools
+      workingDir: ${PROJECTS_ROOT}
+      commandLine: "./mvnw quarkus:dev"
+      group:
+        kind: run
+        isDefault: true
+
+  # 2. Package standard JVM JAR file
+  - id: package-jvm
+    exec:
+      label: "Package JVM JAR"
+      component: tools
+      workingDir: ${PROJECTS_ROOT}
+      commandLine: "./mvnw clean package -DskipTests=true"
+      group:
+        kind: build
+
+  # 3. Package Native Executable (Requires GraalVM or explicit container build flags)
+  - id: package-native
+    exec:
+      label: "Package Native Binary"
+      component: tools
+      workingDir: ${PROJECTS_ROOT}
+      commandLine: "./mvnw clean package -Pnative -DskipTests=true"
+      group:
+        kind: build
+
+  # 4. Run Unit and Integration Tests
+  - id: test
+    exec:
+      label: "Run Tests"
+      component: tools
+      workingDir: ${PROJECTS_ROOT}
+      commandLine: "./mvnw test"
+      group:
+        kind: test
 EOF
 ----
 
@@ -275,7 +366,7 @@ Create a Person Access Token from GitLab to be used in RHDH.  In production you 
 ----
 +
 . Navigate to your User settings
-. Click the Access - Personal access tokens 
+. Click the menu:Access[Personal access tokens] 
 . Click `Add new token`
 . Give it a name and select the `api` scope and click Generate Token
 . You will see a Green box that says `Your token`, copy that token and run the following replacing `{YOUR_PAT_HERE}` with the PAT you copied:
@@ -286,46 +377,6 @@ export GITLAB_PAT={YOUR_PAT_HERE}
 ----
 
 NOTE: We will use the `GITLAB_PATH` environment variable in a later step when we setup the RHDH auth secret
-
-== Integrate with Dev Spaces
-
-Add a Dev Spaces link to catalog components so developers can open a workspace directly from the component page.
-
-=== Add the Dev Spaces URL Annotation
-
-In the `catalog-info.yaml` skeleton, add the Dev Spaces annotation:
-
-[source,yaml,subs="attributes+"]
-----
-metadata:
-  annotations:
-    che.eclipse.org/che-server: {devspaces_url}
-----
-
-WARNING: Do not forget to commit and push the changes to the Git repository.
-
-[source,bash,role=execute]
-----
-git add catalog-info.yaml
-git commit -m "feat: add dev spaces annotation"
-git push origin main
-----
-
-When a component has this annotation, the Developer Hub UI shows a "Dev Spaces" link that opens a workspace for the component's repository.
-
-=== Configure the Dev Spaces Plugin
-
-Add the Dev Spaces plugin configuration to *rhdh-config* ConfigMap. Under `data.app-config.yaml`, keep your
-existing `app`, `auth` and other settings and add the `devSpaces` block below.
-Do not replace the whole file—merge the new section with what is already there.
-
-[source,yaml,subs="attributes+"]
-----
-    devSpaces:
-      defaultUrl: {devspaces_url}
-----
-
-Update the ConfigMap and wait for the pod to restart.
 
 == Configure Keycloak OAuth Authentication
 
@@ -356,7 +407,7 @@ oc create secret generic rhdh-auth-secret -n setup-rhdh \
 
 WARNING: Do not replace the catalog key or you will overwrite your template location from before.  Just add the `providers` section
 
-[source,yaml]
+[source,yaml,subs="attributes+"]
 ----
     signInPage: oidc
     auth:
@@ -455,18 +506,18 @@ The Red Hat Developer Hub Operator reconciles the CR and restarts the Backstage 
 +
 You should land on the Developer Hub home page authenticated as your Keycloak user, not as Guest.
 
-IMPORTANT: The signed-in user must exist in the Software Catalog (or be mapped via your org setup) to use some catalog features. For template creation in this lab, guest access is no longer available after this change.
+IMPORTANT: The signed-in user must exist in the Software Catalog (or be mapped via your org setup, which is what we configured with the keycloakOrg provider) to use some catalog features. For template creation in this lab, guest access is no longer available after this change.
 
 == Test the Golden Path
 
-. Open Developer Hub and go to menu:Create[Templates]
+. Open Developer Hub and go to menu:Self-service[Templates] (the plus button in the upper right corner)
 . Select the *Quarkus Application (Golden Path)* template
 . Fill in the parameters (name, owner, repository location)
 . Click btn:[Create]
 . Verify the template:
   * A new GitLab repository is created with the skeleton code
   * The component is registered in the Developer Hub catalog
-  * The repository includes a devfile, Tekton pipeline, and GitOps manifests
+  * The repository includes a devfile, and sample code
 . Open the component in the catalog and click the Dev Spaces link to launch a workspace
 
 == Summary
