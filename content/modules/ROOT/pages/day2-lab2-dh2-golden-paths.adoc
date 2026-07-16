@@ -288,7 +288,7 @@ WARNING: Do not replace the catalog key or you will overwrite your template loca
           production:
             clientId: ${KEYCLOAK_CLIENT_ID}
             clientSecret: ${KEYCLOAK_CLIENT_SECRET}
-            metadataUrl: ${KEYCLOAK_BASE_URL}realms/${KEYCLOAK_REALM}/.well-known/openid-configuration
+            metadataUrl: ${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration
             prompt: auto
     catalog:
       providers:
