@@ -110,7 +110,7 @@ The `spec.application.appConfig` section mounts `rhdh-config` into the Backstage
 +
 [source,yaml]
 ----
-apiVersion: rhdh.redhat.com/v1alpha3
+apiVersion: rhdh.redhat.com/v1alpha5
 kind: Backstage
 metadata:
   name: rhdh
@@ -143,8 +143,10 @@ Expected output (names and ages will differ):
 ----
 NAME                          READY   STATUS    RESTARTS   AGE
 backstage-rhdh-xxxxxxxx-xx    1/1     Running   0          2m
-postgresql-xxxxxxxx-xx        1/1     Running   0          3m
+backstage-psql-rhdh-xx        1/1     Running   0          3m
 ----
+
+NOTE: It is normal for the `backstage-rhdh-xxxxxxxx-xx` pod to take a few minutes to start/restart
 
 Check the custom resource and route:
 

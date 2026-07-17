@@ -22,7 +22,7 @@ Templates are defined using YAML, but are rendered as a rich form in the Red Hat
 
 == Register a Golden Path Template
 
-Golden Path templates provide a self-service way for developers to create new projects that follow organizational standards.
+Golden Path templates provide a self-service way for developers to create new projects that follow organizational standards.  They can contain just about anything needed include pipelines, gitops manifests, etc.
 
 === Template Structure
 
@@ -36,18 +36,6 @@ golden-path-quarkus/
     ├── pom.xml             # Quarkus project with dependencies
     ├── src/                # Application source code
     ├── catalog-info.yaml   # Backstage catalog entity
-    ├── tekton/             # Pipeline definitions
-    │   ├── pipeline.yaml
-    │   └── trigger.yaml
-    └── gitops/             # Argo CD manifests
-        ├── dev/
-        │   ├── deployment.yaml
-        │   ├── service.yaml
-        │   └── route.yaml
-        └── stage/
-            ├── deployment.yaml
-            ├── service.yaml
-            └── route.yaml
 ----
 
 === Create the Template Definition
@@ -75,8 +63,9 @@ cd golden-path-quarkus
 
 Create `template.yaml` in your Git repository:
 
-[source,yaml,subs="attributes+"]
+[source,bash,role=execute,subs="attributes+"]
 ----
+cat << 'EOF' > template.yaml
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
@@ -109,6 +98,26 @@ spec:
           title: Owner
           type: string
           ui:field: OwnerPicker
+        port:
+          title: Port
+          type: number
+          default: 8080
+          description: Override the port exposed for the application
+        groupId:
+          title: Group ID
+          type: string
+          default: io.janus
+          description: Maven Group ID eg (io.janus)
+        artifactId:
+          title: Artifact ID
+          type: string
+          default: quarkusapp
+          description: Maven Artifact ID
+        javaPackageName:
+          title: Java Package Namespace
+          type: string
+          default: io/janus/quarkusapp
+          description: Name for the Java Package (ensure to use the / character as this is used for folder structure) should match Group ID and Artifact ID
 
     - title: Repository
       required:
@@ -120,7 +129,9 @@ spec:
           ui:field: RepoUrlPicker
           ui:options:
             allowedHosts:
-              - {gitlab_url}
+              - gitlab.{openshift_cluster_ingress_domain}
+            allowedOwners:
+              - software-factory
   steps:
     - id: fetch-skeleton
       name: Fetch Skeleton
@@ -131,14 +142,22 @@ spec:
           name: ${{ parameters.name }}
           description: ${{ parameters.description }}
           owner: ${{ parameters.owner }}
+          applicationType: api
+          port: ${{ parameters.port }}
+          groupId: ${{ parameters.groupId }}
+          artifactId: ${{ parameters.artifactId }}
+          javaPackageName: ${{ parameters.javaPackageName }}
+          repoCloneUrl: https://${{ (parameters.repoUrl | parseRepoUrl).host }}/${{ (parameters.repoUrl | parseRepoUrl).owner }}/${{ (parameters.repoUrl | parseRepoUrl).repo }}.git
 
     - id: publish
       name: Publish to GitLab
       action: publish:gitlab
       input:
         repoUrl: ${{ parameters.repoUrl }}
-        description: ${{ parameters.description }}
+        settings:
+          description: ${{ parameters.description }}
         defaultBranch: main
+        repoVisibility: public
 
     - id: register
       name: Register in Catalog
@@ -154,14 +173,28 @@ spec:
       - title: Open in Catalog
         icon: catalog
         entityRef: ${{ steps['register'].output.entityRef }}
+EOF
+----
+
+=== Copy the Skeleton
+
+We have a preconfigured skeleton folder.  To use it run the following:
+
+[source,bash,role=execute]
+----
+curl -L \
+  "https://codeload.github.com/redhat-gpte-devopsautomation/software-templates/tar.gz/main" \
+  | tar -xz --strip-components=3 \
+    software-templates-main/scaffolder-templates/quarkus-backend-template/skeleton
 ----
 
 === Create the Catalog Entity
 
 Add `catalog-info.yaml` to the skeleton directory:
 
-[source,yaml]
+[source,bash,role=execute,subs="attributes+"]
 ----
+cat << 'EOF' > skeleton/catalog-info.yaml
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
@@ -171,10 +204,115 @@ metadata:
     backstage.io/techdocs-ref: dir:.
     argocd/app-name: ${{ values.name }}-dev
     janus-idp.io/tekton: ${{ values.name }}
+    che.eclipse.org/che-server: {devspaces_url}
+    app.openshift.io/vcs-uri: ${{values.repoCloneUrl}}
+  links:
+    - url: {devspaces_url}/#${{values.repoCloneUrl}}
+      title: OpenShift Dev Spaces
 spec:
   type: service
   lifecycle: production
   owner: ${{ values.owner }}
+EOF
+----
+
+=== Create the Dev File
+
+Add `devfile.yaml` to the skeleton directory:
+
+[source,bash,role=execute,subs="attributes+"]
+----
+cat << 'EOF' > skeleton/devfile.yaml
+schemaVersion: 2.2.0
+metadata:
+  name: ${{ values.name }}
+  version: 1.0.0
+  displayName: Quarkus Java Application
+  description: Development environment for standard and native Quarkus Java apps.
+  tags:
+    - Java
+    - Quarkus
+  projectType: Quarkus
+  language: Java
+
+components:
+  # Main development container toolset
+  - name: tools
+    container:
+      image: registry.redhat.io/devspaces/udi-rhel9:latest
+      memoryLimit: 2Gi
+      memoryRequest: 512Mi
+      cpuLimit: '2'
+      cpuRequest: '500m'
+      mountSources: true
+      env:
+        - name: QUARKUS_HTTP_HOST
+          value: 0.0.0.0
+      endpoints:
+        - name: http
+          targetPort: ${{ values.port }}
+          exposure: public
+          protocol: http
+        - name: dev-ui
+          targetPort: ${{ values.port }}
+          path: /q/dev-ui
+          exposure: public
+          protocol: http
+        - name: debug
+          targetPort: 5005
+          exposure: none
+          protocol: tcp
+      volumeMounts:
+        - name: m2-cache
+          path: /home/user/.m2
+
+  # Persistent local cache volume for Maven dependencies
+  - name: m2-cache
+    volume:
+      size: 3Gi
+
+commands:
+  # 1. Start Quarkus Live-Coding Dev Mode
+  - id: dev
+    exec:
+      label: "Start Quarkus Dev Mode"
+      component: tools
+      workingDir: ${PROJECTS_ROOT}
+      commandLine: "./mvnw quarkus:dev"
+      group:
+        kind: run
+        isDefault: true
+
+  # 2. Package standard JVM JAR file
+  - id: package-jvm
+    exec:
+      label: "Package JVM JAR"
+      component: tools
+      workingDir: ${PROJECTS_ROOT}
+      commandLine: "./mvnw clean package -DskipTests=true"
+      group:
+        kind: build
+
+  # 3. Package Native Executable (Requires GraalVM or explicit container build flags)
+  - id: package-native
+    exec:
+      label: "Package Native Binary"
+      component: tools
+      workingDir: ${PROJECTS_ROOT}
+      commandLine: "./mvnw clean package -Pnative -DskipTests=true"
+      group:
+        kind: build
+
+  # 4. Run Unit and Integration Tests
+  - id: test
+    exec:
+      label: "Run Tests"
+      component: tools
+      workingDir: ${PROJECTS_ROOT}
+      commandLine: "./mvnw test"
+      group:
+        kind: test
+EOF
 ----
 
 Commit and push the template repository:
@@ -216,125 +354,135 @@ When the pod is `Running` again, open Developer Hub and confirm the template app
 
 image::rhdh-quarkus-golden-path-template.png[Quarkus Golden Path template in Red Hat Developer Hub,link=self,window=blank,width=700]
 
-== Integrate with Dev Spaces
+=== Setup GitLab Integration
 
-Add a Dev Spaces link to catalog components so developers can open a workspace directly from the component page.
+Create a Person Access Token from GitLab to be used in RHDH.  In production you would use a service account but for the purposes of this lab we can use a PAT.
 
-=== Add the Dev Spaces URL Annotation
-
-In the `catalog-info.yaml` skeleton, add the Dev Spaces annotation:
-
-[source,yaml,subs="attributes+"]
+. Log into GitLab:
++
+[source,text,subs="attributes+"]
 ----
-metadata:
-  annotations:
-    che.eclipse.org/che-server: {devspaces_url}
+{gitlab_url}
 ----
-
-WARNING: Do not forget to commit and push the changes to the Git repository.
-
++
+. Navigate to your User settings
+. Click the menu:Access[Personal access tokens] 
+. Click `Add new token`
+. Give it a name and select the `api` scope and click Generate Token
+. You will see a Green box that says `Your token`, copy that token and run the following replacing `{YOUR_PAT_HERE}` with the PAT you copied:
++
 [source,bash,role=execute]
 ----
-git add catalog-info.yaml
-git commit -m "feat: add dev spaces annotation"
-git push origin main
+export GITLAB_PAT={YOUR_PAT_HERE}
 ----
 
-When a component has this annotation, the Developer Hub UI shows a "Dev Spaces" link that opens a workspace for the component's repository.
+NOTE: We will use the `GITLAB_PATH` environment variable in a later step when we setup the RHDH auth secret
 
-=== Configure the Dev Spaces Plugin
+== Configure Keycloak OAuth Authentication
 
-Add the Dev Spaces plugin configuration to *rhdh-config* ConfigMap. Under `data.app-config.yaml`, keep your
-existing `app`, `auth` and other settings and add the `devSpaces` block below.
-Do not replace the whole file—merge the new section with what is already there.
-
-[source,yaml,subs="attributes+"]
-----
-    devSpaces:
-      defaultUrl: {devspaces_url}
-----
-
-Update the ConfigMap and wait for the pod to restart.
-
-== Configure OpenShift OAuth Authentication
-
-Replace guest authentication with OpenShift OAuth for production-like access.
-
-=== Create an OAuth Client
-
-[source,bash,role=execute,subs="attributes+"]
-----
-oc create -f - <<EOF
-apiVersion: oauth.openshift.io/v1
-kind: OAuthClient
-metadata:
-  name: rhdh-oauth-client
-grantMethod: auto
-redirectURIs:
-  - https://backstage-rhdh-setup-rhdh.{openshift_cluster_ingress_domain}/api/auth/oidc/handler/frame
-secret: GENERATE_A_RANDOM_SECRET
-EOF
-----
-
-TIP: You can generate a random secret value using the following command:
-[source,bash,role=execute,subs="attributes+"]
-----
-node -p 'require("crypto").randomBytes(24).toString("base64")'
-----
+Replace guest authentication with Keycloak OAuth for production-like access.
 
 === Create the Auth Secret
 
+RHDH will need to sign/encrypt the session cookie used during the OIDC flow.  We need to generate and define a session secret.  It can be any string but for real use it should be high entropy, e.g. ~32 random bytes
+
 [source,bash,role=execute,subs="attributes+"]
 ----
+export SESSION_SECRET=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+
 oc create secret generic rhdh-auth-secret -n setup-rhdh \
-  --from-literal=AUTH_OIDC_CLIENT_ID=rhdh-oauth-client \
-  --from-literal=AUTH_OIDC_CLIENT_SECRET=GENERATE_A_RANDOM_SECRET \
-  --from-literal=AUTH_OIDC_METADATA_URL=https://oauth-openshift.{openshift_cluster_ingress_domain}/.well-known/openid-configuration
+  --from-literal=KEYCLOAK_RHDH_REALM={keycloak_realm} \
+  --from-literal=KEYCLOAK_CLIENT_ID=rhdh \
+  --from-literal=KEYCLOAK_CLIENT_SECRET=etx-lab-workshop-gitlab-secret \
+  --from-literal=KEYCLOAK_BASE_URL=https://etx-sso.{openshift_cluster_ingress_domain} \
+  --from-literal=SESSION_SECRET=${SESSION_SECRET} \
+  --from-literal=GITLAB_TOKEN=${GITLAB_PAT}
 ----
 
 === Update app-config
 
-Replace the guest auth block with OIDC:
+* Replace the guest auth block with OIDC and the session secret from above
+* Update the catalog provide to sync the Keycloak users. 
+* Include the gitlab integration
 
-[source,yaml]
+WARNING: Do not replace the catalog key or you will overwrite your template location from before.  Just add the `providers` section
+
+[source,yaml,subs="attributes+"]
 ----
     signInPage: oidc
     auth:
-      session:
-        secret: MY_SESSION_SECRET
       environment: production
+      session:
+        secret: ${SESSION_SECRET}
       providers:
         oidc:
           production:
-            clientId: ${AUTH_OIDC_CLIENT_ID}
-            clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
-            metadataUrl: ${AUTH_OIDC_METADATA_URL}
+            clientId: ${KEYCLOAK_CLIENT_ID}
+            clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+            metadataUrl: ${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_RHDH_REALM}/.well-known/openid-configuration
             prompt: auto
+    catalog:
+      providers:
+        keycloakOrg:
+          default:
+            baseUrl: ${KEYCLOAK_BASE_URL}
+            clientId: ${KEYCLOAK_CLIENT_ID}
+            clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+            realm: ${KEYCLOAK_RHDH_REALM}
+            loginRealm: ${KEYCLOAK_RHDH_REALM}
+            schedule:
+              frequency: { minutes: 5 }
+    integrations:
+      gitlab:
+        - host: gitlab.{openshift_cluster_ingress_domain}
+          token: ${GITLAB_TOKEN}
+          apiBaseUrl: {gitlab_url}/api/v4
+          baseUrl: {gitlab_url}
 ----
 
-TIP: You can replace `MY_SESSION_SECRET` with a random value using the following command:
+NOTE: The schedule frequency would be set to something higher in production (12 hours) and is set low for demo purposes.  Other options like `userQuerySize` or `groupQuerySize` are also good to set.  More information found in the documentation https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html/authentication_in_red_hat_developer_hub/import-users-and-groups-from-your-identity-provider_authentication-in-rhdh#import-users-and-groups-from-rhbk_import-users-and-groups-from-your-identity-provider[here]
 
-[source,bash,role=execute,subs="attributes+"]
-----
-node -p 'require("crypto").randomBytes(24).toString("base64")'
-----
 
 Click **Save** and wait for the Backstage pod to restart.
 
-`signInPage: oidc` shows the OpenShift sign-in flow on the login page.
-The `${AUTH_OIDC_*}` placeholders are resolved from the Secret mounted on the `Backstage` CR in the next step.
+`signInPage: oidc` shows the Keycloak sign-in flow on the login page.
+The `${KEYCLOAK_*}` placeholders are resolved from the Secret mounted on the `Backstage` CR in the next step.
 
-=== Mount the Secret in the Backstage CR
+=== Create Dynamic Plugins ConfigMap
+Create a dynamic plugins ConfigMap to enable the Keycloak Org sync plugin and the gitlab scaffolder plugin for our template
 
-Mount `rhdh-auth-secret` on the `Backstage` custom resource so the OIDC client ID, secret, and metadata URL are available to `app-config` as environment variables.
+[source,bash,role=execute,subs="attributes+"]
+----
+oc create -f - <<EOF
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: dynamic-plugins-rhdh
+  namespace: setup-rhdh
+data:
+  dynamic-plugins.yaml: |
+    includes:
+      - dynamic-plugins.default.yaml
+    plugins:
+      - package: './dynamic-plugins/dist/backstage-community-plugin-catalog-backend-module-keycloak-dynamic'
+        disabled: false
+      - package: './dynamic-plugins/dist/backstage-plugin-scaffolder-backend-module-gitlab-dynamic'
+        disabled: false
+EOF
+----
+
+=== Update the Backstage CR
+
+* Mount `rhdh-auth-secret` on the `Backstage` custom resource so the OIDC client ID, secret, and metadata URL are available to `app-config` as environment variables.
+* Add the dynamic-plugins-rhdh ConfigMap so we can enable the keycloak Org sync
 
 . Open {openshift_console_url}[^] and switch to the *setup-rhdh* project.
 . Go to **Ecosystem** → **Installed Operators**.
-. Select *Red Hat Developer Hub*.
-. Open the **Backstage** tab.
+. Select *Red Hat Developer Hub Operator*.
+. Open the **Red Hat Developer Hub** tab.
 . Click the *rhdh* instance created.
 . Click **Actions** → *Edit Backstage* and switch to **YAML view**.
-. Under `spec.application`, add the `extraEnvs` block below.
+. Under `spec.application`, add the `extraEnvs` & `dynamicPluginsConfigMapName` blocks below.
   Keep the existing `appConfig` and `route` sections from the initial deployment.
 +
 [source,yaml]
@@ -342,41 +490,42 @@ Mount `rhdh-auth-secret` on the `Backstage` custom resource so the OIDC client I
     extraEnvs:
       secrets:
         - name: rhdh-auth-secret
+    dynamicPluginsConfigMapName: dynamic-plugins-rhdh
 ----
 +
 . Click **Save**.
 
 The Red Hat Developer Hub Operator reconciles the CR and restarts the Backstage pod.
 
-=== Verify OpenShift sign-in
+=== Verify Keycloak sign-in
 
 . Wait until the Backstage pod in *setup-rhdh* is `Running`.
 . Open the Developer Hub route URL from the first step in this section.
 . On the login page, choose *OIDC*.
-. Sign in with your OpenShift credentials (for example `{user}` / `{password}`).
+. Sign in with your Keycloak credentials (for example `{user}` / `{password}`).
 +
-You should land on the Developer Hub home page authenticated as your OpenShift user, not as Guest.
+You should land on the Developer Hub home page authenticated as your Keycloak user, not as Guest.
 
-IMPORTANT: The signed-in user must exist in the Software Catalog (or be mapped via your org setup) to use some catalog features. For template creation in this lab, guest access is no longer available after this change.
+IMPORTANT: The signed-in user must exist in the Software Catalog (or be mapped via your org setup, which is what we configured with the keycloakOrg provider) to use some catalog features. For template creation in this lab, guest access is no longer available after this change.
 
 == Test the Golden Path
 
-. Open Developer Hub and go to menu:Create[Templates]
+. Open Developer Hub and go to menu:Self-service[Templates] (the plus button in the upper right corner)
 . Select the *Quarkus Application (Golden Path)* template
 . Fill in the parameters (name, owner, repository location)
 . Click btn:[Create]
 . Verify the template:
   * A new GitLab repository is created with the skeleton code
   * The component is registered in the Developer Hub catalog
-  * The repository includes a devfile, Tekton pipeline, and GitOps manifests
+  * The repository includes a devfile, and sample code
 . Open the component in the catalog and click the Dev Spaces link to launch a workspace
 
 == Summary
 
 Developer Hub now provides:
 
-* *Golden Path templates* that scaffold complete projects with CI/CD, GitOps, and Dev Spaces pre-configured
-* *Software Catalog* with component metadata, ownership, and links to pipelines and deployments
+* *Golden Path templates* that scaffold complete projects with Dev Spaces pre-configured
+* *Software Catalog* with component metadata, ownership, and links to Dev Spaces
 * *Dev Spaces integration* for one-click workspace creation from catalog components
 * *OpenShift OAuth* for enterprise authentication
 
