@@ -117,8 +117,8 @@ spec:
         #!/bin/sh
         set -e
 
-        # Install curl and jq
-        microdnf install -y curl jq && microdnf clean all
+        # Install jq
+        microdnf install -y jq && microdnf clean all
 
         # Authenticate to Vault using ServiceAccount token
         VAULT_ADDR="{vault_url}"
@@ -303,13 +303,6 @@ spec:
         - name: source
           workspace: shared-workspace
 EOF
-----
-
-Apply the pipeline:
-
-[source,bash,role=execute]
-----
-oc apply -f etx-app-promotion-pipeline.yaml
 ----
 
 == Test the Promotion Pipeline
