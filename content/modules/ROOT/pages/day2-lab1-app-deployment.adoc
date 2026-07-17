@@ -336,6 +336,7 @@ Create `environments/dev/deployment.yaml`:
 
 [source,bash,role=execute]
 ----
+mkdir -p environments/dev
 cat > environments/dev/deployment.yaml <<'EOF'
 apiVersion: apps/v1
 kind: Deployment
