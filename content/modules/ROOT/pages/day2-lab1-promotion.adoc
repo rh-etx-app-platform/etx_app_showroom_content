@@ -18,12 +18,176 @@ Before starting this exercise, ensure you have completed:
 
 * xref:day2-lab1-ci-pipeline.adoc[Application CI Pipeline]
 * xref:day2-lab1-app-deployment.adoc[Application Deployment]
+* Secondary cluster enrollment (instructions below)
 
 You should have:
 
 * A working CI pipeline that builds and pushes images
 * Argo CD managing both dev and stage environments
 * Access to Quay registry (pre-configured by bootstrap)
+* Runtime cluster provisioned and enrolled
+
+== Secondary Cluster Enrollment
+
+The promotion pipeline requires two clusters:
+
+* **Factory Cluster** (where you are now) - Development environment and ArgoCD
+* **Runtime Cluster** - Staging and production environments
+
+You need to enroll the runtime cluster with ArgoCD on the factory cluster.
+
+=== Option 1: Automated Enrollment (Recommended)
+
+Download and run the enrollment script:
+
+[source,bash]
+----
+curl -o enroll-secondary-cluster.sh \
+  https://raw.githubusercontent.com/rh-etx-app-platform/etx_app_tooling/main/scripts/enroll-secondary-cluster.sh
+
+chmod +x enroll-secondary-cluster.sh
+----
+
+Edit the configuration section with your cluster credentials (from RHDP emails):
+
+[source,bash]
+----
+export RUNTIME_API="https://api.cluster-xxxxx.dyn.redhatworkshops.io:6443"
+export RUNTIME_USER="admin"
+export RUNTIME_PASSWORD="your-runtime-password"
+
+export FACTORY_API="{api_url}"
+export FACTORY_USER="admin"
+export FACTORY_PASSWORD="{admin_password}"
+----
+
+Run the script:
+
+[source,bash]
+----
+./enroll-secondary-cluster.sh
+----
+
+Skip to <<verify-enrollment,Verify Enrollment>> section below.
+
+=== Option 2: Manual Enrollment
+
+If you prefer to execute commands step-by-step:
+
+==== Step 1: Prepare Runtime Cluster
+
+Login to your runtime cluster using credentials from RHDP:
+
+[source,bash]
+----
+oc login https://api.cluster-YOUR-RUNTIME.dyn.redhatworkshops.io:6443 \
+  -u admin -p YOUR_PASSWORD --insecure-skip-tls-verify
+----
+
+Create ArgoCD manager ServiceAccount:
+
+[source,bash]
+----
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-manager
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-manager-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: argocd-manager
+    namespace: kube-system
+EOF
+----
+
+Generate authentication token:
+
+[source,bash]
+----
+TOKEN=$(oc create token argocd-manager -n kube-system --duration=8760h)
+echo $TOKEN
+----
+
+IMPORTANT: Save this token - you'll need it in the next step.
+
+Create staging namespaces:
+
+[source,bash]
+----
+oc create namespace etx-app-staging
+oc create namespace etx-app-prod
+----
+
+==== Step 2: Register Runtime Cluster
+
+Switch to factory cluster:
+
+[source,bash,subs="attributes+"]
+----
+oc login {api_url} -u admin -p {admin_password} --insecure-skip-tls-verify
+----
+
+Set runtime cluster API URL:
+
+[source,bash]
+----
+RUNTIME_API="https://api.cluster-YOUR-RUNTIME.dyn.redhatworkshops.io:6443"
+----
+
+Create ArgoCD cluster secret:
+
+[source,bash]
+----
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-staging
+  namespace: etx-gitops
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+type: Opaque
+stringData:
+  name: staging
+  server: ${RUNTIME_API}
+  config: |
+    {
+      "bearerToken": "${TOKEN}",
+      "tlsClientConfig": {
+        "insecure": true
+      }
+    }
+EOF
+----
+
+[[verify-enrollment]]
+=== Verify Enrollment
+
+Check cluster secret exists:
+
+[source,bash]
+----
+oc get secret cluster-staging -n etx-gitops
+----
+
+Verify in ArgoCD UI:
+
+. Open {argocd_url}[ArgoCD^]
+. Login with Keycloak SSO
+. Navigate to Settings > Clusters
+. Verify "staging" cluster appears in the list
+
+You can now proceed with the promotion pipeline.
 
 == Understanding the Promotion Flow
 
