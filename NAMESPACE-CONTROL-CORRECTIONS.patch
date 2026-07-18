@@ -1,0 +1,30 @@
+diff --git a/etx-infra-app/migrated-source/workloads/gitops-operator/values.yaml b/etx-infra-app/migrated-source/workloads/gitops-operator/values.yaml
+--- a/etx-infra-app/migrated-source/workloads/gitops-operator/values.yaml
++++ b/etx-infra-app/migrated-source/workloads/gitops-operator/values.yaml
+@@ -8,8 +8,10 @@
+ 
+ # Namespace where operator runs
++# The openshift-gitops namespace is created automatically by the
++# OpenShift GitOps Operator installation, so we should not create it
+ namespace:
+-  create: true
++  create: false
+   name: openshift-gitops
+ 
+ # Operator Subscription settings
+
+diff --git a/etx-infra-app/migrated-source/workloads/vault-secrets-operator/values.yaml b/etx-infra-app/migrated-source/workloads/vault-secrets-operator/values.yaml
+--- a/etx-infra-app/migrated-source/workloads/vault-secrets-operator/values.yaml
++++ b/etx-infra-app/migrated-source/workloads/vault-secrets-operator/values.yaml
+@@ -16,8 +16,10 @@
+ 
+ # Namespace where operator runs
+-# Note: Vault Secrets Operator is cluster-scoped, always openshift-operators
++# The openshift-operators namespace is a built-in OpenShift namespace
++# that always exists, so we should not create it
+ namespace:
+-  create: true
++  create: false
+   name: openshift-operators
+ 
+ # Operator Subscription settings
