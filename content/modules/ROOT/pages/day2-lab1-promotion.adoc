@@ -353,23 +353,21 @@ Create a docker-registry secret in `etx-app-staging` on the *runtime* cluster us
 
 Login to the runtime cluster (credentials from RHDP):
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc login $RUNTIME_API \
-  -u $RUNTIME_USER -p $RUNTIME_PASSWORK --insecure-skip-tls-verify
+  -u $RUNTIME_USER -p $RUNTIME_PASSWORD --insecure-skip-tls-verify
 ----
 
 Replace `$ROBOT_TOKEN` with the `etx-app+promoter` token:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 oc create secret docker-registry quay-pull-secret \
   -n etx-app-staging \
   --docker-server=$QUAY_URL \
   --docker-username='etx-app+promoter' \
-  --docker-password='$ROBOT_TOKEN' \
-  --docker-email='unused@example.com' \
-  --dry-run=client -o yaml | oc apply -f -
+  --docker-password='$ROBOT_TOKEN'
 ----
 
 Switch back to the factory cluster before continuing with the GitOps manifests:
