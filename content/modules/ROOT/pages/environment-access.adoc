@@ -64,7 +64,7 @@ The ETX GitOps ArgoCD instance is your primary GitOps control plane for applicat
 [NOTE]
 ====
 The bootstrap control plane runs in `openshift-gitops` namespace and manages the infrastructure layer.
-The student-facing ArgoCD instance runs in `etx-gitops` namespace.
+The student-facing Argo CD instance runs in `etx-gitops` namespace.
 ====
 
 == Keycloak SSO
@@ -164,46 +164,6 @@ The following infrastructure components have been deployed as part of the bootst
 * ✅ HashiCorp Vault (if enabled)
 * ✅ Web Terminal Operator
 
-== Accessing ConfigMap Data
-
-The provision data is stored in a ConfigMap labeled with `demo.redhat.com/infra: "true"` for automated discovery by RHDP components.
-
-To view all provision data:
-
-[source,bash,role=execute]
-----
-oc get configmap etx-lab-provision-data -n openshift-gitops -o yaml
-----
-
-To extract a specific value:
-
-[source,bash,role=execute,subs="attributes"]
-----
-# Get Keycloak URL
-oc get configmap etx-lab-provision-data -n openshift-gitops \
-  -o jsonpath='{.data.keycloak_url}'
-
-# Get ArgoCD URL
-oc get configmap etx-lab-provision-data -n openshift-gitops \
-  -o jsonpath='{.data.argocd_url}'
-----
-
-== Workshop Metadata
-
-[cols="1,3",options="header"]
-|===
-| Item | Value
-
-| Workshop Name
-| ETX Lab - Day 1 & 2
-
-| Workshop Version
-| 1.0.0
-
-| Bootstrap Repository
-| https://github.com/rhpds/service-enablement-app-platform-factory-gitops[service-enablement-app-platform-factory-gitops,window="_blank"]
-|===
-
 == Next Steps
 
-With your environment credentials in hand, proceed to xref:day1-requirements.adoc[Requirements & Environment Setup] to verify your cluster access.
+Once your environment is verified, proceed to xref:day1-branching-strategies.adoc[Branching Strategies].
