@@ -252,10 +252,12 @@ You will create the organization and repository the pipeline expects, create a r
 . Inside the `etx-app` organization, click btn:[Create New Repository]
 . Configure the repository:
   * **Repository Name:** `etx-app-base-app`
-  * **Repository Visibility:** Public (so the staging cluster can pull without an image pull secret)
+  * **Repository Visibility:** Public
 . Click btn:[Create Public Repository]
 
 NOTE: The organization and repository names must match the destination used later in the promotion pipeline: `etx-app/etx-app-base-app`.
+
+IMPORTANT: This Quay instance disables anonymous pulls (`FEATURE_ANONYMOUS_ACCESS: false`). Even with a public repository, the staging cluster must authenticate using an image pull secret.
 
 === Create a Robot Account
 
@@ -344,6 +346,39 @@ QUAY_URL=$(oc get route -n quay -l quay-component=quay-app-route -o jsonpath='{.
 echo "Using Quay URL: $QUAY_URL"
 ----
 
+==== Create Quay Image Pull Secret on Staging
+
+The staging cluster must authenticate to Quay when pulling images.
+Create a docker-registry secret in `etx-app-staging` on the *runtime* cluster using the robot account credentials.
+
+Login to the runtime cluster (credentials from RHDP):
+
+[source,bash]
+----
+oc login $RUNTIME_API \
+  -u $RUNTIME_USER -p $RUNTIME_PASSWORK --insecure-skip-tls-verify
+----
+
+Replace `$ROBOT_TOKEN` with the `etx-app+promoter` token:
+
+[source,bash]
+----
+oc create secret docker-registry quay-pull-secret \
+  -n etx-app-staging \
+  --docker-server=$QUAY_URL \
+  --docker-username='etx-app+promoter' \
+  --docker-password='$ROBOT_TOKEN' \
+  --docker-email='unused@example.com' \
+  --dry-run=client -o yaml | oc apply -f -
+----
+
+Switch back to the factory cluster before continuing with the GitOps manifests:
+
+[source,bash,subs="attributes+"]
+----
+oc login $FACTORY_API -u $FACTORY_USER -p $FACTORY_PASSWORD --insecure-skip-tls-verify
+----
+
 Then create the deployment manifest:
 
 [source,bash,role=execute]
@@ -370,6 +405,8 @@ spec:
       annotations:
         instrumentation.opentelemetry.io/inject-java: "true"
     spec:
+      imagePullSecrets:
+        - name: quay-pull-secret
       containers:
         - name: etx-app-base-app
           image: ${QUAY_URL}/etx-app/etx-app-base-app:stable
@@ -390,6 +427,7 @@ Key differences from dev:
 * **Namespace**: `etx-app-staging` instead of `etx-app-dev`
 * **Replicas**: Increased to 2 for higher availability
 * **Image**: Uses Quay registry for cross-cluster image distribution instead of internal registry
+* **imagePullSecrets**: References `quay-pull-secret` so the staging cluster can authenticate to Quay
 
 Update `environments/stage/service.yaml` to use `etx-app-staging` namespace:
 
