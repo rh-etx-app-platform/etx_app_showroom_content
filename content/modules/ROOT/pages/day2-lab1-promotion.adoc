@@ -523,6 +523,8 @@ spec:
               value: "parasol"
             - name: POSTGRESQL_PASSWORD
               value: "parasol"
+            - name: QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION
+              value: update
 EOF
 ----
 
@@ -720,8 +722,13 @@ spec:
         # Install git
         dnf install -y git && dnf clean all
 
+        REPO_URL="$(params.gitops-repo-url)"
+        GITLAB_HOST=$(echo "$REPO_URL" | sed -E 's|https?://([^/]+)/.*|\1|')
+
+        git config --global url."https://etx-platform-bot:openshift@${GITLAB_HOST}/".insteadOf "https://${GITLAB_HOST}/"
+
         # Clone GitOps repo
-        git clone $(params.gitops-repo-url) /workspace/gitops
+        git clone "$REPO_URL" /workspace/gitops
         cd /workspace/gitops
 
         # Update the image in staging deployment
