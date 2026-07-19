@@ -56,7 +56,7 @@ export RUNTIME_API="https://api.cluster-xxxxx.dyn.redhatworkshops.io:6443"
 export RUNTIME_USER="admin"
 export RUNTIME_PASSWORD="your-runtime-password"
 
-export FACTORY_API="{cluster_api_url}"
+export FACTORY_API="{openshift_api_url}"
 export FACTORY_USER="admin"
 export FACTORY_PASSWORD="{openshift_cluster_admin_password}"
 ----
