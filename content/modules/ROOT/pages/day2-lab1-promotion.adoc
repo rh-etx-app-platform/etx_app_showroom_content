@@ -245,7 +245,7 @@ You will create the organization and repository the pipeline expects, create a r
 
 === Create the Quay Organization and Repository
 
-. Open {quay_url}[^]
+. Open link:{quay_url}
 . Sign in with Keycloak SSO using `platform-admin` / `openshift`
 . Click btn:[Create New Organization]
 . Set the organization name to `etx-app` and click btn:[Create Organization]
@@ -261,15 +261,16 @@ NOTE: The organization and repository names must match the destination used late
 
 Robot accounts provide token-based credentials for CI/CD pipelines without requiring interactive SSO login.
 
-. In the `etx-app` organization, open the *Robot Accounts* tab
+. In the `etx-app` organization, click the *Settings* gear on the left panel
+. Under `User and Robot Permissions` click the down arrow next to the `Select a team or user...` box (near the btn:[Add Permission] button)
 . Click btn:[Create Robot Account]
 . Name the robot `promoter` and click btn:[Create Robot Account]
-. Grant the robot *Write* permission on the `etx-app-base-app` repository
+. Grant the robot *Write* permission by change the `Read` dropdown to *Write*
+. Click btn:[Add Permission]
+. Click the newly created robot account `etx-app+promoter`
 . When Quay displays the robot credentials, copy both values:
   * **Username:** `etx-app+promoter`
   * **Token:** the generated token
-
-IMPORTANT: Save the robot token now. Quay will not show it again after you close the dialog.
 
 === Update Vault with Robot Credentials
 
@@ -282,11 +283,19 @@ First, confirm the Quay hostname (this is the `server` value stored in Vault):
 oc get route -n quay -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}' && echo
 ----
 
+Next, get the Vault token for login
+[source,bash,role=execute]
+----
+oc get secret etx-vault-bootstrap -n vault -o jsonpath='{.data.root-token}' | base64 -d && echo
+----
+
 Then update the secret in Vault:
 
-. Open {vault_url}[^]
+. Open link:{vault_url}
 . Log in with the *OIDC* method using `platform-admin` / `openshift`
+. From the `Dashboard` click the btn:[View] button next to `secret/` under *Secret engines*
 . Navigate to `secret/registry/quay`
+. Click the *Secret* tab
 . Click btn:[Create new version] (or edit the existing secret)
 . Set the secret values:
   * **server:** the Quay hostname from the command above (no `https://` prefix)
@@ -357,7 +366,7 @@ spec:
           --data "{\"role\":\"pipeline\",\"jwt\":\"$\{SA_TOKEN}\"}" \
           | jq -r '.auth.client_token')
 
-        # Fetch Quay robot credentials
+        # Fetch Quay credentials
         CREDS=$(curl -s --header "X-Vault-Token: $\{VAULT_TOKEN}" \
           "$\{VAULT_ADDR}/v1/secret/data/registry/quay")
 
