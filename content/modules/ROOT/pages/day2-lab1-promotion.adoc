@@ -559,18 +559,6 @@ Copy the dev manifests as a template:
 cp environments/dev/*.yaml environments/stage/
 ----
 
-Update `environments/stage/namespace.yaml`:
-
-[source,bash,role=execute]
-----
-cat > environments/stage/namespace.yaml <<'EOF'
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: etx-app-staging
-EOF
-----
-
 Update `environments/stage/deployment.yaml` to use the `etx-app-staging` namespace and Quay registry.
 
 First, get the Quay URL:
@@ -641,13 +629,6 @@ Update `environments/stage/route.yaml` to use `etx-app-staging` namespace:
 [source,bash,role=execute]
 ----
 sed -i 's/namespace: etx-app-dev/namespace: etx-app-staging/' environments/stage/route.yaml
-----
-
-Update `environments/stage/namespace.yaml`:
-
-[source,bash,role=execute]
-----
-sed -i 's/name: etx-app-dev/name: etx-app-staging/' environments/stage/namespace.yaml
 ----
 
 Verify the changes:
