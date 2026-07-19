@@ -63,7 +63,7 @@ export FACTORY_PASSWORD="{openshift_cluster_admin_password}"
 
 Run the script:
 
-[source,bash]
+[source,bash,role=execute]
 ----
 ./enroll-secondary-cluster.sh
 ----
@@ -182,8 +182,11 @@ oc get secret -n etx-app-dev -l argocd.argoproj.io/secret-type=cluster -o json |
 ----
 
 You should see secrets for:
-- argocd-default-cluster-config - in-cluster
-- cluster-staging - staging
+
+[source,bash]
+----
+argocd-default-cluster-config - in-cluster
+cluster-staging - staging
 ----
 
 You can now proceed with the promotion pipeline.
