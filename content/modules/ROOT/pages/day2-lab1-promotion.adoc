@@ -24,7 +24,7 @@ You should have:
 
 * A working CI pipeline that builds and pushes images
 * Argo CD managing both dev and stage environments
-* Access to Quay registry (pre-configured by bootstrap)
+* Access to Quay via Keycloak SSO (`platform-admin` / `openshift`)
 * Runtime cluster provisioned and enrolled
 
 == Secondary Cluster Enrollment
@@ -236,6 +236,233 @@ The promotion workflow follows these steps:
 * **Promotion is explicit** - you decide when code is ready for staging
 * **GitOps ensures** staging deployments are version-controlled
 
+== Configure Quay for Image Promotion
+
+The promotion pipeline pushes images to Quay at `etx-app/etx-app-base-app` and reads credentials from Vault at `secret/registry/quay`.
+
+Quay authenticates interactive users through Keycloak SSO, so local `quayadmin` credentials cannot be used for automated pushes.
+You will create the organization and repository the pipeline expects, create a robot account for non-interactive authentication, and store the robot credentials in Vault.
+
+=== Create the Quay Organization and Repository
+
+. Open link:{quay_url}
+. Sign in with Keycloak SSO using `platform-admin` / `openshift`
+. Click btn:[Create New Organization]
+. Set the organization name to `etx-app` and click btn:[Create Organization]
+. Inside the `etx-app` organization, click btn:[Create New Repository]
+. Configure the repository:
+  * **Repository Name:** `etx-app-base-app`
+  * **Repository Visibility:** Public
+. Click btn:[Create Public Repository]
+
+NOTE: The organization and repository names must match the destination used later in the promotion pipeline: `etx-app/etx-app-base-app`.
+
+IMPORTANT: This Quay instance disables anonymous pulls (`FEATURE_ANONYMOUS_ACCESS: false`). Even with a public repository, the staging cluster must authenticate using an image pull secret.
+
+=== Create a Robot Account
+
+Robot accounts provide token-based credentials for CI/CD pipelines without requiring interactive SSO login.
+
+. In the `etx-app` organization, click the *Settings* gear on the left panel
+. Under `User and Robot Permissions` click the down arrow next to the `Select a team or user...` box (near the btn:[Add Permission] button)
+. Click btn:[Create Robot Account]
+. Name the robot `promoter` and click btn:[Create Robot Account]
+. Grant the robot *Write* permission by change the `Read` dropdown to *Write*
+. Click btn:[Add Permission]
+. Click the newly created robot account `etx-app+promoter`
+. When Quay displays the robot credentials, copy both values:
+  * **Username:** `etx-app+promoter`
+  * **Token:** the generated token
+
+=== Create Vault Secret with Robot Credentials
+
+Enable a KV secrets engine in Vault and store the robot account credentials so the promotion pipeline can authenticate to Quay.
+
+First, confirm the Quay hostname (this is the `server` value stored in Vault):
+
+[source,bash,role=execute]
+----
+oc get route -n quay -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}' && echo
+----
+
+Next, get the Vault root token:
+
+[source,bash,role=execute]
+----
+oc get secret etx-vault-bootstrap -n vault -o jsonpath='{.data.root-token}' | base64 -d && echo
+----
+
+==== Enable the KV Secrets Engine
+
+. Open link:{vault_url}
+. Log in with the *Token* method using the token above
+. Click *Secrets Engines* in the left navigation
+. Click btn:[Enable new engine]
+. Select *KV*
+. Configure the engine:
+  * **Path:** `secret`
+  * **Version:** `2`
+. Click btn:[Enable Engine]
+
+==== Create the Quay Credentials Secret
+
+. From the `secret/` secrets engine, click btn:[Create secret]
+. Set the path to `registry/quay`
+. Add the following secret data:
+  * **server:** the Quay hostname from the command above (no `https://` prefix)
+  * **username:** `etx-app+promoter`
+  * **password:** the robot token you copied earlier
+. Click btn:[Save]
+
+The promotion pipeline tasks you create next will fetch these credentials at runtime via Kubernetes auth to Vault.
+
+== Multi-Cluster Promotion to Stage
+
+=== Create Stage Environment Manifests
+
+Create stage environment manifests in your GitOps repository:
+
+[source,bash,role=execute]
+----
+cd ~/workshop/etx-app-gitops
+mkdir -p environments/stage
+----
+
+Copy the dev manifests as a template:
+
+[source,bash,role=execute]
+----
+cp environments/dev/*.yaml environments/stage/
+----
+
+Update `environments/stage/deployment.yaml` to use the `etx-app-staging` namespace and Quay registry.
+
+First, get the Quay URL:
+
+[source,bash,role=execute]
+----
+# Get Quay URL dynamically
+QUAY_URL=$(oc get route -n quay -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}')
+echo "Using Quay URL: $QUAY_URL"
+----
+
+==== Create Quay Image Pull Secret on Staging
+
+The staging cluster must authenticate to Quay when pulling images.
+Create a docker-registry secret in `etx-app-staging` on the *runtime* cluster using the robot account credentials.
+
+Login to the runtime cluster (credentials from RHDP):
+
+[source,bash,role=execute]
+----
+oc login $RUNTIME_API \
+  -u $RUNTIME_USER -p $RUNTIME_PASSWORD --insecure-skip-tls-verify
+----
+
+Replace `$ROBOT_TOKEN` with the `etx-app+promoter` token:
+
+[source,bash,role=execute]
+----
+oc create secret docker-registry quay-pull-secret \
+  -n etx-app-staging \
+  --docker-server=$QUAY_URL \
+  --docker-username='etx-app+promoter' \
+  --docker-password='$ROBOT_TOKEN'
+----
+
+Switch back to the factory cluster before continuing with the GitOps manifests:
+
+[source,bash,subs="attributes+"]
+----
+oc login $FACTORY_API -u $FACTORY_USER -p $FACTORY_PASSWORD --insecure-skip-tls-verify
+----
+
+==== Create Application Deployment Manifest
+
+[source,bash,role=execute]
+----
+cat > environments/stage/deployment.yaml <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etx-app-base-app
+  namespace: etx-app-staging
+  labels:
+    app: etx-app-base-app
+  annotations:
+    instrumentation.opentelemetry.io/inject-java: "true"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: etx-app-base-app
+  template:
+    metadata:
+      labels:
+        app: etx-app-base-app
+      annotations:
+        instrumentation.opentelemetry.io/inject-java: "true"
+    spec:
+      imagePullSecrets:
+        - name: quay-pull-secret
+      containers:
+        - name: etx-app-base-app
+          image: ${QUAY_URL}/etx-app/etx-app-base-app:stable
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          env:
+            - name: POSTGRESQL_HOST
+              value: "parasol-db.etx-app-staging.svc.cluster.local"
+            - name: POSTGRESQL_DATABASE
+              value: "parasol"
+            - name: POSTGRESQL_USER
+              value: "parasol"
+            - name: POSTGRESQL_PASSWORD
+              value: "parasol"
+            - name: QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION
+              value: update
+EOF
+----
+
+Key differences from dev:
+
+* **Namespace**: `etx-app-staging` instead of `etx-app-dev`
+* **Replicas**: Increased to 2 for higher availability
+* **Image**: Uses Quay registry for cross-cluster image distribution instead of internal registry
+* **imagePullSecrets**: References `quay-pull-secret` so the staging cluster can authenticate to Quay
+
+Update `environments/stage/service.yaml` and `environments/stage/route.yaml` to use the `etx-app-staging` namespace:
+
+[source,bash,role=execute]
+----
+sed -i 's/namespace: etx-app-dev/namespace: etx-app-staging/' \
+  environments/stage/service.yaml \
+  environments/stage/route.yaml
+----
+
+Verify the changes:
+
+[source,bash,role=execute]
+----
+grep namespace environments/stage/*.yaml
+----
+
+Commit and push:
+
+[source,bash,role=execute]
+----
+git add environments/stage/
+git commit -m "feat: add stage environment manifests"
+git push origin main
+----
+
 == Create Promotion Pipeline Resources
 
 === Pipeline Workspace
@@ -261,7 +488,7 @@ EOF
 
 === Fetch Quay Credentials from Vault
 
-Create a task to retrieve Quay credentials from Vault:
+Create a task to retrieve the Quay robot credentials you stored in Vault:
 
 [source,bash,role=execute,subs="attributes+"]
 ----
@@ -343,10 +570,15 @@ spec:
         echo "Source: $(params.source-image)"
         echo "Destination: $(params.dest-image)"
 
+        # Authenticate to the OpenShift internal registry with the
+        # pipeline ServiceAccount token (destination uses Quay robot creds)
+        SRC_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+
         # Copy image using skopeo
         skopeo copy \
           --src-tls-verify=false \
           --dest-tls-verify=false \
+          --src-creds="pipeline:$\{SRC_TOKEN}" \
           --dest-creds="$(params.dest-username):$(params.dest-password)" \
           "docker://$(params.source-image)" \
           "docker://$(params.dest-image)"
@@ -392,22 +624,30 @@ spec:
         # Install git
         dnf install -y git && dnf clean all
 
+        REPO_URL="$(params.gitops-repo-url)"
+        GITLAB_HOST=$(echo "$REPO_URL" | sed -E 's|https?://([^/]+)/.*|\1|')
+
+        git config --global url."https://etx-platform-bot:openshift@${GITLAB_HOST}/".insteadOf "https://${GITLAB_HOST}/"
+
         # Clone GitOps repo
-        git clone $(params.gitops-repo-url) /workspace/gitops
+        git clone "$REPO_URL" /workspace/gitops
         cd /workspace/gitops
 
         # Update the image in staging deployment
         sed -i "s|image:.*etx-app-base-app:.*|image: $(params.image-url)|" \
           environments/stage/deployment.yaml
 
-        # Commit and push
+        # Commit and push only when the image reference changed
         git config user.email "$(params.git-email)"
         git config user.name "$(params.git-username)"
         git add environments/stage/deployment.yaml
-        git commit -m "Promote to staging: $(params.image-url)"
-        git push origin main
-
-        echo "GitOps repository updated successfully!"
+        if git diff --cached --quiet; then
+          echo "No changes to commit - staging already references $(params.image-url)"
+        else
+          git commit -m "Promote to staging: $(params.image-url)"
+          git push origin main
+          echo "GitOps repository updated successfully!"
+        fi
 EOF
 ----
 
@@ -540,113 +780,6 @@ Watch the pipeline logs. You should see:
 2. Image copied from internal registry to Quay
 3. GitOps repository updated
 
-== Multi-Cluster Promotion to Stage
-
-=== Create Stage Environment Manifests
-
-Create stage environment manifests in your GitOps repository:
-
-[source,bash,role=execute]
-----
-cd ~/workshop/etx-app-gitops
-mkdir -p environments/stage
-----
-
-Copy the dev manifests as a template:
-
-[source,bash,role=execute]
-----
-cp environments/dev/*.yaml environments/stage/
-----
-
-Update `environments/stage/deployment.yaml` to use the `etx-app-staging` namespace and Quay registry.
-
-First, get the Quay URL:
-
-[source,bash,role=execute]
-----
-# Get Quay URL dynamically
-QUAY_URL=$(oc get route -n quay -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}')
-echo "Using Quay URL: $QUAY_URL"
-----
-
-Then create the deployment manifest:
-
-[source,bash,role=execute]
-----
-cat > environments/stage/deployment.yaml <<EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: etx-app-base-app
-  namespace: etx-app-staging
-  labels:
-    app: etx-app-base-app
-  annotations:
-    instrumentation.opentelemetry.io/inject-java: "true"
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: etx-app-base-app
-  template:
-    metadata:
-      labels:
-        app: etx-app-base-app
-      annotations:
-        instrumentation.opentelemetry.io/inject-java: "true"
-    spec:
-      containers:
-        - name: etx-app-base-app
-          image: ${QUAY_URL}/etx-app/etx-app-base-app:stable
-          ports:
-            - containerPort: 8080
-          resources:
-            requests:
-              cpu: 500m
-              memory: 1Gi
-            limits:
-              cpu: "2"
-              memory: 2Gi
-EOF
-----
-
-Key differences from dev:
-
-* **Namespace**: `etx-app-staging` instead of `etx-app-dev`
-* **Replicas**: Increased to 2 for higher availability
-* **Image**: Uses Quay registry for cross-cluster image distribution instead of internal registry
-
-Update `environments/stage/service.yaml` to use `etx-app-staging` namespace:
-
-[source,bash,role=execute]
-----
-sed -i 's/namespace: etx-app-dev/namespace: etx-app-staging/' environments/stage/service.yaml
-----
-
-Update `environments/stage/route.yaml` to use `etx-app-staging` namespace:
-
-[source,bash,role=execute]
-----
-sed -i 's/namespace: etx-app-dev/namespace: etx-app-staging/' environments/stage/route.yaml
-----
-
-Verify the changes:
-
-[source,bash,role=execute]
-----
-grep namespace environments/stage/*.yaml
-----
-
-Commit and push:
-
-[source,bash,role=execute]
-----
-git add environments/stage/
-git commit -m "feat: add stage environment manifests"
-git push origin main
-----
-
 === Create Stage Application
 
 Create an Argo CD Application for the staging environment on the secondary cluster.
@@ -670,6 +803,8 @@ kind: Application
 metadata:
   name: etx-app-stage
   namespace: etx-app-dev
+  labels:
+    app.kubernetes.io/part-of: etx_app_base_app
 spec:
   project: default
   source:

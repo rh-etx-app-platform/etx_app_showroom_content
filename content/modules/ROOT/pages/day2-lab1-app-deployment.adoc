@@ -468,6 +468,8 @@ kind: Application
 metadata:
   name: etx-app-dev
   namespace: etx-app-dev
+  labels:
+    app.kubernetes.io/part-of: etx_app_base_app
 spec:
   project: default
   source:
@@ -566,7 +568,12 @@ spec:
         # Install git
         dnf install -y git && dnf clean all
 
-        git clone $(params.gitops-repo-url) /tmp/gitops
+        REPO_URL="$(params.gitops-repo-url)"
+        GITLAB_HOST=$(echo "$REPO_URL" | sed -E 's|https?://([^/]+)/.*|\1|')
+
+        git config --global url."https://etx-platform-bot:openshift@${GITLAB_HOST}/".insteadOf "https://${GITLAB_HOST}/"
+
+        git clone "$REPO_URL" /tmp/gitops
         cd /tmp/gitops/environments/$(params.environment)
 
         # Update the image tag in the deployment manifest
