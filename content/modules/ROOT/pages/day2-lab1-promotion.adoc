@@ -245,7 +245,7 @@ You will create the organization and repository the pipeline expects, create a r
 
 === Create the Quay Organization and Repository
 
-. Open link:{quay_url}
+. Open link:{quay_url}[Quay] or click the *Quay* tab in your Showroom
 . Sign in with Keycloak SSO using `platform-admin` / `openshift`
 . Click btn:[Create New Organization]
 . Set the organization name to `etx-app` and click btn:[Create Organization]
@@ -294,18 +294,9 @@ oc get secret etx-vault-bootstrap -n vault -o jsonpath='{.data.root-token}' | ba
 
 ==== Enable the KV Secrets Engine
 
-. Open link:{vault_url}
+. Open link:{vault_url}[Vault] or click the *Vault* tab in your Showroom
 . Log in with the *Token* method using the token above
-. Click *Secrets Engines* in the left navigation
-. Click btn:[Enable new engine]
-. Select *KV*
-. Configure the engine:
-  * **Path:** `secret`
-  * **Version:** `2`
-. Click btn:[Enable Engine]
-
-==== Create the Quay Credentials Secret
-
+. From the Dashboard click *secret/* under the *Secret engines*
 . From the `secret/` secrets engine, click btn:[Create secret]
 . Set the path to `registry/quay`
 . Add the following secret data:
@@ -367,12 +358,12 @@ oc create secret docker-registry quay-pull-secret \
   -n etx-app-staging \
   --docker-server=$QUAY_URL \
   --docker-username='etx-app+promoter' \
-  --docker-password='$ROBOT_TOKEN'
+  --docker-password=$ROBOT_TOKEN
 ----
 
 Switch back to the factory cluster before continuing with the GitOps manifests:
 
-[source,bash,subs="attributes+"]
+[source,bash,role=execute]
 ----
 oc login $FACTORY_API -u $FACTORY_USER -p $FACTORY_PASSWORD --insecure-skip-tls-verify
 ----
@@ -578,7 +569,7 @@ spec:
         skopeo copy \
           --src-tls-verify=false \
           --dest-tls-verify=false \
-          --src-creds="pipeline:$\{SRC_TOKEN}" \
+          --src-creds="pipeline:${SRC_TOKEN}" \
           --dest-creds="$(params.dest-username):$(params.dest-password)" \
           "docker://$(params.source-image)" \
           "docker://$(params.dest-image)"
