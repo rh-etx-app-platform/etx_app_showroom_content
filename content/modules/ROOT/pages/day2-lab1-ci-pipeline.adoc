@@ -707,6 +707,8 @@ oc logs -n etx-app-dev -l eventlistener=gitlab-listener
 
 == Verify the Pipeline
 
+NOTE: If you configured Git credentials in the xref:day2-lab1-devspaces.adoc#_configure_git_credentials_for_push_operations[Dev Spaces lab], you can push directly. Otherwise, ensure you have configured your GitLab Personal Access Token before proceeding.
+
 Push a change to your repository and confirm the pipeline triggers:
 
 [source,bash,role=execute]

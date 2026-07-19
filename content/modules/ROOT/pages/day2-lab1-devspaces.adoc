@@ -275,6 +275,64 @@ ls -la devfile.yaml
 
 You should see `feature/add-devfile` as the current branch and the `devfile.yaml` file in the repository root.
 
+=== Configure Git Credentials for Push Operations
+
+GitLab is configured with Keycloak OIDC authentication. While Dev Spaces can clone repositories using OAuth, **push operations require a Personal Access Token (PAT)** because GitLab OIDC does not support username/password authentication for Git operations.
+
+==== Create GitLab Personal Access Token
+
+. Access GitLab: {gitlab_url}[^]
+. Log in with Keycloak SSO (`platform-developer` / `openshift`)
+. Create a Personal Access Token:
+  * Click on your profile icon (top right) → **Edit Profile**
+  * Navigate to **Access Tokens** in the left sidebar
+  * Click **Add new token**
+  * Configure the token:
+    - **Token name**: `devspaces-git-access`
+    - **Expiration date**: Select a date (e.g., 30 days from now)
+    - **Select scopes**: Check `write_repository` and `read_repository`
+  * Click **Create personal access token**
+  * **IMPORTANT**: Copy the token immediately (it won't be shown again)
+
+==== Store Credentials in Dev Spaces
+
+Configure Git to cache your credentials in the Dev Spaces terminal:
+
+[source,bash,role=execute]
+----
+# Enable credential storage
+git config --global credential.helper store
+
+# Trigger credential prompt with a git operation
+git pull
+----
+
+When prompted for credentials:
+
+* **Username**: `platform-developer`
+* **Password**: _paste your Personal Access Token_
+
+The credentials are now cached in `~/.git-credentials` for future git operations.
+
+==== Verify Git Push Works
+
+Test that you can push to the repository:
+
+[source,bash,role=execute]
+----
+# Make a trivial change
+echo "# Test git credentials" >> README.md
+git add README.md
+git commit -m "Test git credentials"
+git push origin feature/add-devfile
+----
+
+Expected output: `Branch 'feature/add-devfile' set up to track remote branch...`
+
+If the push succeeds, your Git credentials are configured correctly and you can proceed with the workshop.
+
+TIP: If you need to update your token later (e.g., after expiration), delete `~/.git-credentials` and repeat the credential configuration steps.
+
 === Check Environment Variables
 
 Verify the environment variables from your devfile are present:
