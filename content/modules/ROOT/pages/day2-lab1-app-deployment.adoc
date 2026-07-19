@@ -468,6 +468,8 @@ kind: Application
 metadata:
   name: etx-app-dev
   namespace: etx-app-dev
+  labels:
+    app.kubernetes.io/part-of: etx_app_base_app
 spec:
   project: default
   source:
