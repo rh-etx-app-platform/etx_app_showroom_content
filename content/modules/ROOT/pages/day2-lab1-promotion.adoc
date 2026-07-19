@@ -377,104 +377,7 @@ Switch back to the factory cluster before continuing with the GitOps manifests:
 oc login $FACTORY_API -u $FACTORY_USER -p $FACTORY_PASSWORD --insecure-skip-tls-verify
 ----
 
-==== Create Stage Database Manifests
-
-Dev Spaces uses the PostgreSQL instance created manually in xref:day2-lab1-supporting-services.adoc[Supporting Services].
-Staging has no such bootstrap, so add the same database resources to the stage GitOps path for Argo CD to deploy on the runtime cluster:
-
-[source,bash,role=execute]
-----
-cat > environments/stage/database.yaml <<'EOF'
-apiVersion: v1
-kind: Secret
-metadata:
-  name: parasol-db-secret
-  namespace: etx-app-staging
-type: Opaque
-stringData:
-  database-name: parasol
-  database-user: parasol
-  database-password: parasol
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: parasol-db
-  namespace: etx-app-staging
-spec:
-  ports:
-    - name: postgresql
-      port: 5432
-      targetPort: 5432
-  selector:
-    app: parasol-db
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: parasol-db
-  namespace: etx-app-staging
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: parasol-db
-  template:
-    metadata:
-      labels:
-        app: parasol-db
-    spec:
-      containers:
-        - name: postgresql
-          image: registry.redhat.io/rhel9/postgresql-16:latest
-          ports:
-            - containerPort: 5432
-          env:
-            - name: POSTGRESQL_USER
-              valueFrom:
-                secretKeyRef:
-                  name: parasol-db-secret
-                  key: database-user
-            - name: POSTGRESQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: parasol-db-secret
-                  key: database-password
-            - name: POSTGRESQL_DATABASE
-              valueFrom:
-                secretKeyRef:
-                  name: parasol-db-secret
-                  key: database-name
-          volumeMounts:
-            - name: postgresql-data
-              mountPath: /var/lib/pgsql/data
-          livenessProbe:
-            exec:
-              command:
-                - /usr/libexec/check-container
-                - --live
-            initialDelaySeconds: 120
-            timeoutSeconds: 10
-          readinessProbe:
-            exec:
-              command:
-                - /usr/libexec/check-container
-            initialDelaySeconds: 5
-            timeoutSeconds: 1
-          resources:
-            limits:
-              memory: 512Mi
-              cpu: 500m
-            requests:
-              memory: 256Mi
-              cpu: 100m
-      volumes:
-        - name: postgresql-data
-          emptyDir: {}
-EOF
-----
-
-Then create the application deployment manifest:
+==== Create Application Deployment Manifest
 
 [source,bash,role=execute]
 ----
@@ -534,7 +437,6 @@ Key differences from dev:
 * **Replicas**: Increased to 2 for higher availability
 * **Image**: Uses Quay registry for cross-cluster image distribution instead of internal registry
 * **imagePullSecrets**: References `quay-pull-secret` so the staging cluster can authenticate to Quay
-* **Database**: Stage includes `database.yaml` (Secret, Service, Deployment) managed by Argo CD; `POSTGRESQL_HOST` points at that Service
 
 Update `environments/stage/service.yaml` and `environments/stage/route.yaml` to use the `etx-app-staging` namespace:
 
@@ -557,7 +459,7 @@ Commit and push:
 [source,bash,role=execute]
 ----
 git add environments/stage/
-git commit -m "feat: add stage environment manifests (app + database)"
+git commit -m "feat: add stage environment manifests"
 git push origin main
 ----
 
