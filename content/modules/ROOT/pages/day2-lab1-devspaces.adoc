@@ -294,7 +294,7 @@ GitLab is configured with Keycloak OIDC authentication. While Dev Spaces can clo
   * Click **Create personal access token**
   * **IMPORTANT**: Copy the token immediately (it won't be shown again)
 
-==== Store Credentials in Dev Spaces
+==== Configure Git Authentication
 
 Configure Git to use your Personal Access Token:
 
@@ -307,19 +307,11 @@ git config --global user.name "Platform Developer"
 # Enable credential storage
 git config --global credential.helper store
 
-# Store your GitLab credentials
-# Replace YOUR_PERSONAL_ACCESS_TOKEN with the token you copied
-cat > ~/.git-credentials <<EOF
-https://platform-developer:YOUR_PERSONAL_ACCESS_TOKEN@gitlab.{deployer_domain}
-EOF
-
-# Secure the credentials file
-chmod 600 ~/.git-credentials
+# Update the Git remote URL to include your username
+git remote set-url origin https://platform-developer@gitlab.{deployer_domain}/software-factory/etx_app_base_app.git
 ----
 
-IMPORTANT: Replace `YOUR_PERSONAL_ACCESS_TOKEN` in the command above with the actual token you copied from GitLab.
-
-The credentials are now stored in `~/.git-credentials` and Git will use them automatically for all future operations.
+Now when you perform a `git push`, Git will only prompt for your **password** (not username). You will paste your Personal Access Token as the password, and it will be automatically saved for future operations.
 
 ==== Verify Git Push Works
 
@@ -334,21 +326,26 @@ git commit -m "Test git credentials"
 git push origin feature/add-devfile
 ----
 
-Expected output:
+The **first time** you push, Git will prompt for your password in the terminal:
+
+[source,text]
+----
+Password for 'https://platform-developer@gitlab.apps.cluster-GUID.dyn.redhatworkshops.io':
+----
+
+Paste your Personal Access Token and press Enter. The token will be saved automatically.
+
+Expected output after authentication:
 
 [source,text]
 ----
 Enumerating objects: 5, done.
-Counting objects: 100% (5/5), done.
-Delta compression using up to 16 threads
-Compressing objects: 100% (3/3), done.
-Writing objects: 100% (3/3), 324 bytes | 324.00 KiB/s, done.
-Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
-To https://gitlab.apps.cluster-GUID.dyn.redhatworkshops.io/software-factory/etx_app_base_app.git
+...
+To https://platform-developer@gitlab.apps.cluster-GUID.dyn.redhatworkshops.io/software-factory/etx_app_base_app.git
    abc1234..def5678  feature/add-devfile -> feature/add-devfile
 ----
 
-If the push succeeds without prompting for credentials, your Git authentication is configured correctly.
+Future `git push` commands will work without prompting for credentials.
 
 TIP: If you need to update your token later (e.g., after expiration), delete `~/.git-credentials` and repeat the credential configuration steps.
 
