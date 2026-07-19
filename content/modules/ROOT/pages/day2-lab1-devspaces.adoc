@@ -303,16 +303,17 @@ Configure Git to cache your credentials in the Dev Spaces terminal:
 # Enable credential storage
 git config --global credential.helper store
 
-# Trigger credential prompt with a git operation
-git pull
+# Set your Git identity
+git config --global user.email "platform-developer@example.com"
+git config --global user.name "Platform Developer"
 ----
 
-When prompted for credentials:
+The next time you perform a `git push`, Git will prompt for credentials in the terminal. When that happens:
 
-* **Username**: `platform-developer`
-* **Password**: _paste your Personal Access Token_
+* At `Username:` prompt → type `platform-developer` and press Enter
+* At `Password:` prompt → paste your Personal Access Token and press Enter
 
-The credentials are now cached in `~/.git-credentials` for future git operations.
+The credentials will be automatically saved to `~/.git-credentials` for all future git operations.
 
 ==== Verify Git Push Works
 
@@ -327,9 +328,27 @@ git commit -m "Test git credentials"
 git push origin feature/add-devfile
 ----
 
-Expected output: `Branch 'feature/add-devfile' set up to track remote branch...`
+When you run `git push` for the first time, you'll see prompts in the terminal:
 
-If the push succeeds, your Git credentials are configured correctly and you can proceed with the workshop.
+[source,text]
+----
+Username for 'https://gitlab.apps.cluster-GUID.dyn.redhatworkshops.io': platform-developer
+Password for 'https://platform-developer@gitlab.apps.cluster-GUID.dyn.redhatworkshops.io':
+----
+
+Type your username, press Enter, paste your PAT token, press Enter.
+
+Expected output after entering credentials:
+
+[source,text]
+----
+Enumerating objects: 5, done.
+...
+To https://gitlab.apps.cluster-GUID.dyn.redhatworkshops.io/software-factory/etx_app_base_app.git
+   abc1234..def5678  feature/add-devfile -> feature/add-devfile
+----
+
+If the push succeeds, your Git credentials are configured correctly and cached for future operations.
 
 TIP: If you need to update your token later (e.g., after expiration), delete `~/.git-credentials` and repeat the credential configuration steps.
 
