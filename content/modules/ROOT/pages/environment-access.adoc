@@ -39,14 +39,20 @@ Access your OpenShift cluster using the credentials below:
 
 === CLI Login
 
-To log in via the CLI, use:
+You can use the OpenShift CLI to log in from either your local machine or using the "Terminal" tab.
 
-[source,bash,role=execute,subs="attributes"]
-----
-oc login --server={openshift_api_url}
-----
+First request a new token by clicking link:https://oauth-openshift.{openshift_cluster_ingress_domain}/oauth/token/request[here,window="_blank"].
 
-== ArgoCD (ETX GitOps)
+Authenticate to OpenShift using the credentials found above.
+
+Once authenticated, you will be presented with a command that can be used to either authenticate from your local machine or from the "Terminal" tab.
+
+[NOTE]
+====
+It is recommended that you use the "Terminal" tab to log in to the cluster and work through the exercises as it is pre-configured with necessary tools.
+====
+
+== Argo CD (ETX GitOps)
 
 The ETX GitOps ArgoCD instance is your primary GitOps control plane for application deployments.
 
