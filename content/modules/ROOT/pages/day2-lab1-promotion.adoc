@@ -24,7 +24,7 @@ You should have:
 
 * A working CI pipeline that builds and pushes images
 * Argo CD managing both dev and stage environments
-* Access to Quay registry (pre-configured by bootstrap)
+* Access to Quay via Keycloak SSO (`platform-admin` / `openshift`)
 * Runtime cluster provisioned and enrolled
 
 == Secondary Cluster Enrollment
@@ -236,6 +236,68 @@ The promotion workflow follows these steps:
 * **Promotion is explicit** - you decide when code is ready for staging
 * **GitOps ensures** staging deployments are version-controlled
 
+== Configure Quay for Image Promotion
+
+The promotion pipeline pushes images to Quay at `etx-app/etx-app-base-app` and reads credentials from Vault at `secret/registry/quay`.
+
+Quay authenticates interactive users through Keycloak SSO, so the bootstrap `quayadmin` credentials can no longer be used for automated pushes.
+You will create the organization and repository the pipeline expects, create a robot account for non-interactive authentication, and update Vault with the robot credentials.
+
+=== Create the Quay Organization and Repository
+
+. Open {quay_url}[^]
+. Sign in with Keycloak SSO using `platform-admin` / `openshift`
+. Click btn:[Create New Organization]
+. Set the organization name to `etx-app` and click btn:[Create Organization]
+. Inside the `etx-app` organization, click btn:[Create New Repository]
+. Configure the repository:
+  * **Repository Name:** `etx-app-base-app`
+  * **Repository Visibility:** Public (so the staging cluster can pull without an image pull secret)
+. Click btn:[Create Public Repository]
+
+NOTE: The organization and repository names must match the destination used later in the promotion pipeline: `etx-app/etx-app-base-app`.
+
+=== Create a Robot Account
+
+Robot accounts provide token-based credentials for CI/CD pipelines without requiring interactive SSO login.
+
+. In the `etx-app` organization, open the *Robot Accounts* tab
+. Click btn:[Create Robot Account]
+. Name the robot `promoter` and click btn:[Create Robot Account]
+. Grant the robot *Write* permission on the `etx-app-base-app` repository
+. When Quay displays the robot credentials, copy both values:
+  * **Username:** `etx-app+promoter`
+  * **Token:** the generated token
+
+IMPORTANT: Save the robot token now. Quay will not show it again after you close the dialog.
+
+=== Update Vault with Robot Credentials
+
+Replace the bootstrap `quayadmin` values in Vault with the robot account credentials so the promotion pipeline can authenticate to Quay.
+
+First, confirm the Quay hostname (this is the `server` value stored in Vault):
+
+[source,bash,role=execute]
+----
+oc get route -n quay -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}' && echo
+----
+
+Then update the secret in Vault:
+
+. Open {vault_url}[^]
+. Log in with the *OIDC* method using `platform-admin` / `openshift`
+. Navigate to `secret/registry/quay`
+. Click btn:[Create new version] (or edit the existing secret)
+. Set the secret values:
+  * **server:** the Quay hostname from the command above (no `https://` prefix)
+  * **username:** `etx-app+promoter`
+  * **password:** the robot token you copied earlier
+. Click btn:[Save]
+
+TIP: Leave any existing `server` value unchanged if it already matches the Quay route hostname. Only the `username` and `password` fields must change from `quayadmin` to the robot account.
+
+The promotion pipeline tasks you create next will fetch these credentials at runtime via Kubernetes auth to Vault.
+
 == Create Promotion Pipeline Resources
 
 === Pipeline Workspace
@@ -261,7 +323,7 @@ EOF
 
 === Fetch Quay Credentials from Vault
 
-Create a task to retrieve Quay credentials from Vault:
+Create a task to retrieve the Quay robot credentials you stored in Vault:
 
 [source,bash,role=execute,subs="attributes+"]
 ----
@@ -295,7 +357,7 @@ spec:
           --data "{\"role\":\"pipeline\",\"jwt\":\"$\{SA_TOKEN}\"}" \
           | jq -r '.auth.client_token')
 
-        # Fetch Quay credentials
+        # Fetch Quay robot credentials
         CREDS=$(curl -s --header "X-Vault-Token: $\{VAULT_TOKEN}" \
           "$\{VAULT_ADDR}/v1/secret/data/registry/quay")
 
