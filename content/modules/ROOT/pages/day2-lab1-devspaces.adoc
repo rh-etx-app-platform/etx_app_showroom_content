@@ -296,24 +296,30 @@ GitLab is configured with Keycloak OIDC authentication. While Dev Spaces can clo
 
 ==== Store Credentials in Dev Spaces
 
-Configure Git to cache your credentials in the Dev Spaces terminal:
+Configure Git to use your Personal Access Token:
 
-[source,bash,role=execute]
+[source,bash,role=execute,subs="attributes"]
 ----
+# Set your Git identity (required for commits)
+git config --global user.email "platform-developer@example.com"
+git config --global user.name "Platform Developer"
+
 # Enable credential storage
 git config --global credential.helper store
 
-# Set your Git identity
-git config --global user.email "platform-developer@example.com"
-git config --global user.name "Platform Developer"
+# Store your GitLab credentials
+# Replace YOUR_PERSONAL_ACCESS_TOKEN with the token you copied
+cat > ~/.git-credentials <<EOF
+https://platform-developer:YOUR_PERSONAL_ACCESS_TOKEN@gitlab.{deployer_domain}
+EOF
+
+# Secure the credentials file
+chmod 600 ~/.git-credentials
 ----
 
-The next time you perform a `git push`, Git will prompt for credentials in the terminal. When that happens:
+IMPORTANT: Replace `YOUR_PERSONAL_ACCESS_TOKEN` in the command above with the actual token you copied from GitLab.
 
-* At `Username:` prompt → type `platform-developer` and press Enter
-* At `Password:` prompt → paste your Personal Access Token and press Enter
-
-The credentials will be automatically saved to `~/.git-credentials` for all future git operations.
+The credentials are now stored in `~/.git-credentials` and Git will use them automatically for all future operations.
 
 ==== Verify Git Push Works
 
@@ -328,27 +334,21 @@ git commit -m "Test git credentials"
 git push origin feature/add-devfile
 ----
 
-When you run `git push` for the first time, you'll see prompts in the terminal:
-
-[source,text]
-----
-Username for 'https://gitlab.apps.cluster-GUID.dyn.redhatworkshops.io': platform-developer
-Password for 'https://platform-developer@gitlab.apps.cluster-GUID.dyn.redhatworkshops.io':
-----
-
-Type your username, press Enter, paste your PAT token, press Enter.
-
-Expected output after entering credentials:
+Expected output:
 
 [source,text]
 ----
 Enumerating objects: 5, done.
-...
+Counting objects: 100% (5/5), done.
+Delta compression using up to 16 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 324 bytes | 324.00 KiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
 To https://gitlab.apps.cluster-GUID.dyn.redhatworkshops.io/software-factory/etx_app_base_app.git
    abc1234..def5678  feature/add-devfile -> feature/add-devfile
 ----
 
-If the push succeeds, your Git credentials are configured correctly and cached for future operations.
+If the push succeeds without prompting for credentials, your Git authentication is configured correctly.
 
 TIP: If you need to update your token later (e.g., after expiration), delete `~/.git-credentials` and repeat the credential configuration steps.
 
