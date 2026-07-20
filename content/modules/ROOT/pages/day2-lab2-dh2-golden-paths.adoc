@@ -342,7 +342,7 @@ You update the existing `rhdh-config` ConfigMap in the `setup-rhdh` namespace—
     catalog:
       locations:
         - type: url
-          target: '{gitlab_url}/software-factory/golden-path-quarkus/-/raw/main/template.yaml'
+          target: '{gitlab_url}/software-factory/golden-path-quarkus/-/blob/main/template.yaml'
           rules:
             - allow: [Template]
 ----

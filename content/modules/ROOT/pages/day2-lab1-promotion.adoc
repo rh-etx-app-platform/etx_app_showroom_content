@@ -867,7 +867,7 @@ oc get application etx-app-dev -n etx-app-dev -o jsonpath='{.status.sync.status}
 oc get pods -n etx-app-dev -l app=etx-app-base-app
 
 # Check application health endpoint
-curl http://$(oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}')/q/health
+curl https://$(oc get route etx-app-base-app -n etx-app-dev -o jsonpath='{.spec.host}')/q/health
 
 # Check OpenTelemetry injection
 oc get pod -n etx-app-dev -l app=etx-app-base-app \
