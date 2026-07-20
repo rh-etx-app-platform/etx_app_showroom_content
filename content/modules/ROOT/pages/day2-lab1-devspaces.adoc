@@ -72,17 +72,8 @@ components:
           value: "0.0.0.0"
         - name: MAVEN_OPTS
           value: "-Dmaven.repo.local=/home/user/.m2/repository"
-        # External service connections
-        - name: POSTGRESQL_HOST
-          value: "parasol-db.etx-app-dev.svc.cluster.local"
-        - name: POSTGRESQL_DATABASE
-          value: "parasol"
-        - name: POSTGRESQL_USER
-          value: "parasol"
-        - name: POSTGRESQL_PASSWORD
-          value: "parasol"
-        - name: KAFKA_BOOTSTRAP_SERVERS
-          value: "parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092"
+        # POSTGRESQL_* and KAFKA_BOOTSTRAP_SERVERS are injected automatically
+        # via the devspaces-parasol-services secret created in Supporting Services
       memoryLimit: 5Gi
       cpuLimit: 2500m
       volumeMounts:
@@ -277,7 +268,7 @@ You should see `feature/add-devfile` as the current branch and the `devfile.yaml
 
 === Check Environment Variables
 
-Verify the environment variables from your devfile are present:
+Verify the environment variables injected by the `devspaces-parasol-services` secret are present:
 
 [source,bash,role=execute]
 ----
@@ -299,12 +290,12 @@ KAFKA_BOOTSTRAP_SERVERS: parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.l
 
 [IMPORTANT]
 ====
-If these variables are **empty**, the workspace was not created with your devfile. This can happen if:
+If these variables are **empty**, the `devspaces-parasol-services` secret may not be configured correctly. Verify that:
 
-* The devfile was not pushed to the feature/add-devfile branch in Step 4
-* The workspace was created before the devfile was pushed
+* The secret exists in the `openshift-devspaces` namespace with the correct labels and annotations (see xref:day2-lab1-supporting-services.adoc[Supporting Services])
+* The workspace was created (or restarted) **after** the secret was created
 
-Go back to Step 5 and recreate the workspace after ensuring the devfile is in the repository.
+Go back to the Supporting Services lab and verify the secret, then recreate the workspace.
 ====
 
 === Test Service Connectivity

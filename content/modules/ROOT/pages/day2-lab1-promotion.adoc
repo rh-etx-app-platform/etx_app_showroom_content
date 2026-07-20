@@ -368,6 +368,19 @@ Switch back to the factory cluster before continuing with the GitOps manifests:
 oc login $FACTORY_API -u $FACTORY_USER -p $FACTORY_PASSWORD --insecure-skip-tls-verify
 ----
 
+==== Create Staging Database Secret
+
+Create a `parasol-db-secret` in the staging namespace so the deployment can reference credentials without hardcoding them:
+
+[source,bash,role=execute]
+----
+oc create secret generic parasol-db-secret \
+  -n etx-app-staging \
+  --from-literal=database-name=parasol \
+  --from-literal=database-user=parasol \
+  --from-literal=database-password=parasol
+----
+
 ==== Create Application Deployment Manifest
 
 [source,bash,role=execute]
@@ -412,11 +425,20 @@ spec:
             - name: POSTGRESQL_HOST
               value: "parasol-db.etx-app-staging.svc.cluster.local"
             - name: POSTGRESQL_DATABASE
-              value: "parasol"
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-name
             - name: POSTGRESQL_USER
-              value: "parasol"
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-user
             - name: POSTGRESQL_PASSWORD
-              value: "parasol"
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-password
             - name: QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION
               value: update
 EOF
