@@ -125,6 +125,11 @@ If you already have an API key, you can use it by following these steps:
 . Click the *show key* button to view the API key
 . Copy the generated key
 
+[source,bash,role=execute]
+----
+export LLM_API_KEY="PASTE YOUR KEY HERE"
+----
+
 Then create the secret:
 
 [source,bash,role=execute]
@@ -147,10 +152,8 @@ oc label secret continue-llm-credentials \
 echo "LLM credentials secret created successfully"
 ----
 
-WARNING: Replace or set `LLM_API_KEY` with your actual API key from the MaaS platform before running the command.
-
 Every new workspace will now have `LLM_API_KEY` and `LLM_BASE_URL` available as environment variables.
-The devfile's `postStart` command can use these to configure the Continue extension automatically (see xref:day2-devspaces-devfiles.adoc[Devfiles]).
+The devfile's `postStart` command can use these to configure the Continue extension automatically (see xref:day2-devspaces-devfiles.adoc[Devfiles]).  This will be apparent in the next steps of the lab where we create a devfile.
 
 == Summary
 
