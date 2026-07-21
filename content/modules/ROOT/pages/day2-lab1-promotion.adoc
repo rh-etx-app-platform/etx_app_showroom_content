@@ -729,14 +729,15 @@ Pick one of the commit SHA tags from the output.
 
 Trigger the promotion pipeline manually.
 
-First, get an actual commit SHA from the images built by the CI pipeline:
+First, get an actual image tag from the CI pipeline builds:
 
 [source,bash,role=execute]
 ----
-oc get images -n etx-app-dev | grep etx-app-base-app
+IMAGE_TAG=$(oc get imagestream etx-app-base-app -n etx-app-dev -o jsonpath='{.status.tags[0].tag}')
+echo "Image tag to promote: $IMAGE_TAG"
 ----
 
-Then create a PipelineRun (replace `<COMMIT_SHA>` with an actual image tag from above):
+Then create a PipelineRun using this tag:
 
 [source,bash,role=execute]
 ----
@@ -751,7 +752,7 @@ spec:
     name: etx-app-promotion
   params:
     - name: source-image-tag
-      value: <COMMIT_SHA>
+      value: ${IMAGE_TAG}
     - name: dest-image-tag
       value: stable
     - name: gitops-repo-url

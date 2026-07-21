@@ -152,7 +152,7 @@ Applying recommended changes can introduce additional impacts in other parts of 
 
 [source,bash]
 ----
-./mvn clean package
+./mvnw clean package
 ----
 
 . Verify the code compiles successfully
@@ -164,7 +164,7 @@ There could be AI-introduced errors in the `pom.xml` file. A separate repository
 
 . The accepted solutions are captured in the **Solution Server** of the MTA Hub and will be used to generate code changes for future applications. This is a powerful feature that allows you to reuse the same solutions for multiple applications.
 
-. Once the analysis is complete, all issues are resolved, and `./mvn clean package` succeeds, you have completed the migration exercise for this lab.
+. Once the analysis is complete, all issues are resolved, and `./mvnw clean package` succeeds, you have completed the migration exercise for this lab.
 
 == Summary
 

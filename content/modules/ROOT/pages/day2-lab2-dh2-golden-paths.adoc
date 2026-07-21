@@ -376,7 +376,7 @@ Create a Person Access Token from GitLab to be used in RHDH.  In production you 
 export GITLAB_PAT={YOUR_PAT_HERE}
 ----
 
-NOTE: We will use the `GITLAB_PATH` environment variable in a later step when we setup the RHDH auth secret
+NOTE: We will use the `GITLAB_PAT` environment variable in a later step when we setup the RHDH auth secret
 
 == Configure Keycloak OAuth Authentication
 
@@ -405,7 +405,7 @@ oc create secret generic rhdh-auth-secret -n setup-rhdh \
 * Update the catalog provide to sync the Keycloak users. 
 * Include the gitlab integration
 
-WARNING: Do not replace the catalog key or you will overwrite your template location from before.  Just add the `providers` section
+WARNING: Do not replace the existing `catalog.locations` section you added earlier (the template registration). The YAML below shows only the new keys to *merge* into `app-config.yaml`. Add the `catalog.providers` block alongside your existing `catalog.locations`, and add the `signInPage`, `auth`, and `integrations` blocks at the top level.
 
 [source,yaml,subs="attributes+"]
 ----

@@ -260,7 +260,7 @@ NOTE: Dev Spaces automatically clones the repository when you create a workspace
 
 Open a terminal and verify the repository was cloned correctly.
 
-Or, you can also verify from a workspace terminal, opening from the burger menu on the top right of the IDE,
+Or, you can also verify from a workspace terminal, opening from the hamburger menu in the top-left corner of the IDE,
 then selecting menu:Terminal[New Terminal]:
 
 NOTE: The terminal opens in `/projects/etx_app_base_app` by default. If you've navigated elsewhere, use `cd /projects/etx_app_base_app` to return.

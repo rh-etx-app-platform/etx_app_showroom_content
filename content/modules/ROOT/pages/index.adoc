@@ -35,4 +35,4 @@ a| *Software Factory & Application Lifecycle* -- Create a complete Software Fact
 
 == Getting Started
 
-Start with xref:day1-requirements.adoc[Environment Access] to provision your cluster and prepare for the labs.
+Start with xref:environment-access.adoc[Environment Access] to provision your cluster and prepare for the labs.

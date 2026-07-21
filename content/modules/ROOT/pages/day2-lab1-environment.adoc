@@ -108,13 +108,19 @@ Lab 1 Step 1: Environment Overview (this page)
       ↓
 Lab 1 Step 2: Deploy supporting services (PostgreSQL, Kafka, Tekton, OpenTelemetry)
       ↓
-Lab 1 Step 3: Deploy and configure Dev Spaces
+Lab 1 Step 3: Install Dev Spaces Operator
       ↓
-Lab 1 Step 4: Create CI pipeline with Tekton
+Lab 1 Step 4: Configure Dev Spaces (CheCluster)
       ↓
-Lab 1 Step 5: Deploy Argo CD for application delivery
+Lab 1 Step 5: GitLab Integration & Shared Secrets
       ↓
-Lab 1 Step 6: Configure multi-cluster promotion
+Lab 1 Step 6: Dev Spaces Workspace & IDE Setup
+      ↓
+Lab 1 Step 7: Create CI pipeline with Tekton
+      ↓
+Lab 1 Step 8: Deploy Argo CD for application delivery
+      ↓
+Lab 1 Step 9: Configure multi-cluster promotion
 ```
 
 IMPORTANT: Supporting services (PostgreSQL and Kafka) must be deployed BEFORE setting up Dev Spaces, as your application workspace will connect to these external services instead of using local containers.

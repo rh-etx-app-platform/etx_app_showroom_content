@@ -211,6 +211,8 @@ EOF
 
 NOTE: `git-clone`, `maven`, and `buildah` are standard Tasks installed in the `openshift-pipelines` namespace. This pipeline resolves them with the cluster resolver (replacing deprecated `ClusterTask` references). Run `oc get task -n openshift-pipelines` to verify they are available.
 
+NOTE: The `fetch-creds` task demonstrates Vault integration for retrieving registry credentials. For the OpenShift internal registry, the pipeline ServiceAccount authenticates automatically via its token. The Vault-fetched credentials become essential in the xref:day2-lab1-promotion.adoc[Promotion Pipeline] where images are pushed to an external registry (Quay).
+
 == Test the Pipeline Manually
 
 Run the pipeline once to verify it works before adding webhooks.

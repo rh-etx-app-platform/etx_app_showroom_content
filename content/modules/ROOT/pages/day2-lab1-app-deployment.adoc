@@ -33,7 +33,7 @@ The OIDC client `argocd` already exists in Keycloak realm `etx-lab`. Create a se
 # Get Keycloak URL (etx-sso route)
 KEYCLOAK_URL="https://etx-sso.apps.$(oc get route -n etx-keycloak -o jsonpath='{.items[0].spec.host}' | sed 's/etx-sso\.apps\.//')"
 
-# Use the shared argocd client secret from etx-gitops
+# The shared argocd OIDC client secret (pre-configured by the ETX bootstrap)
 CLIENT_SECRET="changeme"
 
 oc create secret generic argocd-oidc-secret -n etx-app-dev \
@@ -47,7 +47,7 @@ oc label secret argocd-oidc-secret -n etx-app-dev \
 echo "Keycloak issuer: ${KEYCLOAK_URL}/realms/etx-lab"
 ----
 
-IMPORTANT: The ArgoCD OIDC client is shared across all ArgoCD instances in the ETX platform. Do not create a new client in Keycloak. Use the existing `argocd` client with the provided secret.
+IMPORTANT: The ArgoCD OIDC client is shared across all ArgoCD instances in the ETX platform. Do not create a new client in Keycloak. Use the existing `argocd` client with the provided secret. The value `changeme` is the actual pre-configured client secret from the ETX bootstrap -- do not change it unless your instructor provides a different value.
 
 == Deploy Your Argo CD Instance
 

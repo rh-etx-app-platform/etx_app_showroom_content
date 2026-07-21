@@ -86,7 +86,7 @@ spec:
       enable: true
     pluginRegistry:
       openVSXURL: "https://open-vsx.org"
-  containerRegistry: {}
+    containerRegistry: {}
   devEnvironments:
     startTimeoutSeconds: 600
     secondsOfRunBeforeIdling: -1

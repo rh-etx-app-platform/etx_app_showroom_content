@@ -42,10 +42,10 @@ From the terminal tab, create the `setup-rhdh` the project:
 oc create namespace setup-rhdh
 ----
 
-Expected output (namespace line may vary slightly by cluster):
+Expected output:
 
 ----
-Now using project "setup-rhdh" on server "https://api.openshift.example.com:6443".
+namespace/setup-rhdh created
 ----
 
 == Exercise 2: Create the `rhdh-config` ConfigMap
