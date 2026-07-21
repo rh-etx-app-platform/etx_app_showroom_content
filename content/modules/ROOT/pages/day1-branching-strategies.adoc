@@ -10,7 +10,7 @@ Understanding branching models is essential for the CI/CD and GitOps workflows y
 
 This session includes:
 
-* Git basics validation and SSH setup (5-10 minutes)
+* Git basics validation (5 minutes)
 * Branching models presentation (15-20 minutes)
 * Hands-on branching exercise (10-15 minutes)
 
@@ -53,64 +53,13 @@ All users use password: `openshift`
 
 After login, you should see the GitLab interface with the **software-factory** group.
 
-=== Step 2: Set Up SSH Authentication
-
-Configure an SSH key so Git CLI operations do not prompt for a username and password on every `clone`, `pull`, or `push`.
-
-Generate an SSH key pair (no passphrase for this workshop session):
-
-[source,bash,role=execute]
-----
-mkdir -p ~/.ssh
-chmod 700 ~/.ssh
-ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -C "workshop@$(hostname)" -N ""
-----
-
-Display the public key (you will paste this into GitLab):
-
-[source,bash,role=execute]
-----
-cat ~/.ssh/id_ed25519.pub
-----
-
-Add the key to GitLab:
-
-. Open GitLab in your browser (use the URL from Step 1)
-. Click your avatar (top right) → *Preferences* → *SSH Keys*
-. Click btn:[Add new key]
-. Paste the full contents of `~/.ssh/id_ed25519.pub` into the *Key* field
-. Give it a title such as `workshop-web-terminal`
-. Click btn:[Add key]
-
-Trust the GitLab host and verify SSH access:
-
-[source,bash,role=execute]
-----
-GITLAB_HOST="$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
-ssh-keyscan -t ed25519,rsa "$GITLAB_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-ssh -o StrictHostKeyChecking=accept-new -T "git@${GITLAB_HOST}"
-----
-
-.Expected Output
-[source,text]
-----
-Welcome to GitLab, @platform-developer!
-----
-
-NOTE: The exact username in the welcome message matches the GitLab account you used for SSO. If you see a permission denied error, confirm the public key was saved in GitLab and that you pasted the `.pub` file (not the private key).
-
-[TIP]
-====
-OpenShift Web Terminal sessions can be reset. If your terminal is recreated later in the workshop, regenerate the key and add the new public key in GitLab, or reuse an existing key if `~/.ssh` was preserved.
-====
-
-=== Step 3: Clone the Workshop Repository
+=== Step 2: Clone the Workshop Repository
 
 Now clone the ETX App Base application repository using Git CLI.
 
 First, get the GitLab URL:
 
-[source,bash,role=execute]
+[source,bash]
 ----
 # Get GitLab URL dynamically
 GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')"
@@ -127,6 +76,14 @@ git clone ${GITLAB_URL}/software-factory/etx_app_base_app.git
 cd etx_app_base_app
 ----
 
+[TIP]
+====
+**Authentication for Git CLI:**
+
+When prompted for credentials during `git clone`, use your assigned workshop credentials or create a personal access token from GitLab:
+Settings → Access Tokens → Create token with `read_repository` scope
+====
+
 .Expected Output
 [source,text]
 ----
@@ -136,7 +93,7 @@ remote: Counting objects: 100% (150/150), done.
 Receiving objects: 100% (150/150), done.
 ----
 
-=== Step 4: Verify Basic Git Commands
+=== Step 3: Verify Basic Git Commands
 
 [source,bash,role=execute]
 ----
@@ -161,10 +118,10 @@ If any of these commands fail, verify:
 
 * Git client is installed: `git --version`
 * Git is configured in the repository: `git config --list --local`
-* SSH authentication works: `ssh -T git@$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')`
+* You have network access to GitLab
 ====
 
-=== Step 5: Configure Git (If Needed)
+=== Step 4: Configure Git (If Needed)
 
 If this is your first time using Git on this system:
 
