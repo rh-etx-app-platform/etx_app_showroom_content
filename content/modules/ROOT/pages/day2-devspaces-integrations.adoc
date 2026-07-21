@@ -36,6 +36,13 @@ The labels and annotations are required -- Dev Spaces discovers the secret autom
 WARNING: Replace `GITLAB_APPLICATION_ID` and `GITLAB_APPLICATION_SECRET` with the values from the GitLab OAuth application before running the command.
 
 [source,bash,role=execute]
+---
+export GITLAB_APPLICATION_ID="ADD YOUR ID HERE"
+export GITLAB_APPLICATION_SECRET="ADD YOUR SECRET HERE"
+---
+
+
+[source,bash,role=execute]
 ----
 
 # Get the GitLab URL dynamically from the cluster
