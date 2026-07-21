@@ -180,7 +180,7 @@ Get the Kafka bootstrap server:
 oc get service parasol-kafka-kafka-bootstrap -n etx-app-dev -o jsonpath='{.metadata.name}:{.spec.ports[0].port}{"\n"}'
 ----
 
-This returns `parasol-kafka-kafka-bootstrap:9092` which will be used to connect to Kafka from your application.
+This returns `parasol-kafka-kafka-bootstrap:9091` which will be used to connect to Kafka from your application.
 
 === Create Kafka Topics
 
