@@ -170,7 +170,7 @@ continuously releasable and deployable.
 git checkout -b feature/add-validation
 
 # Work, commit frequently
-git commit -am "add email validation"
+git commit --allow-empty -m "add email validation"
 
 # Merge back quickly (same day)
 git checkout main
@@ -239,7 +239,7 @@ branch-and-pull-request workflow focused on short-lived branches and frequent me
 git checkout -b feature/user-profile
 
 # Work and push frequently
-git commit -am "add user profile page"
+git commit --allow-empty -m "add user profile page"
 git push origin feature/user-profile
 
 # Open Pull Request in GitLab
