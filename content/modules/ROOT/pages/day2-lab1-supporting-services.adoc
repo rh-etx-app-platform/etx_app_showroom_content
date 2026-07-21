@@ -24,7 +24,6 @@ The Vault instance is already configured with:
 
 * KV v2 secrets engine enabled at `secret/`
 * Kubernetes authentication method for pipeline ServiceAccounts
-* Registry credentials stored at `secret/registry`
 * RBAC policies for pipeline access
 
 Your Tekton pipelines can authenticate to Vault using their ServiceAccount tokens to retrieve registry credentials at runtime.
