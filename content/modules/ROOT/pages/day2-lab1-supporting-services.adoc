@@ -3,7 +3,7 @@
 
 == Overview
 
-Deploy and configure the platform services required by the application and CI/CD pipeline: PostgreSQL database for application data persistence, AMQ Streams (Kafka) for messaging, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
+Deploy and configure the platform services required by the application and CI/CD pipeline: PostgreSQL database for application data persistence, Streams for Apache Kafka (formerly AMQ Streams) for messaging, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
 
 These services will be shared across your development workflow in Dev Spaces and production deployments.
 
@@ -68,9 +68,9 @@ oc get pods -n openshift-pipelines
 
 You should see pods for `tekton-pipelines-controller`, `tekton-triggers-controller`, and related components.
 
-== Install AMQ Streams (Apache Kafka)
+== Install Streams for Apache Kafka
 
-AMQ Streams provides Apache Kafka on OpenShift. The ETX App Base application uses Kafka for messaging between services.
+Streams for Apache Kafka (formerly AMQ Streams) provides Apache Kafka on OpenShift. The ETX App Base application uses Kafka for messaging between services.
 
 === Install via OperatorHub
 
@@ -78,7 +78,7 @@ AMQ Streams provides Apache Kafka on OpenShift. The ETX App Base application use
 . In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Streams for Apache Kafka*
 +
-WARNING: Do **NOT** install the "Streams for Apache Kafka Proxy" operator. Only install "Streams for Apache Kafka" (AMQ Streams).
+WARNING: Do **NOT** install the "Streams for Apache Kafka Proxy" operator. Only install "Streams for Apache Kafka".
 +
 . Click btn:[Install]
 . Accept the defaults:
@@ -95,13 +95,13 @@ Verify from the CLI:
 oc get csv -n openshift-operators | grep amqstreams
 ----
 
-You should see the AMQ Streams operator listed with phase `Succeeded`.
+You should see the Streams for Apache Kafka operator listed with phase `Succeeded`.
 
 === Deploy Kafka Cluster
 
 Now that the operator is installed, deploy a Kafka cluster in your application namespace.
 
-Starting with AMQ Streams 3.x, Kafka clusters use **KafkaNodePools** to manage broker nodes.
+Starting with Streams for Apache Kafka 3.x, Kafka clusters use **KafkaNodePools** to manage broker nodes.
 A `KafkaNodePool` defines a group of Kafka nodes with specific roles (controller, broker, or both) and their storage configuration.
 This deployment uses a single node pool with combined controller and broker roles, running in **KRaft mode** (without ZooKeeper).
 
@@ -465,7 +465,7 @@ You now have the following services deployed and ready:
 
 * **Vault** (pre-deployed) -- secrets management with Kubernetes authentication for pipeline access
 * **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
-* **AMQ Streams Kafka Cluster** -- `parasol-kafka-kafka-bootstrap:9092` with `intake` topic
+* **Streams for Apache Kafka Cluster** -- `parasol-kafka-kafka-bootstrap:9092` with `intake` topic
 * **PostgreSQL Database** -- `parasol-db:5432` with database `parasol`
 * **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing
 
