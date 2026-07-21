@@ -37,7 +37,7 @@ Access your OpenShift cluster using the credentials below:
 | `{openshift_cluster_guid}`
 
 | OpenShift Admin username
-| '{openshift_cluster_admin_username}'
+| `{openshift_cluster_admin_username}`
 
 | OpenShift Admin password
 | `{openshift_cluster_admin_password}`
