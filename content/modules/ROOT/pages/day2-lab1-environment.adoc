@@ -93,7 +93,7 @@ You will configure multi-cluster promotion in the final section of this lab.
 As part of this hands-on lab, you will install and configure:
 
 * **PostgreSQL Database** - Application data persistence using Red Hat certified image
-* **AMQ Streams (Kafka)** - Messaging infrastructure for application services
+* **Streams for Apache Kafka** - Messaging infrastructure for application services
 * **OpenShift Pipelines (Tekton)** - Cloud-native CI/CD engine
 * **OpenTelemetry Operator** - Distributed tracing and observability
 * **Red Hat OpenShift Dev Spaces** - Cloud IDE with VS Code in the browser

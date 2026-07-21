@@ -25,7 +25,7 @@ Over three days you will stand up the key services of a modern application platf
 a| *Software Factory & Application Lifecycle* -- Create a complete Software Factory to develop, build, deploy, and monitor using Red Hat solutions.
 
 * Create a Quarkus application with an integrated setup of GitLab, OpenShift Dev Spaces, OpenShift Pipelines(Tekton), OpenShift GitOps (Argo CD), and OpenTelemetry.
-* Provision AMQ Streams (Kafka), and PostgreSQL, as supporting services for applications.
+* Provision Streams for Apache Kafka, and PostgreSQL, as supporting services for applications.
 * Complete the modernization journey of a legacy application with Migration Toolkit for Applications (MTA).
 * Integrate services on an internal developer portal (IDP) based on Red Hat Developer Hub.
 
