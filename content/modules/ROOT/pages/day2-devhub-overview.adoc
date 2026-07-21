@@ -28,6 +28,8 @@ Internal Developer Portal (IDP)::
 A centralized, self-service interface where developers discover services, documentation, standards,
 ownership, and workflows needed to build and operate software efficiently.
 
+NOTE:  IDP is there twice because it is use interchangeably.  It is important to distinguish between a *Platform* and a *Portal* when talking to customers.  Backstage and Red Hat Developer Hub are *Portals* 
+
 == What is Red Hat Developer Hub?
 
 https://developers.redhat.com/products/rhdh[Red Hat Developer Hub^] is an enterprise-grade internal developer portal built on the Backstage open source project.
