@@ -3,7 +3,7 @@
 
 == Overview
 
-Create a Tekton CI pipeline that clones your application source, builds and tests it, retrieves registry credentials from Vault, and pushes the container image.
+Create a Tekton CI pipeline that clones your application source, builds and tests it, and pushes the container image.
 Then wire up Tekton Triggers to fire the pipeline automatically when code is pushed to GitLab.
 
 == Pipeline Workspace and ServiceAccount
@@ -55,68 +55,6 @@ oc adm policy add-role-to-user edit \
 ----
 
 This grants the `edit` role, allowing the pipeline to create ImageStreams, Deployments, and other resources.
-
-== Retrieve Registry Credentials from Vault
-
-Create a Tekton Task that authenticates to Vault using the Kubernetes auth method configured in the xref:day2-lab1-supporting-services.adoc[Supporting Services] section and writes registry credentials to the workspace.
-
-First, get the Vault URL from the cluster:
-
-[source,bash,role=execute,subs="attributes"]
-----
-# Get Vault URL dynamically
-VAULT_URL="https://$(oc get route -n vault -o jsonpath='{.items[0].spec.host}')"
-echo "Using Vault URL: $VAULT_URL"
-----
-
-Then create the Task:
-
-[source,bash,role=execute]
-----
-oc apply -f - <<EOF
-apiVersion: tekton.dev/v1
-kind: Task
-metadata:
-  name: vault-fetch-registry-creds
-  namespace: etx-app-dev
-spec:
-  workspaces:
-    - name: source
-  results:
-    - name: registry-server
-    - name: registry-username
-    - name: registry-password
-  steps:
-    - name: fetch
-      image: registry.access.redhat.com/ubi9/ubi-minimal:latest
-      script: |
-        #!/bin/sh
-        set -e
-
-        # Install jq
-        microdnf install -y jq && microdnf clean all
-
-        # Authenticate to Vault using ServiceAccount token
-        VAULT_ADDR="${VAULT_URL}"
-        SA_TOKEN=\$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-
-        VAULT_TOKEN=\$(curl -s --request POST \
-          "\${VAULT_ADDR}/v1/auth/kubernetes/login" \
-          --data "{\"role\":\"pipeline\",\"jwt\":\"\${SA_TOKEN}\"}" \
-          | jq -r '.auth.client_token')
-
-        # Fetch registry credentials
-        CREDS=\$(curl -s --header "X-Vault-Token: \${VAULT_TOKEN}" \
-          "\${VAULT_ADDR}/v1/secret/data/registry")
-
-        echo "\${CREDS}" | jq -r '.data.data.server' \
-          | tr -d '\n' > \$(results.registry-server.path)
-        echo "\${CREDS}" | jq -r '.data.data.username' \
-          | tr -d '\n' > \$(results.registry-username.path)
-        echo "\${CREDS}" | jq -r '.data.data.password' \
-          | tr -d '\n' > \$(results.registry-password.path)
-EOF
-----
 
 == Create the Pipeline
 
@@ -179,16 +117,8 @@ spec:
         - name: source
           workspace: shared-workspace
 
-    - name: fetch-creds
-      runAfter: [clone]
-      taskRef:
-        name: vault-fetch-registry-creds
-      workspaces:
-        - name: source
-          workspace: shared-workspace
-
     - name: build-image
-      runAfter: [build-and-test, fetch-creds]
+      runAfter: [build-and-test]
       taskRef:
         resolver: cluster
         params:
@@ -341,21 +271,6 @@ NOTE: Option 3 only shows logs from one Task at a time. When that Task completes
 Watch the logs to confirm all tasks complete successfully.
 
 === Troubleshooting Common Issues
-
-**fetch-creds task fails with "parse error: Invalid numeric literal"**
-
-This error means the Vault response is not valid JSON. Common causes:
-
-* **Vault is unavailable**: Check if Vault pods are running:
-+
-[source,bash,role=execute]
-----
-oc get pods -n vault
-----
-+
-If Vault is down, wait for it to recover and retry the pipeline.
-
-* **Vault authentication not configured**: Verify the Kubernetes auth method exists in Vault UI at the vault URL.
 
 * **ServiceAccount lacks permissions**: Verify the pipeline ServiceAccount exists:
 +
@@ -782,7 +697,7 @@ oc get pipelinerun -n etx-app-dev --sort-by=.metadata.creationTimestamp | tail -
 
 You now have:
 
-* Tekton CI pipeline with Vault secrets integration
+* Tekton CI pipeline
 * Automated builds triggered by GitLab webhooks
 * Container images pushed to OpenShift internal registry
 * Maven-based Java/Quarkus build and test automation
