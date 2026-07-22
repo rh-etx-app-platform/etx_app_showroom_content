@@ -350,7 +350,7 @@ You update the existing `rhdh-config` ConfigMap in the `setup-rhdh` namespace—
 . Click **Save** to apply the ConfigMap.
 
 The Red Hat Developer Hub Operator rolls out the change and restarts the application pod.
-When the pod is `Running` again, open Developer Hub and confirm the template appears under menu:Create[Templates].
+When the pod is `Running` again, open Developer Hub and confirm the template appears under menu:Self-service[Templates] (the plus button in the upper right corner).
 
 image::rhdh-quarkus-golden-path-template.png[Quarkus Golden Path template in Red Hat Developer Hub,link=self,window=blank,width=700]
 
