@@ -324,37 +324,11 @@ git commit -m "feat: initial commit"
 git push origin main
 ----
 
-=== Register the Template in Developer Hub
-
-Red Hat Developer Hub discovers Software Templates through *catalog locations* in `app-config.yaml`.
-After you push `template.yaml` to GitLab, add a `catalog` section that points at that file so the catalog importer
-loads your Golden Path template.
-You update the existing `rhdh-config` ConfigMap in the `setup-rhdh` namespace—the same ConfigMap created in xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub].
-
-. Open {openshift_console_url}[^] and switch to the *setup-rhdh* project.
-. In the console, open **Workloads** → **ConfigMaps** and select *rhdh-config*.
-. Click **Actions** → *Edit ConfigMap* and stay in **YAML view** (or open the **Data** tab and edit the `app-config.yaml` key).
-. Under `data.app-config.yaml`, keep your existing `app` and `auth` settings and add the `catalog` block below.
-  Do not replace the whole file—merge the new section with what is already there.
-+
-[source,yaml,subs="attributes+"]
-----
-    catalog:
-      locations:
-        - type: url
-          target: '{gitlab_url}/software-factory/golden-path-quarkus/-/blob/main/template.yaml'
-          rules:
-            - allow: [Template]
-----
-+
-. Click **Save** to apply the ConfigMap.
-
-The Red Hat Developer Hub Operator rolls out the change and restarts the application pod.
-When the pod is `Running` again, open Developer Hub and confirm the template appears under menu:Create[Templates].
-
-image::rhdh-quarkus-golden-path-template.png[Quarkus Golden Path template in Red Hat Developer Hub,link=self,window=blank,width=700]
-
 === Setup GitLab Integration
+
+You register the template with Developer Hub in the next section, and that registration needs a GitLab integration
+already configured in `app-config.yaml`, otherwise Developer Hub can't fetch `template.yaml`'s contents. Set up
+that integration's credentials now, before registering the template.
 
 Create a Person Access Token from GitLab to be used in RHDH.  In production you would use a service account but for the purposes of this lab we can use a PAT.
 
@@ -401,12 +375,24 @@ oc create secret generic rhdh-auth-secret -n setup-rhdh \
 
 === Update app-config
 
+Red Hat Developer Hub discovers Software Templates through *catalog locations* in `app-config.yaml`. This step
+registers the Golden Path template you pushed to GitLab earlier, alongside the OIDC auth, Keycloak user sync, and
+GitLab integration settings, all in one edit to the `rhdh-config` ConfigMap in the `setup-rhdh` namespace (the
+same ConfigMap created in xref:day2-lab2-dh1-install-configure.adoc[Install and configure Red Hat Developer Hub]).
+Registering the template's `catalog` location here, together with the `gitlab` integration, matters: Developer Hub
+can only fetch `template.yaml`'s contents from a GitLab `blob` URL through a configured GitLab integration, so the
+integration needs to exist in the same config as (or before) the catalog location that points at it.
+
 * Replace the guest auth block with OIDC and the session secret from above
-* Update the catalog provide to sync the Keycloak users. 
+* Add the template's catalog location
+* Update the catalog provider to sync the Keycloak users
 * Include the gitlab integration
 
-WARNING: Do not replace the catalog key or you will overwrite your template location from before.  Just add the `providers` section
-
+. Open {openshift_console_url}[^] and switch to the *setup-rhdh* project.
+. In the console, open **Workloads** → **ConfigMaps** and select *rhdh-config*.
+. Click **Actions** → *Edit ConfigMap* and stay in **YAML view** (or open the **Data** tab and edit the `app-config.yaml` key).
+. Under `data.app-config.yaml`, keep your existing `app` and `backend` settings and replace the `auth` block with the content below.
++
 [source,yaml,subs="attributes+"]
 ----
     signInPage: oidc
@@ -422,6 +408,11 @@ WARNING: Do not replace the catalog key or you will overwrite your template loca
             metadataUrl: ${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_RHDH_REALM}/.well-known/openid-configuration
             prompt: auto
     catalog:
+      locations:
+        - type: url
+          target: '{gitlab_url}/software-factory/golden-path-quarkus/-/blob/main/template.yaml'
+          rules:
+            - allow: [Template]
       providers:
         keycloakOrg:
           default:
@@ -439,11 +430,12 @@ WARNING: Do not replace the catalog key or you will overwrite your template loca
           apiBaseUrl: {gitlab_url}/api/v4
           baseUrl: {gitlab_url}
 ----
++
+. Click **Save** to apply the ConfigMap.
 
 NOTE: The schedule frequency would be set to something higher in production (12 hours) and is set low for demo purposes.  Other options like `userQuerySize` or `groupQuerySize` are also good to set.  More information found in the documentation https://docs.redhat.com/en/documentation/red_hat_developer_hub/1.10/html/authentication_in_red_hat_developer_hub/import-users-and-groups-from-your-identity-provider_authentication-in-rhdh#import-users-and-groups-from-rhbk_import-users-and-groups-from-your-identity-provider[here]
 
-
-Click **Save** and wait for the Backstage pod to restart.
+The Red Hat Developer Hub Operator rolls out the change and restarts the Backstage pod.
 
 `signInPage: oidc` shows the Keycloak sign-in flow on the login page.
 The `${KEYCLOAK_*}` placeholders are resolved from the Secret mounted on the `Backstage` CR in the next step.
@@ -507,6 +499,15 @@ The Red Hat Developer Hub Operator reconciles the CR and restarts the Backstage 
 You should land on the Developer Hub home page authenticated as your Keycloak user, not as Guest.
 
 IMPORTANT: The signed-in user must exist in the Software Catalog (or be mapped via your org setup, which is what we configured with the keycloakOrg provider) to use some catalog features. For template creation in this lab, guest access is no longer available after this change.
+
+=== Register the Template in Developer Hub
+
+Confirm the Golden Path template registered in the "Update app-config" step above shows up now that the GitLab
+integration and your Keycloak sign-in are both in place.
+
+Open Developer Hub and confirm the template appears under menu:Self-service[Templates] (the plus button in the upper right corner).
+
+image::rhdh-quarkus-golden-path-template.png[Quarkus Golden Path template in Red Hat Developer Hub,link=self,window=blank,width=700]
 
 == Test the Golden Path
 
