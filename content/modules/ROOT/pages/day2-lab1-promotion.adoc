@@ -36,19 +36,9 @@ The promotion pipeline requires two clusters:
 
 You need to enroll the runtime cluster with ArgoCD on the factory cluster.
 
-=== Option 1: Automated Enrollment (Recommended)
+=== Configure Cluster Credentials
 
-Download and run the enrollment script:
-
-[source,bash,role=execute]
-----
-curl -o enroll-secondary-cluster.sh \
-  https://raw.githubusercontent.com/rh-etx-app-platform/etx_app_tooling/main/scripts/enroll-secondary-cluster.sh
-
-chmod +x enroll-secondary-cluster.sh
-----
-
-Edit the configuration section with your cluster credentials (from RHDP emails):
+Set your cluster credentials (from RHDP emails):
 
 [source,bash,subs="attributes+"]
 ----
@@ -59,6 +49,18 @@ export RUNTIME_PASSWORD="your-runtime-password"
 export FACTORY_API="{openshift_api_server_url}"
 export FACTORY_USER="admin"
 export FACTORY_PASSWORD="{openshift_cluster_admin_password}"
+----
+
+=== Option 1: Automated Enrollment (Recommended)
+
+Download and run the enrollment script:
+
+[source,bash,role=execute]
+----
+curl -o enroll-secondary-cluster.sh \
+  https://raw.githubusercontent.com/rh-etx-app-platform/etx_app_tooling/main/scripts/enroll-secondary-cluster.sh
+
+chmod +x enroll-secondary-cluster.sh
 ----
 
 Run the script:
@@ -80,8 +82,8 @@ Login to your runtime cluster using credentials from RHDP:
 
 [source,bash]
 ----
-oc login https://api.cluster-YOUR-RUNTIME.dyn.redhatworkshops.io:6443 \
-  -u admin -p YOUR_PASSWORD --insecure-skip-tls-verify
+oc login $RUNTIME_API \
+  -u $RUNTIME_USER -p $RUNTIME_PASSWORD --insecure-skip-tls-verify
 ----
 
 Create ArgoCD manager ServiceAccount:
@@ -132,16 +134,9 @@ oc create namespace etx-app-prod
 
 Switch to factory cluster:
 
-[source,bash,subs="attributes+"]
-----
-oc login {api_url} -u admin -p {admin_password} --insecure-skip-tls-verify
-----
-
-Set runtime cluster API URL:
-
 [source,bash]
 ----
-RUNTIME_API="https://api.cluster-YOUR-RUNTIME.dyn.redhatworkshops.io:6443"
+oc login $FACTORY_API -u $FACTORY_USER -p $FACTORY_PASSWORD --insecure-skip-tls-verify
 ----
 
 Create ArgoCD cluster secret:
