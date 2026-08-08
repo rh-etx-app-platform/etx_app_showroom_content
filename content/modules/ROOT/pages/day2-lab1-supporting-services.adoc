@@ -3,7 +3,7 @@
 
 == Overview
 
-Deploy and configure the platform services required by the application and CI/CD pipeline: PostgreSQL database for application data persistence, AMQ Streams (Kafka) for messaging, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
+Deploy and configure the platform services required by the application and CI/CD pipeline: PostgreSQL database for application data persistence, Streams for Apache Kafka (formerly AMQ Streams) for messaging, OpenShift Pipelines (Tekton) for CI, and the OpenTelemetry Operator for distributed tracing.
 
 These services will be shared across your development workflow in Dev Spaces and production deployments.
 
@@ -68,9 +68,9 @@ oc get pods -n openshift-pipelines
 
 You should see pods for `tekton-pipelines-controller`, `tekton-triggers-controller`, and related components.
 
-== Install AMQ Streams (Apache Kafka)
+== Install Streams for Apache Kafka
 
-AMQ Streams provides Apache Kafka on OpenShift. The ETX App Base application uses Kafka for messaging between services.
+Streams for Apache Kafka (formerly AMQ Streams) provides Apache Kafka on OpenShift. The ETX App Base application uses Kafka for messaging between services.
 
 === Install via OperatorHub
 
@@ -78,7 +78,7 @@ AMQ Streams provides Apache Kafka on OpenShift. The ETX App Base application use
 . In the OpenShift Web Console, go to menu:Ecosystem[Software Catalog]
 . Search for *Streams for Apache Kafka*
 +
-WARNING: Do **NOT** install the "Streams for Apache Kafka Proxy" operator. Only install "Streams for Apache Kafka" (AMQ Streams).
+WARNING: Do **NOT** install the "Streams for Apache Kafka Proxy" operator. Only install "Streams for Apache Kafka".
 +
 . Click btn:[Install]
 . Accept the defaults:
@@ -95,13 +95,13 @@ Verify from the CLI:
 oc get csv -n openshift-operators | grep amqstreams
 ----
 
-You should see the AMQ Streams operator listed with phase `Succeeded`.
+You should see the Streams for Apache Kafka operator listed with phase `Succeeded`.
 
 === Deploy Kafka Cluster
 
 Now that the operator is installed, deploy a Kafka cluster in your application namespace.
 
-Starting with AMQ Streams 3.x, Kafka clusters use **KafkaNodePools** to manage broker nodes.
+Starting with Streams for Apache Kafka 3.x, Kafka clusters use **KafkaNodePools** to manage broker nodes.
 A `KafkaNodePool` defines a group of Kafka nodes with specific roles (controller, broker, or both) and their storage configuration.
 This deployment uses a single node pool with combined controller and broker roles, running in **KRaft mode** (without ZooKeeper).
 
@@ -345,6 +345,36 @@ You should see connection information confirming PostgreSQL is accessible.
 
 NOTE: The database credentials are stored in the `parasol-db-secret` Secret. Your application will use these same credentials to connect.
 
+=== Inject Service Credentials into Dev Spaces Workspaces
+
+Dev Spaces can automatically inject environment variables into every workspace using labeled Secrets in the `openshift-devspaces` namespace (see xref:day2-devspaces-integrations.adoc#_mounting_shared_secrets_into_workspaces[Mounting Shared Secrets into Workspaces]).
+
+Create a secret that provides PostgreSQL and Kafka connection details to all developer workspaces:
+
+[source,bash,role=execute]
+----
+oc create secret generic devspaces-parasol-services \
+  -n openshift-devspaces \
+  --from-literal=POSTGRESQL_HOST="parasol-db.etx-app-dev.svc.cluster.local" \
+  --from-literal=POSTGRESQL_DATABASE="parasol" \
+  --from-literal=POSTGRESQL_USER="parasol" \
+  --from-literal=POSTGRESQL_PASSWORD="parasol" \
+  --from-literal=KAFKA_BOOTSTRAP_SERVERS="parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092"
+
+oc annotate secret devspaces-parasol-services \
+  -n openshift-devspaces \
+  controller.devfile.io/mount-as=env
+
+oc label secret devspaces-parasol-services \
+  -n openshift-devspaces \
+  app.kubernetes.io/part-of=che.eclipse.org \
+  app.kubernetes.io/component=workspaces-config
+
+echo "Dev Spaces service credentials secret created successfully"
+----
+
+Every new Dev Spaces workspace will now have `POSTGRESQL_HOST`, `POSTGRESQL_DATABASE`, `POSTGRESQL_USER`, `POSTGRESQL_PASSWORD`, and `KAFKA_BOOTSTRAP_SERVERS` available as environment variables. This avoids hardcoding credentials in devfiles and follows the same pattern used for xref:day2-devspaces-integrations.adoc#_example_ai_code_assistant_continue_credentials[AI Code Assistant credentials].
+
 == Install the OpenTelemetry Operator
 
 The OpenTelemetry Operator manages the deployment of OpenTelemetry Collectors for distributed tracing and metrics collection.
@@ -465,7 +495,7 @@ You now have the following services deployed and ready:
 
 * **Vault** (pre-deployed) -- secrets management with Kubernetes authentication for pipeline access
 * **OpenShift Pipelines** -- Tekton CI engine ready to run pipelines
-* **AMQ Streams Kafka Cluster** -- `parasol-kafka-kafka-bootstrap:9092` with `intake` topic
+* **Streams for Apache Kafka Cluster** -- `parasol-kafka-kafka-bootstrap:9092` with `intake` topic
 * **PostgreSQL Database** -- `parasol-db:5432` with database `parasol`
 * **OpenTelemetry** -- collector and auto-instrumentation configured for distributed tracing
 

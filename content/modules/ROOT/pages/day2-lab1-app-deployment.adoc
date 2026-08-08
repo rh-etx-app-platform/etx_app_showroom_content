@@ -375,11 +375,20 @@ spec:
             - name: POSTGRESQL_HOST
               value: "parasol-db.etx-app-dev.svc.cluster.local"
             - name: POSTGRESQL_DATABASE
-              value: "parasol"
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-name
             - name: POSTGRESQL_USER
-              value: "parasol"
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-user
             - name: POSTGRESQL_PASSWORD
-              value: "parasol"
+              valueFrom:
+                secretKeyRef:
+                  name: parasol-db-secret
+                  key: database-password
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: "parasol-kafka-kafka-bootstrap.etx-app-dev.svc.cluster.local:9092"
 EOF

@@ -7,7 +7,7 @@ Connecting Dev Spaces to GitLab allows automatic Git credential injection into w
 
 === Create a GitLab OAuth Application
 
-. Open {gitlab_url}[GitLab^] and authenticate with your SSO credentials.
+. Open {gitlab_url}[GitLab^] and authenticate with your SSO credentials, using the `platform-admin` user.
 . Click your avatar in the upper-right corner.
 . Select menu:Edit profile[Access > Applications] to open the User Settings applications page.
 +
