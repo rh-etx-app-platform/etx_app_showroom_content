@@ -132,12 +132,14 @@ These users are configured with OIDC clients for GitLab, Quay, ArgoCD, and Vault
 | Quay URL
 | {quay_url}[Quay Registry,window="_blank"]
 
-| Admin Username
-| `{quay_admin_user}`
-
-| Admin Password
-| `{quay_admin_password}`
+| Authentication
+| Keycloak OIDC
 |===
+
+[NOTE]
+====
+Quay integrates with Keycloak SSO. Use the student users listed above to authenticate via OIDC.
+====
 
 == HashiCorp Vault
 
