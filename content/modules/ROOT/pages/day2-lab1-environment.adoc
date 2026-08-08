@@ -159,6 +159,94 @@ NOTE: The repository name is `etx_app_base_app` and Kubernetes resources will be
 
 IMPORTANT: The repository does NOT include a `devfile.yaml`. You will create this file manually in the next lab step (xref:day2-lab1-devspaces.adoc[Dev Spaces Setup]).
 
+== Configure Git Authentication (Optional)
+
+The initial `git clone` above works without authentication because GitLab allows read access. However, **push operations require authentication**.
+
+You can configure Git authentication now or wait until you need to push changes (in later lab steps). This section shows how to set up SSH keys for password-less authentication.
+
+NOTE: You will also need to configure Git authentication inside your Dev Spaces workspace later. These are **separate environments** with separate SSH keys.
+
+[tabs]
+====
+SSH Key Authentication (Recommended)::
++
+--
+
+SSH keys eliminate password prompts for all git operations.
+
+=== Generate SSH Key
+
+In the OpenShift Web Terminal, generate an SSH key pair:
+
+[source,bash,role=execute]
+----
+# Generate ED25519 SSH key
+ssh-keygen -t ed25519 -C "platform-developer@web-terminal" -f ~/.ssh/id_ed25519 -N ""
+
+# Start ssh-agent and add the key
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+
+# Display your public key
+cat ~/.ssh/id_ed25519.pub
+----
+
+Copy the entire output (starts with `ssh-ed25519`).
+
+=== Add SSH Key to GitLab
+
+. Access GitLab: {gitlab_url}[^]
+. Log in with Keycloak SSO (`platform-developer` / `openshift`)
+. Navigate to: Profile Icon → **Edit Profile** → **SSH Keys**
+. Add the key:
+  * **Key**: Paste the public key
+  * **Title**: `Web Terminal`
+  * **Usage type**: *Authentication & Signing*
+  * Click **Add key**
+
+=== Update Git Remote to SSH
+
+Back in the Web Terminal:
+
+[source,bash,role=execute]
+----
+cd ~/workshop/etx_app_base_app
+
+# Get GitLab hostname
+GITLAB_HOST=$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')
+
+# Update remote to SSH
+git remote set-url origin git@${GITLAB_HOST}:software-factory/etx_app_base_app.git
+
+# Verify
+git remote -v
+----
+
+=== Test SSH Connection
+
+[source,bash,role=execute]
+----
+ssh -T git@$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')
+----
+
+Expected: `Welcome to GitLab, @platform-developer!`
+
+If you see a host key verification prompt, type `yes`.
+
+--
+
+Skip for Now::
++
+--
+
+You can skip this configuration now and set up authentication later when you need to push changes.
+
+When you do need to push, you'll be prompted for credentials. You can then return to this section or use a Personal Access Token instead of SSH.
+
+--
+====
+
 == Verify Cluster Access
 
 Confirm you're logged into the primary cluster:

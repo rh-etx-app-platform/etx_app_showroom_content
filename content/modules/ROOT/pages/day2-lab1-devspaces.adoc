@@ -279,6 +279,8 @@ You should see `feature/add-devfile` as the current branch and the `devfile.yaml
 
 GitLab is configured with Keycloak OIDC authentication. While Dev Spaces can clone repositories using OAuth, **push operations require authentication** because GitLab OIDC does not support username/password authentication for Git operations.
 
+IMPORTANT: The following configuration is done **inside your Dev Spaces workspace terminal**, not the OpenShift Web Terminal. Open a terminal in Dev Spaces using menu:☰[Terminal > New Terminal].
+
 You have two options for Git authentication:
 
 * **SSH Keys (Recommended)** - No password prompts, more secure, easier to use
