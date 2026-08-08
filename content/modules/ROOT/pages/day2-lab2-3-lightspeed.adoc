@@ -95,9 +95,7 @@ image::mta-hub-configure.png[align="center"]
 * **Enable Hub**: Checked
 * **Hub URL**: `https://mta-openshift-mta.{openshift_cluster_ingress_domain}`
 * **Insecure connection**: Checked
-* **Enable authentication**: Checked
-* **Username**: `{user}`
-* **Password**: `{password}`
+* **Enable authentication**: Unchecked
 * **Solution Server**: Enabled
 * **Profile Sync**: Enabled
 
