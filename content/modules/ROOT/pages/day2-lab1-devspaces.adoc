@@ -277,9 +277,140 @@ You should see `feature/add-devfile` as the current branch and the `devfile.yaml
 
 === Configure Git Credentials for Push Operations
 
-GitLab is configured with Keycloak OIDC authentication. While Dev Spaces can clone repositories using OAuth, **push operations require a Personal Access Token (PAT)** because GitLab OIDC does not support username/password authentication for Git operations.
+GitLab is configured with Keycloak OIDC authentication. While Dev Spaces can clone repositories using OAuth, **push operations require authentication** because GitLab OIDC does not support username/password authentication for Git operations.
 
-==== Create GitLab Personal Access Token
+You have two options for Git authentication:
+
+* **SSH Keys (Recommended)** - No password prompts, more secure, easier to use
+* **Personal Access Token (PAT)** - HTTPS-based authentication with password prompts
+
+Choose one of the following methods:
+
+[tabs]
+====
+SSH Key Authentication (Recommended)::
++
+--
+
+SSH keys provide password-less authentication and are the recommended approach for Git operations.
+
+===== Step 1: Generate SSH Key Pair
+
+Generate a new SSH key pair in your Dev Spaces workspace:
+
+[source,bash,role=execute]
+----
+# Generate ED25519 SSH key (modern, secure algorithm)
+ssh-keygen -t ed25519 -C "platform-developer@devspaces" -f ~/.ssh/id_ed25519 -N ""
+
+# Start ssh-agent and add the key
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+
+# Display your public key
+cat ~/.ssh/id_ed25519.pub
+----
+
+Copy the entire output of the `cat` command (starts with `ssh-ed25519` and ends with `platform-developer@devspaces`).
+
+TIP: If you prefer RSA keys, use: `ssh-keygen -t rsa -b 4096 -C "platform-developer@devspaces" -f ~/.ssh/id_rsa -N ""`
+
+===== Step 2: Add SSH Key to GitLab
+
+. Access GitLab: {gitlab_url}[^]
+. Log in with Keycloak SSO (`platform-developer` / `openshift`)
+. Navigate to SSH Keys:
+  * Click on your profile icon (top right) → **Edit Profile**
+  * Click **SSH Keys** in the left sidebar
+. Add the key:
+  * **Key**: Paste the public key you copied (entire `ssh-ed25519 ...` line)
+  * **Title**: `Dev Spaces Workspace`
+  * **Usage type**: Select *Authentication & Signing*
+  * **Expiration date**: Optional (leave blank for no expiration)
+  * Click **Add key**
+
+===== Step 3: Configure Git Remote for SSH
+
+Update your repository remote to use SSH instead of HTTPS:
+
+[source,bash,role=execute,subs="attributes"]
+----
+# Set your Git identity (required for commits)
+git config --global user.email "platform-developer@example.com"
+git config --global user.name "Platform Developer"
+
+# Get GitLab hostname
+GITLAB_HOST=$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')
+
+# Update remote to use SSH
+git remote set-url origin git@${GITLAB_HOST}:software-factory/etx_app_base_app.git
+
+# Verify the new remote URL
+git remote -v
+----
+
+Expected output:
+[source,text]
+----
+origin  git@gitlab.apps.cluster-GUID.dyn.redhatworkshops.io:software-factory/etx_app_base_app.git (fetch)
+origin  git@gitlab.apps.cluster-GUID.dyn.redhatworkshops.io:software-factory/etx_app_base_app.git (push)
+----
+
+===== Step 4: Test SSH Connection
+
+Verify SSH authentication works:
+
+[source,bash,role=execute]
+----
+# Test SSH connection to GitLab
+ssh -T git@$(oc get route -n gitlab -l app=webservice -o jsonpath='{.items[0].spec.host}')
+----
+
+Expected output:
+[source,text]
+----
+Welcome to GitLab, @platform-developer!
+----
+
+If you see a host key verification prompt, type `yes` to continue.
+
+===== Step 5: Verify Git Push Works
+
+Test that you can push without password prompts:
+
+[source,bash,role=execute]
+----
+# Make a trivial change
+echo "# Test SSH credentials" >> README.md
+git add README.md
+git commit -m "Test SSH authentication"
+git push origin feature/add-devfile
+----
+
+The push should complete **without any password prompt**.
+
+Expected output:
+[source,text]
+----
+Enumerating objects: 5, done.
+...
+To gitlab.apps.cluster-GUID.dyn.redhatworkshops.io:software-factory/etx_app_base_app.git
+   abc1234..def5678  feature/add-devfile -> feature/add-devfile
+----
+
+IMPORTANT: Future `git push`, `git pull`, and `git fetch` commands will work without any password prompts.
+
+TIP: If your workspace is deleted and recreated, you'll need to regenerate the SSH key and add it to GitLab again. Consider saving your SSH private key in a secure location if you need persistence across workspace recreations.
+
+--
+
+Personal Access Token (HTTPS)::
++
+--
+
+Personal Access Tokens provide HTTPS-based authentication for Git operations.
+
+===== Create GitLab Personal Access Token
 
 . Access GitLab: {gitlab_url}[^]
 . Log in with Keycloak SSO (`platform-developer` / `openshift`)
@@ -294,7 +425,7 @@ GitLab is configured with Keycloak OIDC authentication. While Dev Spaces can clo
   * Click **Create personal access token**
   * **IMPORTANT**: Copy the token immediately (it won't be shown again)
 
-==== Configure Git Authentication
+===== Configure Git Authentication
 
 Configure Git to use your Personal Access Token:
 
@@ -313,7 +444,7 @@ git remote set-url origin https://platform-developer@gitlab.{deployer_domain}/so
 
 Now when you perform a `git push`, Git will only prompt for your **password** (not username). You will paste your Personal Access Token as the password, and it will be automatically saved for future operations.
 
-==== Verify Git Push Works
+===== Verify Git Push Works
 
 Test that you can push to the repository:
 
@@ -348,6 +479,9 @@ To https://platform-developer@gitlab.apps.cluster-GUID.dyn.redhatworkshops.io/so
 Future `git push` commands will work without prompting for credentials.
 
 TIP: If you need to update your token later (e.g., after expiration), delete `~/.git-credentials` and repeat the credential configuration steps.
+
+--
+====
 
 === Check Environment Variables
 
