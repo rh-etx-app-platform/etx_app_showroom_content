@@ -35,11 +35,11 @@ WARNING: Make sure that you choose the **Operator Backed** entry from the result
 . Accept the defaults for the rest (All namespaces, Automatic approval) and click btn:[Install]
 . Wait for the operator to reach the `Succeeded` phase
 
-From the terminal tab, create the `setup-rhdh` the project:
+From the terminal tab, create the `setup-rhdh` project:
 
 [source,role="execute"]
 ----
-oc create namespace setup-rhdh
+oc new-project setup-rhdh
 ----
 
 Expected output (namespace line may vary slightly by cluster):
