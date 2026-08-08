@@ -505,15 +505,19 @@ spec:
       image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
       script: |
         #!/bin/bash
-        set -e
+        set -euo pipefail
 
         if [ -n "$(params.override-tag)" ]; then
           echo "Using override tag: $(params.override-tag)"
           echo -n "$(params.override-tag)" > $(results.image-tag.path)
         else
           echo "Querying ImageStream for latest CI build..."
-          TAG=$(oc get imagestream etx-app-base-app -n etx-app-dev \
-            -o jsonpath='{.status.tags[0].tag}')
+          TAG=$(oc get imagestream etx-app-base-app -n etx-app-dev -o json | \
+            jq -r '.status.tags
+                   | map(select(.items != null and (.items | length > 0)))
+                   | sort_by(.items[0].created)
+                   | reverse
+                   | .[0].tag // empty')
 
           if [ -z "$TAG" ]; then
             echo "ERROR: No images found in ImageStream. Run the CI pipeline first."
