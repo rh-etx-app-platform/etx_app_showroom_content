@@ -196,6 +196,8 @@ Copy the entire output (starts with `ssh-ed25519`).
 
 === Add SSH Key to GitLab
 
+NOTE: You'll use Keycloak OIDC to log into GitLab's web interface and configure your SSH key. Once configured, Git CLI operations will use the SSH key for authentication (not OIDC).
+
 . Access GitLab: {gitlab_url}[^]
 . Log in with Keycloak SSO (`platform-developer` / `openshift`)
 . Navigate to: Profile Icon → **Edit Profile** → **SSH Keys**
