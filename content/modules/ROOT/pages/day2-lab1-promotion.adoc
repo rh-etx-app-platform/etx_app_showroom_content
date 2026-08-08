@@ -202,19 +202,19 @@ The promotion workflow follows these steps:
 
 |1
 |Developer
-|Approves promotion (manual trigger)
+|Triggers promotion (manual PipelineRun)
 
 |2
-|GitLab
-|Triggers promotion pipeline
+|Promotion Pipeline
+|Resolves latest image tag from ImageStream (or uses override)
 
 |3
 |Promotion Pipeline
-|Pulls image from internal registry by SHA
+|Fetches Quay credentials from Vault
 
 |4
 |Promotion Pipeline
-|Pushes image to Quay with 'stable' tag
+|Copies image from internal registry to Quay with 'stable' tag
 
 |5
 |Promotion Pipeline
@@ -477,6 +477,55 @@ spec:
 EOF
 ----
 
+=== Resolve Promotion Candidate
+
+Create a task that automatically determines which image to promote.
+It queries the ImageStream for the most recent CI build, eliminating the need to manually look up commit SHAs.
+If you need to promote a specific image (for example, during a rollback), you can pass an override tag.
+
+[source,bash,role=execute]
+----
+oc apply -f - <<'EOF'
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: resolve-promotion-candidate
+  namespace: etx-app-dev
+spec:
+  params:
+    - name: override-tag
+      type: string
+      default: ""
+      description: "Specific image tag to promote. Leave empty to use the latest CI build."
+  results:
+    - name: image-tag
+      description: "Resolved image tag to promote"
+  steps:
+    - name: resolve
+      image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+      script: |
+        #!/bin/bash
+        set -e
+
+        if [ -n "$(params.override-tag)" ]; then
+          echo "Using override tag: $(params.override-tag)"
+          echo -n "$(params.override-tag)" > $(results.image-tag.path)
+        else
+          echo "Querying ImageStream for latest CI build..."
+          TAG=$(oc get imagestream etx-app-base-app -n etx-app-dev \
+            -o jsonpath='{.status.tags[0].tag}')
+
+          if [ -z "$TAG" ]; then
+            echo "ERROR: No images found in ImageStream. Run the CI pipeline first."
+            exit 1
+          fi
+
+          echo "Resolved latest build: $TAG"
+          echo -n "$TAG" > $(results.image-tag.path)
+        fi
+EOF
+----
+
 === Fetch Quay Credentials from Vault
 
 Create a task to retrieve the Quay robot credentials you stored in Vault:
@@ -658,7 +707,8 @@ spec:
   params:
     - name: source-image-tag
       type: string
-      description: Image tag to promote (e.g., commit SHA)
+      default: ""
+      description: "Image tag to promote. Leave empty to use the latest CI build."
     - name: dest-image-tag
       type: string
       default: stable
@@ -669,17 +719,24 @@ spec:
   workspaces:
     - name: shared-workspace
   tasks:
+    - name: resolve-image
+      taskRef:
+        name: resolve-promotion-candidate
+      params:
+        - name: override-tag
+          value: $(params.source-image-tag)
+
     - name: fetch-quay-creds
       taskRef:
         name: vault-fetch-quay-creds
 
     - name: copy-to-quay
-      runAfter: [fetch-quay-creds]
+      runAfter: [resolve-image, fetch-quay-creds]
       taskRef:
         name: copy-image-to-quay
       params:
         - name: source-image
-          value: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:$(params.source-image-tag)
+          value: image-registry.openshift-image-registry.svc:5000/etx-app-dev/etx-app-base-app:$(tasks.resolve-image.results.image-tag)
         - name: dest-image
           value: $(tasks.fetch-quay-creds.results.quay-server)/etx-app/etx-app-base-app:$(params.dest-image-tag)
         - name: dest-username
@@ -712,31 +769,58 @@ GITLAB_URL="https://$(oc get route -n gitlab -l app=webservice -o jsonpath='{.it
 echo "GitLab URL: $GITLAB_URL"
 ----
 
-=== Get a Valid Image Tag
+=== Run the Promotion Pipeline
 
-Find a recent image tag from your dev environment:
+The pipeline automatically resolves the latest image from the CI pipeline — no manual SHA lookup required.
+
+Trigger the promotion:
 
 [source,bash,role=execute]
 ----
-# List recent images from dev CI pipeline
+oc create -f - <<EOF
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: etx-app-promotion-
+  namespace: etx-app-dev
+spec:
+  pipelineRef:
+    name: etx-app-promotion
+  params:
+    - name: dest-image-tag
+      value: stable
+    - name: gitops-repo-url
+      value: ${GITLAB_URL}/software-factory/etx-app-gitops.git
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: promotion-workspace-pvc
+  taskRunTemplate:
+    serviceAccountName: pipeline
+EOF
+----
+
+NOTE: The `source-image-tag` parameter is omitted, so the pipeline uses the `resolve-promotion-candidate` task to automatically select the most recent image built by CI.
+
+Watch the pipeline logs. You should see:
+
+1. Image tag resolved from ImageStream
+2. Vault credentials retrieved
+3. Image copied from internal registry to Quay
+4. GitOps repository updated
+
+=== Promote a Specific Image (Rollback)
+
+If you need to promote a specific image — for example, to rollback staging to a previous version — pass the SHA explicitly:
+
+[source,bash,role=execute]
+----
+# List available image tags
 oc get imagestream etx-app-base-app -n etx-app-dev -o json | \
   jq -r '.status.tags[].tag' | head -5
 ----
 
-Pick one of the commit SHA tags from the output.
-
-=== Run the Promotion Pipeline
-
-Trigger the promotion pipeline manually.
-
-First, get an actual commit SHA from the images built by the CI pipeline:
-
-[source,bash,role=execute]
-----
-oc get images -n etx-app-dev | grep etx-app-base-app
-----
-
-Then create a PipelineRun (replace `<COMMIT_SHA>` with an actual image tag from above):
+Then run the promotion with your chosen tag:
 
 [source,bash,role=execute]
 ----
@@ -765,11 +849,7 @@ spec:
 EOF
 ----
 
-Watch the pipeline logs. You should see:
-
-1. Vault credentials retrieved
-2. Image copied from internal registry to Quay
-3. GitOps repository updated
+TIP: The default workflow (omitting `source-image-tag`) is ideal for promoting the latest successful build. Use the explicit SHA only for rollbacks or when promoting a specific tested version.
 
 === Create Stage Application
 
@@ -988,9 +1068,18 @@ git push origin main
 
 Argo CD will automatically sync the previous version.
 
-=== Method 2: Update to Previous Tag
+=== Method 2: Re-promote a Previous Image
 
-Run the promotion pipeline with a previous image tag:
+Run the promotion pipeline with a specific previous image tag:
+
+[source,bash,role=execute]
+----
+# List available images to find the previous SHA
+oc get imagestream etx-app-base-app -n etx-app-dev -o json | \
+  jq -r '.status.tags[].tag' | head -5
+----
+
+Then promote the desired version:
 
 [source,bash,role=execute]
 ----
@@ -1021,11 +1110,12 @@ EOF
 
 You have completed the Promotion Pipeline exercise. You now have:
 
+* Automatic image resolution from CI builds (no manual SHA lookup)
 * Automated image promotion from internal registry to Quay
 * GitOps-based staging deployments
 * Secure credential management via Vault
 * Multi-cluster deployment capability
-* Rollback capability through Git history
+* Rollback capability through Git history and explicit SHA promotion
 
 == Key Takeaways
 
@@ -1034,6 +1124,12 @@ You have completed the Promotion Pipeline exercise. You now have:
 * The same container image (by SHA) is promoted from dev to staging
 * No code changes between environments - only configuration
 * This ensures you test exactly what you deploy
+
+**Smart defaults with explicit overrides:**
+
+* The pipeline auto-resolves the latest CI build — no manual lookup needed
+* Override with a specific SHA for rollbacks or controlled releases
+* This pattern balances automation with human control
 
 **GitOps ensures consistency:**
 
