@@ -429,6 +429,8 @@ EOF
 
 Commit and push the dev environment:
 
+IMPORTANT: If you skipped the SSH key configuration in xref:day2-lab1-environment.adoc#_configure_git_authentication_optional[Environment Overview], you'll be prompted for credentials when pushing. Go back to that section to configure SSH authentication, or use a Personal Access Token when prompted.
+
 [source,bash,role=execute]
 ----
 git add environments/dev/

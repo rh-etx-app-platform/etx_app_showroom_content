@@ -447,6 +447,8 @@ grep namespace environments/stage/*.yaml
 
 Commit and push:
 
+NOTE: This uses the same GitOps repository from the previous section. If you configured SSH authentication earlier, this push will work without prompts.
+
 [source,bash,role=execute]
 ----
 git add environments/stage/

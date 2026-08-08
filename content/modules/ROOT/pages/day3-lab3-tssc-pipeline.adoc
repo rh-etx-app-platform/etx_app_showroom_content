@@ -29,8 +29,11 @@ After completing Module 10, apply what you have learned to the application from 
 
 . Trigger the pipeline by pushing a change to the application repository:
 +
+NOTE: Run this from your **Dev Spaces workspace terminal** where you have the `etx_app_base_app` repository. If you configured SSH authentication in xref:day2-lab1-devspaces.adoc#_configure_git_credentials_for_push_operations[Dev Spaces Workspace], the push will work without prompts.
++
 [source,bash]
 ----
+cd /projects/etx_app_base_app
 git commit --allow-empty -m "chore: trigger TSSC pipeline"
 git push
 ----
