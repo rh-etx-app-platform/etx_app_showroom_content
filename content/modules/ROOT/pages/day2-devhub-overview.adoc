@@ -18,15 +18,17 @@ ____
 
 The developer experience is a major component of, and usually related to the following terms:
 
-Internal Developer Platform (IDP)::
+Internal Developer Platform::
 The set of tools and processes that software developers use to create business capabilities, and deploy them in production.
 
 Platform Engineering::
 A diverse group of technology professionals - developers, system administrators, and site reliability engineers (SRE) that build, run, and maintain an internal developer platform.
 
-Internal Developer Portal (IDP)::
+Internal Developer Portal::
 A centralized, self-service interface where developers discover services, documentation, standards,
 ownership, and workflows needed to build and operate software efficiently.
+
+NOTE: While both "Internal Developer Platform" and "Internal Developer Portal" are sometimes abbreviated as IDP, this workshop uses the full terms to avoid confusion. Red Hat Developer Hub is an Internal Developer Portal that helps developers interact with the Internal Developer Platform.
 
 == What is Red Hat Developer Hub?
 
