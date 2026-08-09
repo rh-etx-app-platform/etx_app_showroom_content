@@ -94,6 +94,7 @@ spec:
         description:
           title: Description
           type: string
+          default: ''
         owner:
           title: Owner
           type: string
@@ -199,7 +200,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: ${{ values.name }}
-  description: ${{ values.description }}
+  description: "${{ values.description }}"
   annotations:
     backstage.io/techdocs-ref: dir:.
     argocd/app-name: ${{ values.name }}-dev
