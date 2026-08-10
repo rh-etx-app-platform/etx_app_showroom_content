@@ -27,7 +27,7 @@ a| *Software Factory & Application Lifecycle* -- Create a complete Software Fact
 * Create a Quarkus application with an integrated setup of GitLab, OpenShift Dev Spaces, OpenShift Pipelines(Tekton), OpenShift GitOps (Argo CD), and OpenTelemetry.
 * Provision Streams for Apache Kafka, and PostgreSQL, as supporting services for applications.
 * Complete the modernization journey of a legacy application with Migration Toolkit for Applications (MTA).
-* Integrate services on an internal developer portal (IDP) based on Red Hat Developer Hub.
+* Integrate services on an internal developer portal based on Red Hat Developer Hub.
 
 | *Day 3*
 | *Trusted Software Supply Chain* -- Extend your pipelines adding the Red Hat Trusted Software Supply Chain (TSSC) components; Red Hat Trusted Artifact Signer (TAS), and Red Hat Trusted Profile Analyzer (TAP) to enable the integration of cryptographic signing and trust verification.
