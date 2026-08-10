@@ -88,11 +88,21 @@ Red Hat Build of Keycloak provides Single Sign-On (SSO) for all platform service
 | `{keycloak_realm}`
 
 | Admin Username
-| `{keycloak_admin_user}`
+| `temp-admin`
 
 | Admin Password
-| `{keycloak_admin_password}`
+| Retrieve from secret (see below)
 |===
+
+To access Keycloak admin console, retrieve the generated admin password:
+
+[source,bash,role=execute]
+----
+oc get secret etx-keycloak-initial-admin -n keycloak-etx-lab \
+  -o jsonpath='{.data.password}' | base64 -d
+----
+
+NOTE: The Keycloak Operator automatically generates the `etx-keycloak-initial-admin` secret with username `temp-admin` and a random password when the Keycloak instance is deployed.
 
 === Student Users
 
